@@ -52,6 +52,7 @@ Makefile
 install_manifest.txt 
 compile_commands.json
 
+cmake-build-debug
 # Temporary files
 *.tmp 
 *.log 
@@ -67,3 +68,5 @@ vcpkg_installed/
 # test output & cache
 Testing/
 .cache/
+.idea
+FromMemory/.idea

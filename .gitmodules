@@ -1,3 +1,0 @@
-[submodule "FromMemory/ext/glfw"]
-	path = FromMemory/ext/glfw
-	url = https://github.com/glfw/glfw
