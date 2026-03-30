@@ -9,6 +9,18 @@
 // bootstrap library
 #include "VkBootstrap.h"
 
+struct FrameData
+{
+	// sync structures
+	VkSemaphore _swapchainSemaphore, _renderSemaphore;
+	VkFence _renderFence;
+
+	VkCommandPool _commandPool;
+	VkCommandBuffer _mainCommandBuffer;
+};
+
+constexpr unsigned int FRAME_OVERLAP = 2;
+
 class VulkanEngine {
 public:
 
@@ -45,6 +57,12 @@ public:
 	std::vector<VkImage> _swapchainImages;
 	std::vector<VkImageView> _swapchainImageViews;
 	VkExtent2D _swapchainExtent;
+
+	FrameData _frames[FRAME_OVERLAP];
+	FrameData& get_current_frame() { return _frames[_frameNumber % FRAME_OVERLAP]; }
+
+	VkQueue _graphicsQueue;
+	uint32_t _graphicsQueueFamily;
 
 private:
 
