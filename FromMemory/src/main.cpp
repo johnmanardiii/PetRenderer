@@ -6,11 +6,12 @@
 
 int main()
 {
+    // #JOHN you need to pass the vulkan version here.
     std::optional<VkInstance> instance
             = VulkanInstanceBuilder()
                       .SetRequiredLayers({"VK_LAYER_KHRONOS_validation"})
                       .RequiresDebugUtilsExtension()
-    .EnableDebugMessengerForInstanceCreation()
+                      .EnableDebugMessengerForInstanceCreation()
                       .GetInstance();
 
     /* Initialize the library */
@@ -24,6 +25,7 @@ int main()
     }
 
     /* Make the window's context current */
+    // #JOHN this is some opengl thing you gotta get rid of
     glfwMakeContextCurrent(window);
 
     /* Loop until the user closes the window */

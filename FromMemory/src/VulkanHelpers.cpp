@@ -6,16 +6,12 @@
 #include "vulkan_util_pr.h"
 
 VKAPI_ATTR VkBool32 VKAPI_CALL DebugCreateInstanceCallback(
-    VkDebugReportFlagsEXT                       flags,
-    VkDebugReportObjectTypeEXT                  objectType,
-    uint64_t                                    object,
-    size_t                                      location,
-    int32_t                                     messageCode,
-    const char*                                 pLayerPrefix,
-    const char*                                 pMessage,
-    void*                                       pUserData)
+    VkDebugUtilsMessageSeverityFlagBitsEXT           messageSeverity,
+    VkDebugUtilsMessageTypeFlagsEXT                  messageTypes,
+    const VkDebugUtilsMessengerCallbackDataEXT*      pCallbackData,
+    void*                                            pUserData)
 {
-    fmt::print("DebugCreateInstanceCallback: {}\n", pMessage);
+    fmt::print("DebugCreateInstanceCallback: {}\n", pCallbackData->pMessage);
 
     return VK_FALSE;
 }
@@ -88,20 +84,22 @@ std::optional<VkInstance> VulkanInstanceBuilder::GetInstance()
                .pEngineName = "Pet Renderer",
                .engineVersion = VK_MAKE_VERSION(1, 0, 0),
                .apiVersion
-               = VK_MAKE_VERSION(1, 0, 0)}; // #JOHN need to fill this out
+               = VK_MAKE_VERSION(1, 3, 0)}; // #JOHN need to fill this out
 
     const void* pNext = nullptr;
-    VkDebugReportCallbackCreateInfoEXT debugcallbackCreateInfo = {};
+
+    VkDebugUtilsMessengerCreateInfoEXT debugcallbackCreateInfo = {};
     if (bEnableDebugMessengerForInstanceCreation) {
         debugcallbackCreateInfo.sType
-                = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
-        debugcallbackCreateInfo.pNext = nullptr;
-        debugcallbackCreateInfo.flags = VK_DEBUG_REPORT_INFORMATION_BIT_EXT
-                  | VK_DEBUG_REPORT_WARNING_BIT_EXT
-                  | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT
-                  | VK_DEBUG_REPORT_DEBUG_BIT_EXT
-                  | VK_DEBUG_REPORT_ERROR_BIT_EXT;  // just include all for now
-        debugcallbackCreateInfo.pfnCallback = DebugCreateInstanceCallback;
+                = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+        debugcallbackCreateInfo.messageSeverity
+                = VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT
+                  | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+        debugcallbackCreateInfo.messageType
+                = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT
+                  | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT
+                  | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+        debugcallbackCreateInfo.pfnUserCallback = DebugCreateInstanceCallback;
         pNext = &debugcallbackCreateInfo;
     }
 
