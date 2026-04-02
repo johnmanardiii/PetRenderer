@@ -1,6 +1,7 @@
 target_sources(PetRenderer PRIVATE
-    main.cpp
-    VulkanHelpers.cpp
+        main.cpp
+        VulkanHelpers.cpp
+        vulkan_engine.cpp
 )
 
 target_include_directories(PetRenderer PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})

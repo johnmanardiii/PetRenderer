@@ -12,16 +12,19 @@
 
 class VulkanInstanceBuilder {
 public:
-    VulkanInstanceBuilder& RequiresDebugUtilsExtension()
-    {
-        bRequiresDebugUtilsExtension = true;
-        return *this;
-    }
     // copies em over but that's ok
     VulkanInstanceBuilder&
     SetRequiredLayers(const std::vector<std::string>& requiredLayers)
     {
         RequiredLayers = requiredLayers;
+        return *this;
+    }
+
+    // copies em over but that's ok
+    VulkanInstanceBuilder&
+    SetRequiredExtensions(const std::vector<const char*>& requiredExtensions)
+    {
+        RequiredExtensions = requiredExtensions;
         return *this;
     }
 
@@ -36,7 +39,7 @@ public:
 
 private:
     std::vector<std::string> RequiredLayers;
-    bool bRequiresDebugUtilsExtension = false;
+    std::vector<const char*> RequiredExtensions;
     bool bEnableDebugMessengerForInstanceCreation = false;
 };
 

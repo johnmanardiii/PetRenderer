@@ -6,10 +6,10 @@
 #include "vulkan_util_pr.h"
 
 VKAPI_ATTR VkBool32 VKAPI_CALL DebugCreateInstanceCallback(
-    VkDebugUtilsMessageSeverityFlagBitsEXT           messageSeverity,
-    VkDebugUtilsMessageTypeFlagsEXT                  messageTypes,
-    const VkDebugUtilsMessengerCallbackDataEXT*      pCallbackData,
-    void*                                            pUserData)
+        VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+        VkDebugUtilsMessageTypeFlagsEXT messageTypes,
+        const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
+        void* pUserData)
 {
     fmt::print("DebugCreateInstanceCallback: {}\n", pCallbackData->pMessage);
 
@@ -58,23 +58,20 @@ std::optional<VkInstance> VulkanInstanceBuilder::GetInstance()
 
     std::vector<const char*> extensionNames = {};
 
-    if (bRequiresDebugUtilsExtension) {
-        bool debug_utils_available = false;
-        for (const auto& extension: availableExtensions) {
-            if (strcmp(extension.extensionName,
-                       VK_EXT_DEBUG_UTILS_EXTENSION_NAME)
-                == 0) {
-                debug_utils_available = true;
+    std::vector<const char*> presentDesiredExtensions;
+    for (const auto& extensionInfo: availableExtensions) {
+        for (const auto& extensionName: RequiredExtensions) {
+            if (strcmp(extensionInfo.extensionName, extensionName) == 0) {
+                presentDesiredExtensions.push_back(extensionName);
+                fmt::print("Found present desired extension: {}\n",
+                           extensionName);
             }
         }
+    }
 
-        if (debug_utils_available) {
-            extensionNames.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-        }
-        else {
-            fmt::printf("Failed to retrieve debug extension names.\n");
-            return std::nullopt;
-        }
+    if (presentDesiredExtensions.size() != RequiredExtensions.size()) {
+        fmt::printf("Failed to retrieve debug extension names.\n");
+        return std::nullopt;
     }
 
     VkApplicationInfo applicationInfo
@@ -89,6 +86,7 @@ std::optional<VkInstance> VulkanInstanceBuilder::GetInstance()
     const void* pNext = nullptr;
 
     VkDebugUtilsMessengerCreateInfoEXT debugcallbackCreateInfo = {};
+
     if (bEnableDebugMessengerForInstanceCreation) {
         debugcallbackCreateInfo.sType
                 = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
@@ -112,8 +110,8 @@ std::optional<VkInstance> VulkanInstanceBuilder::GetInstance()
             = static_cast<uint32_t>(presentDesiredLayers.size()),
             .ppEnabledLayerNames = presentDesiredLayers.data(),
             .enabledExtensionCount
-            = static_cast<uint32_t>(extensionNames.size()),
-            .ppEnabledExtensionNames = extensionNames.data(),
+            = static_cast<uint32_t>(presentDesiredExtensions.size()),
+            .ppEnabledExtensionNames = presentDesiredExtensions.data(),
     };
 
     VkInstance instance = VK_NULL_HANDLE;
