@@ -59,6 +59,9 @@ int main()
 
     glfwTerminate(); // #JOHN honestly wrap this in RAII too since it is annoying to manage
 
+    vkDestroySurfaceKHR(*instance, surface, NULL);   // #JOHN I would like everything to be in RAII so I don't have to handle
+    // one million code paths trying to clean everything up. Also this optional is getting awkward
+
     // cleanup vulkan handle stuff (move this to RAII class engine) #JOHN
     if (instance)
     {
