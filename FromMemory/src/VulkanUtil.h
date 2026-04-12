@@ -16,7 +16,12 @@ inline void vkchk(VkResult result)
     // HONESTLY, this whole thing is like an interesting idea. Always "hard
     // failing" on any kind of error isn't a very mature way to handle this kind
     // of thing
-    if (result < 0) { fmt::print("Error: %s when executing vulkan command", string_VkResult(result)); }
+    // #JOHN maybe add "file" "line" to this thing...
+    if (result < 0)
+    {
+        fmt::printf("Error: %s when executing vulkan command", string_VkResult(result));
+        std::abort();
+    }
 }
 
 #endif // VULKAN_UTIL_PR_H
