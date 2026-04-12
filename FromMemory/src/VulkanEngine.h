@@ -33,7 +33,7 @@ class VulkanEngine
 
     // #JOHN when I have more energy think through how I could make GLFW calls RAII since I don't like these raw
     // pointers
-    GLFWwindow *window;
+    GLFWwindow *window = nullptr;
 };
 
 #endif // VULKAN_ENGINE_H

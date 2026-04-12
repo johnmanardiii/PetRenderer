@@ -6,6 +6,7 @@
 
 
 #include "VulkanInstanceBuilder.h"
+#include "VulkanPhysicalDeviceSelector.h"
 #include "VulkanUtil.h"
 #include "vulkan/vulkan_core.h"
 #include <fmt/printf.h>
@@ -85,6 +86,10 @@ bool VulkanEngine::init()
 
     // #JOHN doesn't seem like it follows the most awesome pattern but whatevs.
     surface = surface_handle;
+
+    // gather a valid physical device
+    VulkanPhysicalDeviceSelector selector;
+    selector.selectPhysicalDevice(*instance, *surface);
 
     return true;
 }
