@@ -3,6 +3,7 @@ target_sources(PetRenderer PRIVATE
         VulkanInstanceBuilder.cpp
         VulkanEngine.cpp
         VulkanPhysicalDeviceSelector.cpp
+        VulkanLogicalDeviceCreator.cpp
 )
 
 target_include_directories(PetRenderer PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})

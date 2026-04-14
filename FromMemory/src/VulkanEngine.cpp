@@ -6,6 +6,7 @@
 
 
 #include "VulkanInstanceBuilder.h"
+#include "VulkanLogicalDeviceCreator.h"
 #include "VulkanPhysicalDeviceSelector.h"
 #include "VulkanUtil.h"
 #include "vulkan/vulkan_core.h"
@@ -20,6 +21,11 @@ VulkanEngine::~VulkanEngine()
     // #JOHN in the future, once you have the device, query present support with
     // glfwGetPhysicalDevicePresentationSupport.
     // https://www.glfw.org/docs/3.3/group__vulkan.html#gaff3823355cdd7e2f3f9f4d9ea9518d92
+
+    if (device)
+    {
+        vkDestroyDevice(*device, nullptr);
+    }
 
     if (instance.has_value() && surface.has_value())
     {
@@ -89,7 +95,21 @@ bool VulkanEngine::init()
 
     // gather a valid physical device
     VulkanPhysicalDeviceSelector selector;
-    selector.selectPhysicalDevice(*instance, *surface);
+    std::optional<PhysicalDeviceInfoWeCareAbout> physDeviceinfo = selector.selectPhysicalDevice(*instance, *surface);
+
+    if (!physDeviceinfo)
+    {
+        fmt::printf("Failed to find a valid physical device.\n");
+        return false;
+    }
+
+    // create a logical device from the physical one
+    device = VulkanLogicalDeviceCreator::CreateLogicalDevice(*physDeviceinfo);
+    if (!device)
+    {
+        fmt::printf("Failed to create logical device.\n");
+        return false;
+    }
 
     return true;
 }

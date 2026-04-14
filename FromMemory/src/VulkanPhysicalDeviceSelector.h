@@ -13,13 +13,21 @@
  *  When it is destructed, all of the resources needed for selecting the physical device are cleaned up...
  *  could honestly make it just get the resources it needs in the actual selection function but we shall see
  */
-class VulkanPhysicalDeviceSelector {
-public:
-    std::optional<VkPhysicalDevice> selectPhysicalDevice(VkInstance instance, VkSurfaceKHR surface);
-private:
-
+// suuuuper simplified where we just want one queue capable of graphics + present
+struct PhysicalDeviceInfoWeCareAbout
+{
+    VkPhysicalDevice physicalDevice;
+    uint32_t
+        graphicsPresentQueueFamilyIndex; // family index of queue that does everything we want (lazy)
 };
 
+class VulkanPhysicalDeviceSelector
+{
+  public:
+    std::optional<PhysicalDeviceInfoWeCareAbout> selectPhysicalDevice(VkInstance instance, VkSurfaceKHR surface);
 
+  private:
+    bool HasSwapChainExtension(VkPhysicalDevice device);
+};
 
-#endif //VULKANPHYSICALDEVICESELECTOR_H
+#endif // VULKANPHYSICALDEVICESELECTOR_H

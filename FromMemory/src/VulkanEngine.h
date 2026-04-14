@@ -30,6 +30,7 @@ class VulkanEngine
     // probably where the instance and resources go.
     std::optional<VkInstance> instance;
     std::optional<VkSurfaceKHR> surface;
+    std::optional<VkDevice> device;
 
     // #JOHN when I have more energy think through how I could make GLFW calls RAII since I don't like these raw
     // pointers
