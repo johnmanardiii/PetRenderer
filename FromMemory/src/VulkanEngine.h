@@ -28,9 +28,11 @@ class VulkanEngine
 
   private:
     // probably where the instance and resources go.
+    // #JOHN reconsider the optionals at this point since like... they are required?
     std::optional<VkInstance> instance;
     std::optional<VkSurfaceKHR> surface;
     std::optional<VkDevice> device;
+    std::optional<VkSwapchainKHR> swapchain;
 
     // #JOHN when I have more energy think through how I could make GLFW calls RAII since I don't like these raw
     // pointers

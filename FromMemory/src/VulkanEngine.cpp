@@ -3,8 +3,7 @@
 //
 #include "VulkanEngine.h"
 
-
-
+#include "VulkanCreateSwapchain.h"
 #include "VulkanInstanceBuilder.h"
 #include "VulkanLogicalDeviceCreator.h"
 #include "VulkanPhysicalDeviceSelector.h"
@@ -13,14 +12,19 @@
 #include <fmt/printf.h>
 #include <vector>
 
-
-
 VulkanEngine::~VulkanEngine()
 {
     // clean up vulkan resources if we have them
     // #JOHN in the future, once you have the device, query present support with
     // glfwGetPhysicalDevicePresentationSupport.
     // https://www.glfw.org/docs/3.3/group__vulkan.html#gaff3823355cdd7e2f3f9f4d9ea9518d92
+
+    if (swapchain)
+    {
+        // #JOHN kinda interesting, like I know that *device is valid since otherwise the swapchain couldn't have
+        // been created in the control flow below, but still makes me 2% nervous.
+        vkDestroySwapchainKHR(*device, *swapchain, nullptr);
+    }
 
     if (device)
     {
@@ -69,6 +73,7 @@ bool VulkanEngine::init()
         requiredExtensions.push_back(extensions[i]);
     }
     requiredExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+    requiredExtensions.push_back(VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME);
 
     // #JOHN you need to pass the vulkan version here.
     instance = VulkanInstanceBuilder()
@@ -84,6 +89,9 @@ bool VulkanEngine::init()
     }
 
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+    // #JOHN move these values out to the class itself
+    int width = 640;
+    int height = 480;
     window = glfwCreateWindow(640, 480, "Window Title", nullptr, nullptr);
 
     // Get a vulkan window surface from glfw
@@ -91,6 +99,7 @@ bool VulkanEngine::init()
     vkchk(glfwCreateWindowSurface(*instance, window, nullptr, &surface_handle));
 
     // #JOHN doesn't seem like it follows the most awesome pattern but whatevs.
+    // really can't fail in this way... why optional?
     surface = surface_handle;
 
     // gather a valid physical device
@@ -108,6 +117,16 @@ bool VulkanEngine::init()
     if (!device)
     {
         fmt::printf("Failed to create logical device.\n");
+        return false;
+    }
+
+    swapchain = VulkanCreateSwapchain::CreateSwapchain(
+        physDeviceinfo->physicalDevice, *surface,
+        {.width = static_cast<uint32_t>(width), .height = static_cast<uint32_t>(height)});
+
+    if (!swapchain)
+    {
+        fmt::printf("Failed to create swapchain.\n");
         return false;
     }
 
