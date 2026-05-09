@@ -121,13 +121,17 @@ bool VulkanEngine::init()
     }
 
     swapchain = VulkanCreateSwapchain::CreateSwapchain(
-        physDeviceinfo->physicalDevice, *surface,
+        *device, physDeviceinfo->physicalDevice, *surface,
         {.width = static_cast<uint32_t>(width), .height = static_cast<uint32_t>(height)});
 
     if (!swapchain)
     {
         fmt::printf("Failed to create swapchain.\n");
         return false;
+    }
+    else
+    {
+        fmt::print("Created swapchain successfully.\n");
     }
 
     return true;

@@ -14,7 +14,7 @@
 class VulkanCreateSwapchain
 {
   public:
-    static std::optional<VkSwapchainKHR> CreateSwapchain(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface,
+    static std::optional<VkSwapchainKHR> CreateSwapchain(VkDevice device, VkPhysicalDevice physicalDevice, VkSurfaceKHR surface,
                                                          VkExtent2D fallbackExtentSize);
 
   private:

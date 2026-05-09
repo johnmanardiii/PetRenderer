@@ -6,8 +6,43 @@
 
 #include "VulkanUtil.h"
 
+#include <assert.h>
 #include <vector>
-std::optional<VkSwapchainKHR> VulkanCreateSwapchain::CreateSwapchain(VkPhysicalDevice physicalDevice,
+
+void PrintSupportedUsageFlags(VkImageUsageFlags availableUsageFlags)
+{
+    constexpr uint32_t numBinaryDigitsInFlags = 4 * 8;
+    for (int i = 0; i < numBinaryDigitsInFlags; i++)
+    {
+        uint32_t bitTest = 1 << (i);
+        if (bitTest & availableUsageFlags)
+        {
+            fmt::print("{:#08X}\n", bitTest);
+        }
+    }
+
+    // on my machine, this displayed:
+    // VK_IMAGE_USAGE_TRANSFER_SRC_BIT - image used as source of transfer command
+    //
+    // VK_IMAGE_USAGE_TRANSFER_DST_BIT - image can be used as destination of a transfer command
+    //
+    // VK_IMAGE_USAGE_SAMPLED_BIT - image can be used to create image view suitable for occupying a VkDescriptorSet slot
+    // either of type VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE or VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, and be sampled by a
+    // shader.
+    //
+    // VK_IMAGE_USAGE_STORAGE_BIT - image can be used to create a image view suitable for occupying a descriptor set
+    // slot of type storage image
+    //
+    // VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT - image can be used to create an image view
+    // suitable for use as a color or resolve attachment by framebuffer
+    //
+    // VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT - image can
+    // be used to create img view suitable occupying descriptorset of type input attachment (read from shader as input
+    // attachment and used as an input attachment in a framebuffer.
+}
+
+// #JOHN this should probably take an old swapchain as an option here.
+std::optional<VkSwapchainKHR> VulkanCreateSwapchain::CreateSwapchain(VkDevice device, VkPhysicalDevice physicalDevice,
                                                                      VkSurfaceKHR surface,
                                                                      VkExtent2D fallbackExtentSize)
 {
@@ -88,8 +123,52 @@ std::optional<VkSwapchainKHR> VulkanCreateSwapchain::CreateSwapchain(VkPhysicalD
         // #JOHN absolutely NO idea if GLFW needs to change if this is something other than what we passed...
         // (initial GLFW surface outside actual surface bounds or somethign).
         // we have to do some funny business to figure out what the swapchain should be...
-        swapChainExtent.width = std::clamp(fallbackExtentSize.width, surfaceCapabilities.surfaceCapabilities.minImageExtent.width, surfaceCapabilities.surfaceCapabilities.maxImageExtent.width);
-        swapChainExtent.height = std::clamp(fallbackExtentSize.height, surfaceCapabilities.surfaceCapabilities.minImageExtent.height, surfaceCapabilities.surfaceCapabilities.maxImageExtent.height);
+        swapChainExtent.width =
+            std::clamp(fallbackExtentSize.width, surfaceCapabilities.surfaceCapabilities.minImageExtent.width,
+                       surfaceCapabilities.surfaceCapabilities.maxImageExtent.width);
+        swapChainExtent.height =
+            std::clamp(fallbackExtentSize.height, surfaceCapabilities.surfaceCapabilities.minImageExtent.height,
+                       surfaceCapabilities.surfaceCapabilities.maxImageExtent.height);
+    }
+
+    // PrintSupportedUsageFlags(surfaceCapabilities.surfaceCapabilities.supportedUsageFlags);
+
+    const std::vector<VkImageUsageFlags> requiredUsageFlags = {
+        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+        VK_IMAGE_USAGE_TRANSFER_DST_BIT // shall be copied over
+    };
+
+    VkImageUsageFlags usages = 0;
+    for (VkImageUsageFlags usage : requiredUsageFlags)
+    {
+        if ((usage & surfaceCapabilities.surfaceCapabilities.supportedUsageFlags) == 0)
+        {
+            // ehhh this is a strange way to present the error
+            fmt::print("Usage flag : {:#08X} not found\n", usage);
+            vkchk(VK_ERROR_IMAGE_USAGE_NOT_SUPPORTED_KHR);
+        }
+
+        usages |= usage;
+    }
+
+    // if i really cared about this transform thing:
+    // https://android-developers.googleblog.com/2020/02/handling-device-orientation-efficiently.html
+
+    VkSurfaceTransformFlagsKHR supportedTransforms = surfaceCapabilities.surfaceCapabilities.supportedTransforms;
+    // if we are not identity (or identity isn't supported), assert since we can't currently handle that, see readme for
+    //      what to do if this becomes relevant:
+    VkSurfaceTransformFlagBitsKHR surfaceTransform = surfaceCapabilities.surfaceCapabilities.currentTransform;
+    if (surfaceTransform != VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR ||
+        (surfaceCapabilities.surfaceCapabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR) == 0)
+    {
+        fmt::printf("Engine currently only supports identity pretransform and will handle rotation later if needed");
+        return std::nullopt;
+    }
+
+    if (!(surfaceCapabilities.surfaceCapabilities.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR))
+    {
+        fmt::print("Composite alpha opaque is not supported... what are we doing here\n");
+        return std::nullopt;
     }
 
     // #JOHN i get the feeling that it would be extremely painful to handle resizing at this stage of the project
@@ -101,10 +180,23 @@ std::optional<VkSwapchainKHR> VulkanCreateSwapchain::CreateSwapchain(VkPhysicalD
         .imageFormat = swapChainSurfaceFormat.surfaceFormat.format,
         .imageColorSpace = swapChainSurfaceFormat.surfaceFormat.colorSpace,
         .imageExtent = swapChainExtent,
-
+        .imageArrayLayers = 1,
+        .imageUsage = usages,
+        .imageSharingMode = VK_SHARING_MODE_EXCLUSIVE,
+        .queueFamilyIndexCount = 0, // not concurrent sharing mode
+        .pQueueFamilyIndices = nullptr,
+        .preTransform = surfaceTransform,
+        .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+        .presentMode = *selectedPresentMode,
+        .clipped = VK_TRUE,
+        .oldSwapchain =
+            VK_NULL_HANDLE, // #JOHN if we need to re-call this (which we will), the old swapchain will go here
     };
 
-    return std::nullopt;
+    VkSwapchainKHR swapchain = VK_NULL_HANDLE;
+    vkchk(vkCreateSwapchainKHR(device, &swapchainInfo, NULL, &swapchain));
+
+    return swapchain;
 }
 
 VkSurfaceFormat2KHR VulkanCreateSwapchain::ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormat2KHR> &formats)
