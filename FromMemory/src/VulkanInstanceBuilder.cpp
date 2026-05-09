@@ -21,7 +21,7 @@ std::optional<VkInstance> VulkanInstanceBuilder::GetInstance()
     // a different file where you can just pass a "release" bool.
     // query the layers available
     uint32_t layerCount = 0;
-    vkchk(vkEnumerateInstanceLayerProperties(&layerCount, NULL));
+    vkchk(vkEnumerateInstanceLayerProperties(&layerCount, nullptr));
     std::vector<VkLayerProperties> availableLayers(layerCount);
 
     vkchk(vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data()));

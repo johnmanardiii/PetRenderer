@@ -15,7 +15,7 @@
 class VulkanEngine
 {
   public:
-    explicit VulkanEngine() = default;
+    VulkanEngine() = default;
     ~VulkanEngine();
 
     bool init();

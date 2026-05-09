@@ -33,7 +33,7 @@ VulkanEngine::~VulkanEngine()
 
     if (instance.has_value() && surface.has_value())
     {
-        vkDestroySurfaceKHR(*instance, *surface, NULL);
+        vkDestroySurfaceKHR(*instance, *surface, nullptr);
     }
 
     // cleanup vulkan handle stuff (move this to RAII class engine) #JOHN

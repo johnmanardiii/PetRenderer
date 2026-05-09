@@ -6,7 +6,7 @@
 
 #include "VulkanUtil.h"
 
-#include <assert.h>
+#include <cassert>
 #include <vector>
 
 void PrintSupportedUsageFlags(VkImageUsageFlags availableUsageFlags)
@@ -101,11 +101,12 @@ std::optional<VkSwapchainKHR> VulkanCreateSwapchain::CreateSwapchain(VkDevice de
 
     // go for more than one image than minimum if that is possible
     // there is this weird part in the API where max image count being 0 actually means no limit on image count
-    uint32_t minImageCount = 3; // should specify somewhere that I have locked us into triple buffering
+    uint32_t passedMinImageCount = std::max(static_cast<uint32_t>(3), surfaceCapabilities.surfaceCapabilities.minImageCount);
     if (surfaceCapabilities.surfaceCapabilities.maxImageCount != 0)
     {
-        minImageCount = std::max(minImageCount, surfaceCapabilities.surfaceCapabilities.maxImageCount);
+        passedMinImageCount = std::min(passedMinImageCount, surfaceCapabilities.surfaceCapabilities.maxImageCount);
     }
+
 
     // ok figuring out this whole "choose extent for your swapchain" was a PAIN to figure out what it means.
     // apparently on windows the 0xFFFF... case for the current Extent doesn't happen, but we will have a fallback
@@ -176,7 +177,7 @@ std::optional<VkSwapchainKHR> VulkanCreateSwapchain::CreateSwapchain(VkDevice de
     VkSwapchainCreateInfoKHR swapchainInfo = {
         .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
         .surface = surface,
-        .minImageCount = minImageCount,
+        .minImageCount = passedMinImageCount,
         .imageFormat = swapChainSurfaceFormat.surfaceFormat.format,
         .imageColorSpace = swapChainSurfaceFormat.surfaceFormat.colorSpace,
         .imageExtent = swapChainExtent,
