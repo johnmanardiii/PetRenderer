@@ -5,10 +5,10 @@
 #include "VulkanCreateSwapchain.h"
 
 #include "VulkanUtil.h"
-
-#include <cassert>
 #include <vector>
 
+namespace VulkanCreateSwapchain
+{
 void PrintSupportedUsageFlags(VkImageUsageFlags availableUsageFlags)
 {
     constexpr uint32_t numBinaryDigitsInFlags = 4 * 8;
@@ -39,6 +39,33 @@ void PrintSupportedUsageFlags(VkImageUsageFlags availableUsageFlags)
     // VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT - image can
     // be used to create img view suitable occupying descriptorset of type input attachment (read from shader as input
     // attachment and used as an input attachment in a framebuffer.
+}
+
+static VkSurfaceFormat2KHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormat2KHR> &formats)
+{
+    // this is a list of formats to go for, in the order I want them. I am gonna make my application prefer srgb
+    // and then pick one of these depending on which is available
+    // woah b8g8r8a8 srgb is wayyy more common... it is because that is the order windows represents things so
+    // potentially one less swizzle: https://vulkan.gpuinfo.org/listsurfaceformats.php?platform=windows
+    // std::vector<VkSurfaceFormat
+    VkSurfaceFormat2KHR desiredFormat = formats[0];
+    std::vector<std::pair<VkFormat, VkColorSpaceKHR>> priorityFormats{
+            {VK_FORMAT_B8G8R8A8_SRGB, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR},
+            {VK_FORMAT_R8G8B8A8_SRGB, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR}};
+    // look for our real desired format if we can find it:
+    for (const auto &priorityFormat : priorityFormats)
+    {
+        for (const auto &format : formats)
+        {
+            if (priorityFormat.first == format.surfaceFormat.format &&
+                priorityFormat.second == format.surfaceFormat.colorSpace)
+            {
+                return format;
+            }
+        }
+    }
+
+    return formats[0];
 }
 
 // #JOHN this should probably take an old swapchain as an option here.
@@ -101,12 +128,12 @@ std::optional<VkSwapchainKHR> VulkanCreateSwapchain::CreateSwapchain(VkDevice de
 
     // go for more than one image than minimum if that is possible
     // there is this weird part in the API where max image count being 0 actually means no limit on image count
-    uint32_t passedMinImageCount = std::max(static_cast<uint32_t>(3), surfaceCapabilities.surfaceCapabilities.minImageCount);
+    uint32_t passedMinImageCount =
+        std::max(static_cast<uint32_t>(3), surfaceCapabilities.surfaceCapabilities.minImageCount);
     if (surfaceCapabilities.surfaceCapabilities.maxImageCount != 0)
     {
         passedMinImageCount = std::min(passedMinImageCount, surfaceCapabilities.surfaceCapabilities.maxImageCount);
     }
-
 
     // ok figuring out this whole "choose extent for your swapchain" was a PAIN to figure out what it means.
     // apparently on windows the 0xFFFF... case for the current Extent doesn't happen, but we will have a fallback
@@ -199,30 +226,4 @@ std::optional<VkSwapchainKHR> VulkanCreateSwapchain::CreateSwapchain(VkDevice de
 
     return swapchain;
 }
-
-VkSurfaceFormat2KHR VulkanCreateSwapchain::ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormat2KHR> &formats)
-{
-    // this is a list of formats to go for, in the order I want them. I am gonna make my application prefer srgb
-    // and then pick one of these depending on which is available
-    // woah b8g8r8a8 srgb is wayyy more common... it is because that is the order windows represents things so
-    // potentially one less swizzle: https://vulkan.gpuinfo.org/listsurfaceformats.php?platform=windows
-    // std::vector<VkSurfaceFormat
-    VkSurfaceFormat2KHR desiredFormat = formats[0];
-    std::vector<std::pair<VkFormat, VkColorSpaceKHR>> priorityFormats{
-        {VK_FORMAT_B8G8R8A8_SRGB, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR},
-        {VK_FORMAT_R8G8B8A8_SRGB, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR}};
-    // look for our real desired format if we can find it:
-    for (const auto &priorityFormat : priorityFormats)
-    {
-        for (const auto &format : formats)
-        {
-            if (priorityFormat.first == format.surfaceFormat.format &&
-                priorityFormat.second == format.surfaceFormat.colorSpace)
-            {
-                return format;
-            }
-        }
-    }
-
-    return formats[0];
-}
+} // namespace VulkanCreateSwapchain

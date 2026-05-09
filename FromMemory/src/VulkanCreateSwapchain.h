@@ -11,14 +11,10 @@
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
-class VulkanCreateSwapchain
+namespace VulkanCreateSwapchain
 {
-  public:
-    static std::optional<VkSwapchainKHR> CreateSwapchain(VkDevice device, VkPhysicalDevice physicalDevice, VkSurfaceKHR surface,
-                                                         VkExtent2D fallbackExtentSize);
-
-  private:
-    static VkSurfaceFormat2KHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormat2KHR> &formats);
+std::optional<VkSwapchainKHR> CreateSwapchain(VkDevice device, VkPhysicalDevice physicalDevice, VkSurfaceKHR surface,
+                                              VkExtent2D fallbackExtentSize);
 };
 
 #endif // VULKANCREATESWAPCHAIN_H
