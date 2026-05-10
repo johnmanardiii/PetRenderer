@@ -50,8 +50,8 @@ static VkSurfaceFormat2KHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFo
     // std::vector<VkSurfaceFormat
     VkSurfaceFormat2KHR desiredFormat = formats[0];
     std::vector<std::pair<VkFormat, VkColorSpaceKHR>> priorityFormats{
-            {VK_FORMAT_B8G8R8A8_SRGB, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR},
-            {VK_FORMAT_R8G8B8A8_SRGB, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR}};
+        {VK_FORMAT_B8G8R8A8_SRGB, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR},
+        {VK_FORMAT_R8G8B8A8_SRGB, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR}};
     // look for our real desired format if we can find it:
     for (const auto &priorityFormat : priorityFormats)
     {
@@ -69,9 +69,8 @@ static VkSurfaceFormat2KHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFo
 }
 
 // #JOHN this should probably take an old swapchain as an option here.
-std::optional<VkSwapchainKHR> VulkanCreateSwapchain::CreateSwapchain(VkDevice device, VkPhysicalDevice physicalDevice,
-                                                                     VkSurfaceKHR surface,
-                                                                     VkExtent2D fallbackExtentSize)
+std::optional<SwapchainInfo> VulkanCreateSwapchain::CreateSwapchain(VkDevice device, VkPhysicalDevice physicalDevice,
+                                                                    VkSurfaceKHR surface, VkExtent2D fallbackExtentSize)
 {
     // Present Modes:
     // https://docs.vulkan.org/refpages/latest/refpages/source/vkGetPhysicalDeviceSurfacePresentModesKHR.html
@@ -222,8 +221,55 @@ std::optional<VkSwapchainKHR> VulkanCreateSwapchain::CreateSwapchain(VkDevice de
     };
 
     VkSwapchainKHR swapchain = VK_NULL_HANDLE;
-    vkchk(vkCreateSwapchainKHR(device, &swapchainInfo, NULL, &swapchain));
+    vkchk(vkCreateSwapchainKHR(device, &swapchainInfo, nullptr, &swapchain));
 
-    return swapchain;
+    return SwapchainInfo{.swapchain = swapchain, .swapchainImageFormat = swapchainInfo.imageFormat};
 }
+
+std::optional<std::vector<VkImageView>> CreateSwapchainImageViews(VkDevice device, const SwapchainInfo& swapchainInfo)
+{
+    uint32_t swapchainImageCount = 0;
+    vkchk(vkGetSwapchainImagesKHR(device, swapchainInfo.swapchain, &swapchainImageCount, nullptr));
+
+    std::vector<VkImage> swapchainImages(swapchainImageCount);
+    vkchk(vkGetSwapchainImagesKHR(device, swapchainInfo.swapchain, &swapchainImageCount, swapchainImages.data()));
+
+    std::vector<VkImageView> swapchainImageViews(swapchainImageCount);
+
+    VkComponentMapping swapchainMapping = {
+        .r = VK_COMPONENT_SWIZZLE_IDENTITY,
+        .g = VK_COMPONENT_SWIZZLE_IDENTITY,
+        .b = VK_COMPONENT_SWIZZLE_IDENTITY,
+        .a = VK_COMPONENT_SWIZZLE_IDENTITY,
+    };
+
+    // keep it simple, one image, one layer, one mip level
+    VkImageSubresourceRange subresourceRange = {
+        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+        .baseMipLevel = 0,
+        .levelCount = 1,
+        .baseArrayLayer = 0,
+        .layerCount = 1,
+    };
+
+    for (uint32_t i = 0; i < swapchainImageCount; i++)
+    {
+        VkImageViewCreateInfo swapchainImageViewInfo = {
+            .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+            .pNext = nullptr,
+            .flags =
+                0, // looked over https://docs.vulkan.org/refpages/latest/refpages/source/VkImageViewCreateFlagBits.html
+                   // and didn't see anything I needed rn.
+            .image = swapchainImages[i],
+            .viewType = VK_IMAGE_VIEW_TYPE_2D,
+            .format = swapchainInfo.swapchainImageFormat,
+            .components = swapchainMapping,
+            .subresourceRange = subresourceRange,
+        };
+        vkchk(vkCreateImageView(device, &swapchainImageViewInfo, nullptr, &swapchainImageViews[i]));
+    }
+
+    return swapchainImageViews;
+}
+
 } // namespace VulkanCreateSwapchain

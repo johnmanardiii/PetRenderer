@@ -19,11 +19,22 @@ VulkanEngine::~VulkanEngine()
     // glfwGetPhysicalDevicePresentationSupport.
     // https://www.glfw.org/docs/3.3/group__vulkan.html#gaff3823355cdd7e2f3f9f4d9ea9518d92
 
-    if (swapchain)
+    // clean up image views of swapchain before destroying the swapchain:
+    // lowkey the swapchain clean up should be abstracted since it will need to happen before destructor in rebuild
+    // #JOHN
+    if (swapchainImageViews)
+    {
+        for (VkImageView swapchainImageView : *swapchainImageViews)
+        {
+            vkDestroyImageView(*device, swapchainImageView, nullptr);
+        }
+    }
+
+    if (swapchainInfo)
     {
         // #JOHN kinda interesting, like I know that *device is valid since otherwise the swapchain couldn't have
         // been created in the control flow below, but still makes me 2% nervous.
-        vkDestroySwapchainKHR(*device, *swapchain, nullptr);
+        vkDestroySwapchainKHR(*device, swapchainInfo->swapchain, nullptr);
     }
 
     if (device)
@@ -120,18 +131,24 @@ bool VulkanEngine::init()
         return false;
     }
 
-    swapchain = VulkanCreateSwapchain::CreateSwapchain(
+    swapchainInfo = VulkanCreateSwapchain::CreateSwapchain(
         *device, physDeviceinfo->physicalDevice, *surface,
         {.width = static_cast<uint32_t>(width), .height = static_cast<uint32_t>(height)});
 
-    if (!swapchain)
+    if (!swapchainInfo)
     {
         fmt::printf("Failed to create swapchain.\n");
         return false;
     }
-    else
+
+    fmt::print("Created swapchain successfully.\n");
+
+    swapchainImageViews = VulkanCreateSwapchain::CreateSwapchainImageViews(*device, *swapchainInfo);
+
+    if (!swapchainImageViews)
     {
-        fmt::print("Created swapchain successfully.\n");
+        fmt::printf("Failed to create swapchain image views.\n");
+        return false;
     }
 
     return true;

@@ -11,10 +11,21 @@
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
+/*
+ * Misc things I need later that I determined from creating the swapchain
+ */
+struct SwapchainInfo
+{
+    VkSwapchainKHR swapchain;
+    VkFormat swapchainImageFormat;
+};
+
 namespace VulkanCreateSwapchain
 {
-std::optional<VkSwapchainKHR> CreateSwapchain(VkDevice device, VkPhysicalDevice physicalDevice, VkSurfaceKHR surface,
+std::optional<SwapchainInfo> CreateSwapchain(VkDevice device, VkPhysicalDevice physicalDevice, VkSurfaceKHR surface,
                                               VkExtent2D fallbackExtentSize);
+
+std::optional<std::vector<VkImageView>> CreateSwapchainImageViews(VkDevice device, const SwapchainInfo& swapchain);
 };
 
 #endif // VULKANCREATESWAPCHAIN_H
