@@ -151,5 +151,8 @@ bool VulkanEngine::init()
         return false;
     }
 
+    // #JOHN need to verify that this is right. and also I should create N of these...
+
+
     return true;
 }

@@ -5,6 +5,7 @@ target_sources(PetRenderer PRIVATE
         VulkanPhysicalDeviceSelector.cpp
         VulkanLogicalDeviceCreator.cpp
         VulkanCreateSwapchain.cpp
+        VulkanCommandBufferCreator.cpp
 )
 
 target_include_directories(PetRenderer PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
