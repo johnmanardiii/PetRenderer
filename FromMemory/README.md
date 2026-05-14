@@ -16,3 +16,6 @@ within a larger ecosystem.
 * I decided to go with clipping on the swapchain
 * should probably read this if my device ever rotates: https://android-developers.googleblog.com/2020/02/handling-device-orientation-efficiently.html. decided not to 
 * read this if pre transform needs to be handled. for now, if not identity, assert: https://github.com/google/vulkan-pre-rotation-demo
+
+## 5/12/2026
+* going to make one command pool / buffer per swapchain image, just for drawing. wish me luck

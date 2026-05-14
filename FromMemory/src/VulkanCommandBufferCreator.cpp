@@ -5,12 +5,12 @@
 #include "VulkanCommandBufferCreator.h"
 
 #include "VulkanUtil.h"
+#include <cassert>
 
-
-
-VulkanCommandStructures::VulkanCommandStructures(VkDevice device, uint32_t queueFamilyIndex)
-    : device(device), queueFamilyIndex(queueFamilyIndex)
+VulkanCommandStructures::VulkanCommandStructures(VkDevice device, uint32_t queueFamilyIndex, uint32_t framesInFlight)
+    : numFramesInFlight(framesInFlight), device(device), queueFamilyIndex(queueFamilyIndex)
 {
+    assert(numFramesInFlight > 0);
     // Going to reset these queues each frame, so went with that flag
     // always go down a useless rabbit hole when making these for protected memory:
     // https://docs.vulkan.org/guide/latest/protected.html
@@ -36,10 +36,20 @@ VulkanCommandStructures::VulkanCommandStructures(VkDevice device, uint32_t queue
         .commandBufferCount = 1 // for now going to make one command buffer
     };
 
-    vkchk(vkAllocateCommandBuffers(device, &commandBufferAllocateInfo, &commandBuffer));
+    for (int i = 0; i < numFramesInFlight; i++)
+    {
+        VkCommandBuffer commandBuffer;
+        vkchk(vkAllocateCommandBuffers(device, &commandBufferAllocateInfo, &commandBuffer));
+
+        frameInFlightStructures.emplace_back(PerFrameInFlightStructure{
+            .commandBuffer = commandBuffer,
+        });
+    }
 }
 VulkanCommandStructures::~VulkanCommandStructures()
 {
+    // destroy semaphores and all that
+
     // Note: if the command pool is destroyed, it cleans up its command buffers
     if (commandPool != VK_NULL_HANDLE)
     {
@@ -48,7 +58,7 @@ VulkanCommandStructures::~VulkanCommandStructures()
 }
 VulkanCommandStructures::VulkanCommandStructures(VulkanCommandStructures &&other) noexcept
     : commandPool(std::exchange(other.commandPool, VK_NULL_HANDLE)),
-      commandBuffer(std::exchange(other.commandBuffer, VK_NULL_HANDLE)), device(other.device),
+      frameInFlightStructures(std::exchange(other.frameInFlightStructures, VK_NULL_HANDLE)), device(other.device),
       queueFamilyIndex(other.queueFamilyIndex)
 {
 }
@@ -60,7 +70,7 @@ VulkanCommandStructures &VulkanCommandStructures::operator=(VulkanCommandStructu
     device = other.device;
     queueFamilyIndex = other.queueFamilyIndex;
     commandPool = std::exchange(other.commandPool, VK_NULL_HANDLE);
-    commandBuffer = std::exchange(other.commandBuffer, VK_NULL_HANDLE);
+    frameInFlightStructures = std::exchange(other.frameInFlightStructures, VK_NULL_HANDLE);
 
     return *this;
 }

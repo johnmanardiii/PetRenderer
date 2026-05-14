@@ -151,8 +151,49 @@ bool VulkanEngine::init()
         return false;
     }
 
-    // #JOHN need to verify that this is right. and also I should create N of these...
 
+    // #JOHN need to verify that this is right. and also I should create N of these...
+    // these say something you need to figure out by reading this tomorrow; https://docs.vulkan.org/guide/latest/swapchain_semaphore_reuse.html
+    VkSemaphoreCreateInfo semaphoreCreateInfo{
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
+    };
+    for (int i = 0; i < swapchainImageViews->size(); i++)
+    {
+        VkSemaphore semaphore = VK_NULL_HANDLE;
+        vkchk(vkCreateSemaphore(*device, &semaphoreCreateInfo, nullptr, &semaphore));
+        imageAvailableSemaphores.emplace_back(semaphore);
+    }
 
     return true;
+}
+
+void VulkanEngine::RenderAndPresentToSwapchain()
+{
+    // wait on the fence for this frame (per frame data thing) to say "hey I have handed this stuff off and I am ready"
+
+    VkAcquireNextImageInfoKHR acquireInfo {
+        .sType = VK_STRUCTURE_TYPE_ACQUIRE_NEXT_IMAGE_INFO_KHR,
+        .pNext = nullptr,
+        .swapchain = swapchainInfo->swapchain,
+        // one second timeout on getting the swapchain image
+        .timeout = 1000000000,
+
+    };
+
+    vkAcquireNextImage2KHR(*device, )
+}
+
+void VulkanEngine::draw()
+{
+    // the classic GLFW loop:
+    while (!glfwWindowShouldClose(window))
+    {
+        // render image and present to swapchain
+        RenderAndPresentToSwapchain();
+
+        // #JOHN is this happening at the right rate... not sure
+        glfwPollEvents();
+    }
 }

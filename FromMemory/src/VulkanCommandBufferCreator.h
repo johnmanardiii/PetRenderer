@@ -6,6 +6,13 @@
 #define VULKANCOMMANDBUFFERCREATOR_H
 
 #include "vulkan/vulkan.h"
+#include <vector>
+
+// created per frame in flight
+struct PerFrameInFlightStructure
+{
+    VkCommandBuffer commandBuffer = VK_NULL_HANDLE;
+};
 
 /*
  * #JOHN not sure why i grouped all of this into like, one file and class but I felt like "command pool" and
@@ -16,20 +23,34 @@
 class VulkanCommandStructures
 {
 public:
-    VulkanCommandStructures(VkDevice device, uint32_t queueFamilyIndex);
+    VulkanCommandStructures(VkDevice device, uint32_t queueFamilyIndex, uint32_t framesInFlight);
     ~VulkanCommandStructures();
     VulkanCommandStructures(const VulkanCommandStructures&) = delete;
     VulkanCommandStructures& operator=(const VulkanCommandStructures&) = delete;
     VulkanCommandStructures(VulkanCommandStructures&&) noexcept;
     VulkanCommandStructures& operator=(VulkanCommandStructures&&) noexcept;
+    PerFrameInFlightStructure& getPerFrameInFlightStructure(int frame)
+    {
+        return frameInFlightStructures[frame % frameInFlightStructures.size()];
+    }
 private:
+    uint32_t numFramesInFlight;
     // #JOHN honestly ... give this a destructor. in case the whole thing blows up in the middle of construction.
     VkCommandPool commandPool = VK_NULL_HANDLE;
-    VkCommandBuffer commandBuffer = VK_NULL_HANDLE;
+    std::vector<PerFrameInFlightStructure> frameInFlightStructures;
 
     // #JOHN this needs its own clean up for realllllll especially since I will be making n of them.
     VkDevice device;
     uint32_t queueFamilyIndex;  // keeping this in case I am curious later, should be chill. #JOHN
+};
+
+// #JOHN this mayyy belong in a new file (probably definitely)
+// this will hold all of the rendering sync primitives I will need per frame.
+// not sure if this is the right structure (it probalby isn't)
+class RenderSyncPrimitives
+{
+public:
+
 };
 
 #endif //VULKANCOMMANDBUFFERCREATOR_H
