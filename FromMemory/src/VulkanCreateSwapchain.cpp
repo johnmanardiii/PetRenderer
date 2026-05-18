@@ -5,6 +5,8 @@
 #include "VulkanCreateSwapchain.h"
 
 #include "VulkanUtil.h"
+
+#include <cassert>
 #include <vector>
 
 namespace VulkanCreateSwapchain
@@ -49,9 +51,8 @@ static VkSurfaceFormat2KHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFo
     // potentially one less swizzle: https://vulkan.gpuinfo.org/listsurfaceformats.php?platform=windows
     // std::vector<VkSurfaceFormat
     VkSurfaceFormat2KHR desiredFormat = formats[0];
-    std::vector<std::pair<VkFormat, VkColorSpaceKHR>> priorityFormats{
-        {VK_FORMAT_B8G8R8A8_SRGB, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR},
-        {VK_FORMAT_R8G8B8A8_SRGB, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR}};
+    // currently only supporting BGRA for simplicity
+    std::vector<std::pair<VkFormat, VkColorSpaceKHR>> priorityFormats{{VK_FORMAT_B8G8R8A8_SRGB, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR}};
     // look for our real desired format if we can find it:
     for (const auto &priorityFormat : priorityFormats)
     {
@@ -65,6 +66,7 @@ static VkSurfaceFormat2KHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFo
         }
     }
 
+    assert(false && "No Priority image format found... not sure what is going to happen here.");
     return formats[0];
 }
 
@@ -223,17 +225,19 @@ std::optional<SwapchainInfo> VulkanCreateSwapchain::CreateSwapchain(VkDevice dev
     VkSwapchainKHR swapchain = VK_NULL_HANDLE;
     vkchk(vkCreateSwapchainKHR(device, &swapchainInfo, nullptr, &swapchain));
 
-    return SwapchainInfo{.swapchain = swapchain, .swapchainImageFormat = swapchainInfo.imageFormat};
+    // get the list of images so we don't need to get them every time:
+    uint32_t swapchainImageCount = 0;
+    vkchk(vkGetSwapchainImagesKHR(device, swapchain, &swapchainImageCount, nullptr));
+
+    std::vector<VkImage> swapchainImages(swapchainImageCount);
+    vkchk(vkGetSwapchainImagesKHR(device, swapchain, &swapchainImageCount, swapchainImages.data()));
+
+    return SwapchainInfo{.swapchain = swapchain, .swapchainImageFormat = swapchainInfo.imageFormat, .swapchainImages = swapchainImages};
 }
 
 std::optional<std::vector<VkImageView>> CreateSwapchainImageViews(VkDevice device, const SwapchainInfo& swapchainInfo)
 {
-    uint32_t swapchainImageCount = 0;
-    vkchk(vkGetSwapchainImagesKHR(device, swapchainInfo.swapchain, &swapchainImageCount, nullptr));
-
-    std::vector<VkImage> swapchainImages(swapchainImageCount);
-    vkchk(vkGetSwapchainImagesKHR(device, swapchainInfo.swapchain, &swapchainImageCount, swapchainImages.data()));
-
+    size_t swapchainImageCount = swapchainInfo.swapchainImages.size();
     std::vector<VkImageView> swapchainImageViews(swapchainImageCount);
 
     VkComponentMapping swapchainMapping = {
@@ -260,7 +264,7 @@ std::optional<std::vector<VkImageView>> CreateSwapchainImageViews(VkDevice devic
             .flags =
                 0, // looked over https://docs.vulkan.org/refpages/latest/refpages/source/VkImageViewCreateFlagBits.html
                    // and didn't see anything I needed rn.
-            .image = swapchainImages[i],
+            .image = swapchainInfo.swapchainImages[i],
             .viewType = VK_IMAGE_VIEW_TYPE_2D,
             .format = swapchainInfo.swapchainImageFormat,
             .components = swapchainMapping,

@@ -12,6 +12,8 @@
 struct PerFrameInFlightStructure
 {
     VkCommandBuffer commandBuffer = VK_NULL_HANDLE;
+    VkSemaphore imageAcquiredSemaphore = VK_NULL_HANDLE;
+
 };
 
 /*
@@ -29,7 +31,7 @@ public:
     VulkanCommandStructures& operator=(const VulkanCommandStructures&) = delete;
     VulkanCommandStructures(VulkanCommandStructures&&) noexcept;
     VulkanCommandStructures& operator=(VulkanCommandStructures&&) noexcept;
-    PerFrameInFlightStructure& getPerFrameInFlightStructure(int frame)
+    PerFrameInFlightStructure& getPerFrameInFlightStructure(uint32_t frame)
     {
         return frameInFlightStructures[frame % frameInFlightStructures.size()];
     }
@@ -44,13 +46,5 @@ private:
     uint32_t queueFamilyIndex;  // keeping this in case I am curious later, should be chill. #JOHN
 };
 
-// #JOHN this mayyy belong in a new file (probably definitely)
-// this will hold all of the rendering sync primitives I will need per frame.
-// not sure if this is the right structure (it probalby isn't)
-class RenderSyncPrimitives
-{
-public:
-
-};
 
 #endif //VULKANCOMMANDBUFFERCREATOR_H

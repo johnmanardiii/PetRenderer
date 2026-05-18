@@ -18,6 +18,7 @@ struct SwapchainInfo
 {
     VkSwapchainKHR swapchain;
     VkFormat swapchainImageFormat;
+    std::vector<VkImage> swapchainImages;
 };
 
 namespace VulkanCreateSwapchain

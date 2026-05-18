@@ -85,6 +85,7 @@ bool VulkanEngine::init()
     }
     requiredExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
     requiredExtensions.push_back(VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME);
+    requiredExtensions.push_back(VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME);
 
     // #JOHN you need to pass the vulkan version here.
     instance = VulkanInstanceBuilder()
@@ -171,18 +172,110 @@ bool VulkanEngine::init()
 
 void VulkanEngine::RenderAndPresentToSwapchain()
 {
+    // #JOHN maybe move this to a different file when all is said and done
     // wait on the fence for this frame (per frame data thing) to say "hey I have handed this stuff off and I am ready"
 
-    VkAcquireNextImageInfoKHR acquireInfo {
-        .sType = VK_STRUCTURE_TYPE_ACQUIRE_NEXT_IMAGE_INFO_KHR,
-        .pNext = nullptr,
-        .swapchain = swapchainInfo->swapchain,
-        // one second timeout on getting the swapchain image
-        .timeout = 1000000000,
+    // Get this frame's sync primitives and command buffer and stuff:
+    PerFrameInFlightStructure& frameStruct = commandStructures.getPerFrameInFlightStructure(currentFrame);
 
+    uint32_t imageAcquiredIndex = 0;
+    // #JOHN does this wait? or like what... this is kinda crazy that you can just call this on the CPU
+    // I guess that is why we have the timeout?
+    vkchk(vkAcquireNextImageKHR(*device, swapchainInfo->swapchain, 1000000000,
+        frameStruct.imageAcquiredSemaphore, VK_NULL_HANDLE, &imageAcquiredIndex));
+    // once the image acquired semaphore goes off, we have the image in the pipeline
+
+    // reset the command buffer associated with this frame
+    vkResetCommandBuffer(frameStruct.commandBuffer, 0);
+
+    // get the clear image from our list of images
+    VkImage acquiredImage = swapchainInfo->swapchainImages[imageAcquiredIndex];
+
+    // #JOHN once done, convert this whole "turn image from this to that" insane amt of code
+    // #JOHN temp little subresource range we are going to use to describe our baby image:
+    VkImageSubresourceRange subresourceRange = {
+        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+        .baseMipLevel = 0,
+        .levelCount = 1,
+        .baseArrayLayer = 0,
+        .layerCount = 1,
     };
 
-    vkAcquireNextImage2KHR(*device, )
+    // transition the swapchain image from undefined to "writable"
+    VkImageMemoryBarrier2 undefinedToWritable = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
+        .pNext = nullptr,
+        // #JOHN understanding of this is... the stage where "at least this must be completed by previously submitted things"
+        // we want... IDK I guess all commands to be finished? I don't think there is anything super important before this
+        .srcStageMask = VK_PIPELINE_STAGE_2_NONE,
+        .srcAccessMask = 0, // apparently this doesn't matter, we don't care about the undefined, just acquired mem
+        // this means "what stages need to wait on this thing to be done" before continuing, which is like whatever vkclear needs?
+        .dstStageMask = VK_PIPELINE_STAGE_2_CLEAR_BIT, // this is just the clear one
+        .dstAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+        .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+        // this may be worse than general for scaling up, so #JOHn remember to change when doing more than clearing
+        .newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .image = acquiredImage, // the swapchain image we want to clear and have acquired by index from the swapchain
+        .subresourceRange = subresourceRange
+    };
+
+    // now we wrap this monster in a uhh dependency info struct (turducken-like API design right here):
+    VkDependencyInfo dependencyInfoToWritable = {
+        .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+        .imageMemoryBarrierCount = 1,
+        .pImageMemoryBarriers = &undefinedToWritable,
+    };
+
+    // record the pipeline barrier transitioning the image to transferrable
+    vkCmdPipelineBarrier2(frameStruct.commandBuffer, &dependencyInfoToWritable);
+
+    // now we clear it (I don't care about time yet that will be easy to change let's just make it blue):
+    // gonna assume everything is in BGRA for this test-like code
+    const VkClearColorValue clearColor = {
+        .float32 = {
+            1.0f, 0.0f, 0.0, 1.0f
+        }
+    };
+
+    vkCmdClearColorImage(frameStruct.commandBuffer, acquiredImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        &clearColor, 1, &subresourceRange);
+    // Ok now we gotta wait on this to finish (set src to whatever it is we need here like finish transferring
+
+    // transition the swapchain image from undefined to "writable"
+    VkImageMemoryBarrier2 writableToPresentable = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
+        .pNext = nullptr,
+
+        // the last thing we did was clear (how does anyone keep these connections all in their head?)
+        .srcStageMask = VK_PIPELINE_STAGE_2_CLEAR_BIT,
+        .srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+        // the next thing we are going to do is present...
+        // so the semaphore will tell the presentation engine to go forth and venture into presentation land
+        .dstStageMask = VK_PIPELINE_STAGE_2_NONE,
+        .dstAccessMask = 0,
+
+        .oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        .newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .image = acquiredImage, // the swapchain image we want to clear and have acquired by index from the swapchain
+        .subresourceRange = subresourceRange
+    };
+
+    // now we wrap this monster in a uhh dependency info struct (turducken-like API design right here):
+    VkDependencyInfo dependencyInfoToPresentable = {
+        .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+        .imageMemoryBarrierCount = 1,
+        .pImageMemoryBarriers = &undefinedToWritable,
+    };
+
+    // record the pipeline barrier transitioning the image to transferrable
+    vkCmdPipelineBarrier2(frameStruct.commandBuffer, &dependencyInfoToPresentable);
+
+    // OK now we finally submit this thing to the queue
+    vkQueueSubmit2(device)
 }
 
 void VulkanEngine::draw()
@@ -195,5 +288,8 @@ void VulkanEngine::draw()
 
         // #JOHN is this happening at the right rate... not sure
         glfwPollEvents();
+
+        // update what frame we are on for the frames in flight structures
+        currentFrame++;
     }
 }

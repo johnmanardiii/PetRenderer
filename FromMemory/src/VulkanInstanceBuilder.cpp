@@ -81,6 +81,7 @@ std::optional<VkInstance> VulkanInstanceBuilder::GetInstance()
                                          .applicationVersion = VK_MAKE_VERSION(1, 0, 0),
                                          .pEngineName = "Pet Renderer",
                                          .engineVersion = VK_MAKE_VERSION(1, 0, 0),
+        // #JOHN you really need to pass this explicitly to the builder when we get more time
                                          .apiVersion = VK_MAKE_VERSION(1, 3, 0)}; // #JOHN need to fill this out
 
     const void *pNext = nullptr;

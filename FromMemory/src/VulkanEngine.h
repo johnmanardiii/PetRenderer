@@ -17,7 +17,6 @@
 class VulkanEngine
 {
   public:
-    VulkanEngine() = default;
     ~VulkanEngine();
 
     bool init();
@@ -37,6 +36,8 @@ class VulkanEngine
 
     // probably where the instance and resources go.
     // #JOHN reconsider the optionals at this point since like... they are required?
+    // #JOHN in the long run, the bool valid check doesn't matter since they are all valid or this whole thing crashed
+    // with vkchk
     std::optional<VkInstance> instance;
     std::optional<VkSurfaceKHR> surface;
     std::optional<VkDevice> device;
@@ -48,10 +49,9 @@ class VulkanEngine
     // stuff related to command buffers / commands for submission
     // #JOHN for now gonna make 1 command pool / buffer per vulkan swapchain image, but I may only need 2/3
     VulkanCommandStructures commandStructures;
-    // #JOHN this needs to be made #TODO
-    std::vector<RenderSyncPrimitives> syncPrimitives; // currently is the same size as command structures but that may change.
 
-    // semaphores, one per possible image view from the swapchain: https://docs.vulkan.org/guide/latest/swapchain_semaphore_reuse.html
+    // semaphores, one per possible image view from the swapchain:
+    // https://docs.vulkan.org/guide/latest/swapchain_semaphore_reuse.html
     std::vector<VkSemaphore> imageAvailableSemaphores;
 
     // #JOHN when I have more energy think through how I could make GLFW calls RAII since I don't like these raw
@@ -60,7 +60,7 @@ class VulkanEngine
 
     // this maybe should be somewhere else accessible
     constexpr uint32_t framesInFlight = 2;
-    uint32_t currentFrame = 0;  // always incrementing, doesn't loop around w/ modulo
+    uint32_t currentFrame = 0; // always incrementing, doesn't loop around w/ modulo
 };
 
 #endif // VULKAN_ENGINE_H
