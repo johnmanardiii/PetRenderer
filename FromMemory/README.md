@@ -44,3 +44,6 @@
 * in the instance builder you quietly set the version to 1_3, but you should pass that in somewhere way higher level
   like "engine" so you can figure out that value later.
 * Ok, when I get this tomorrow, I need to actually call vkGetDeviceQueue and do a little audit to make sure that I haven't accidentally used a raw int somewhere stupid instead of an actual handle that I should have gotten. Then I need to figure out that semaphore situation with the queue submit and then present. and then I need to add fences. much to do but should be easier than this image memory barrier stuff.
+
+## 5/18/2026
+* when you get back to this, make sure the per frame things are cleaned up, the semaphores per swapchain image are cleaned up, then figure out where you need the CPU to wait, and also just in general get your mind around the synchronization stuff.

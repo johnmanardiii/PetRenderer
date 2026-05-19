@@ -36,14 +36,19 @@ VulkanCommandStructures::VulkanCommandStructures(VkDevice device, uint32_t queue
         .commandBufferCount = 1 // for now going to make one command buffer
     };
 
+    VkSemaphoreCreateInfo semaphoreCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+    };
+
     for (int i = 0; i < numFramesInFlight; i++)
     {
-        VkCommandBuffer commandBuffer;
-        vkchk(vkAllocateCommandBuffers(device, &commandBufferAllocateInfo, &commandBuffer));
+        PerFrameInFlightStructure perFrame;
 
-        frameInFlightStructures.emplace_back(PerFrameInFlightStructure{
-            .commandBuffer = commandBuffer,
-        });
+        vkchk(vkAllocateCommandBuffers(device, &commandBufferAllocateInfo, &perFrame.commandBuffer));
+        vkchk(vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &perFrame.imageAcquiredSemaphore));
+        vkchk(vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &perFrame.readyToPresentSemaphore));
+
+        frameInFlightStructures.emplace_back(perFrame);
     }
 }
 VulkanCommandStructures::~VulkanCommandStructures()

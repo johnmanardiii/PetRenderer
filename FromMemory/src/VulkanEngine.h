@@ -41,6 +41,7 @@ class VulkanEngine
     std::optional<VkInstance> instance;
     std::optional<VkSurfaceKHR> surface;
     std::optional<VkDevice> device;
+    VkQueue oneQueueToRuleThemAll = VK_NULL_HANDLE; // #JOHn this is a funny name but it is long and a lot
 
     // could probably group these together into a logical class #JOHN and then destroy it as one thing
     std::optional<SwapchainInfo> swapchainInfo;

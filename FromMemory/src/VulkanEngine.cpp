@@ -9,7 +9,9 @@
 #include "VulkanPhysicalDeviceSelector.h"
 #include "VulkanUtil.h"
 #include "vulkan/vulkan_core.h"
+
 #include <fmt/printf.h>
+#include <queue>
 #include <vector>
 
 VulkanEngine::~VulkanEngine()
@@ -132,6 +134,9 @@ bool VulkanEngine::init()
         return false;
     }
 
+    // assign our queue created from the device
+    vkGetDeviceQueue(*device, physDeviceinfo->graphicsPresentQueueFamilyIndex, 0, &oneQueueToRuleThemAll);
+
     swapchainInfo = VulkanCreateSwapchain::CreateSwapchain(
         *device, physDeviceinfo->physicalDevice, *surface,
         {.width = static_cast<uint32_t>(width), .height = static_cast<uint32_t>(height)});
@@ -253,7 +258,7 @@ void VulkanEngine::RenderAndPresentToSwapchain()
         .srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
         // the next thing we are going to do is present...
         // so the semaphore will tell the presentation engine to go forth and venture into presentation land
-        .dstStageMask = VK_PIPELINE_STAGE_2_NONE,
+        .dstStageMask = VK_PIPELINE_STAGE_2_NONE,   // #JOHN this doesn't seem right...
         .dstAccessMask = 0,
 
         .oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
@@ -274,8 +279,35 @@ void VulkanEngine::RenderAndPresentToSwapchain()
     // record the pipeline barrier transitioning the image to transferrable
     vkCmdPipelineBarrier2(frameStruct.commandBuffer, &dependencyInfoToPresentable);
 
+    VkCommandBufferSubmitInfo cmdSubmitInfo = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO,
+        .commandBuffer = frameStruct.commandBuffer,
+    };
+
+    VkSemaphoreSubmitInfo semaphoreSubmitInfo = {
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+        .semaphore = frameStruct.readyToPresentSemaphore,
+        .stageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT // #JOHN might be too much but whatever
+    };
+
+    // gonna use the V1 submit info since that seems more simple
+    VkSubmitInfo2 submitInfo = {.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+        .pNext = nullptr,
+        .flags = 0, // don't care about protected submissions :D
+        // gonna be explicit about not needing a wait to submit the info for this, since the initial semaphores in this
+        // already handle that
+        .waitSemaphoreInfoCount = 0,
+        .pWaitSemaphoreInfos = nullptr,
+        .commandBufferInfoCount = 1,
+        .pCommandBufferInfos = &cmdSubmitInfo,
+        // when this is signaled, then the image is presentable to a swapchain and in the right format
+        .signalSemaphoreInfoCount = 1,
+        .pSignalSemaphoreInfos = &semaphoreSubmitInfo,
+    };
+
     // OK now we finally submit this thing to the queue
-    vkQueueSubmit2(device)
+    // #JOHN I don't think we need the fence for this part? the semaphore signal in this being done handles that I think
+    vkchk(vkQueueSubmit2(oneQueueToRuleThemAll, 1, &submitInfo, VK_NULL_HANDLE));
 }
 
 void VulkanEngine::draw()

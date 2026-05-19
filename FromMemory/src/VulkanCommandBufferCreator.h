@@ -9,11 +9,15 @@
 #include <vector>
 
 // created per frame in flight
+
+// #JOHN when you get back to this... change it to be a constructor / destructor thing automatically...
+// YOu could have forgotten to clean these up! Also you need to get clear on where the fence comes into this
+// as well as like, where the "semaphore per image in swapchain" comes from...
 struct PerFrameInFlightStructure
 {
     VkCommandBuffer commandBuffer = VK_NULL_HANDLE;
     VkSemaphore imageAcquiredSemaphore = VK_NULL_HANDLE;
-
+    VkSemaphore readyToPresentSemaphore = VK_NULL_HANDLE;
 };
 
 /*
