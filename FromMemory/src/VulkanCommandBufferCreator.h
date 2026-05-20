@@ -16,8 +16,8 @@
 struct PerFrameInFlightStructure
 {
     VkCommandBuffer commandBuffer = VK_NULL_HANDLE;
+    VkFence queueFinishedFence = VK_NULL_HANDLE;
     VkSemaphore imageAcquiredSemaphore = VK_NULL_HANDLE;
-    VkSemaphore readyToPresentSemaphore = VK_NULL_HANDLE;
 };
 
 /*
@@ -29,7 +29,7 @@ struct PerFrameInFlightStructure
 class VulkanCommandStructures
 {
 public:
-    VulkanCommandStructures(VkDevice device, uint32_t queueFamilyIndex, uint32_t framesInFlight);
+    VulkanCommandStructures(VkDevice device, uint32_t queueFamilyIndex, uint32_t framesInFlight, uint32_t swapChainImageCount);
     ~VulkanCommandStructures();
     VulkanCommandStructures(const VulkanCommandStructures&) = delete;
     VulkanCommandStructures& operator=(const VulkanCommandStructures&) = delete;
@@ -39,11 +39,13 @@ public:
     {
         return frameInFlightStructures[frame % frameInFlightStructures.size()];
     }
+    VkSemaphore GetSemaphoreForImageIndex(uint32_t imageIndex) { return imageAvailableSemaphores[imageIndex]; }
 private:
     uint32_t numFramesInFlight;
     // #JOHN honestly ... give this a destructor. in case the whole thing blows up in the middle of construction.
     VkCommandPool commandPool = VK_NULL_HANDLE;
     std::vector<PerFrameInFlightStructure> frameInFlightStructures;
+    std::vector<VkSemaphore> imageAvailableSemaphores;
 
     // #JOHN this needs its own clean up for realllllll especially since I will be making n of them.
     VkDevice device;

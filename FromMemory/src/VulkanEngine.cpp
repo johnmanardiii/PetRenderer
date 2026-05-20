@@ -87,7 +87,6 @@ bool VulkanEngine::init()
     }
     requiredExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
     requiredExtensions.push_back(VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME);
-    requiredExtensions.push_back(VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME);
 
     // #JOHN you need to pass the vulkan version here.
     instance = VulkanInstanceBuilder()
@@ -118,7 +117,7 @@ bool VulkanEngine::init()
 
     // gather a valid physical device
     VulkanPhysicalDeviceSelector selector;
-    std::optional<PhysicalDeviceInfoWeCareAbout> physDeviceinfo = selector.selectPhysicalDevice(*instance, *surface);
+     physDeviceinfo = selector.selectPhysicalDevice(*instance, *surface);
 
     if (!physDeviceinfo)
     {
@@ -157,31 +156,21 @@ bool VulkanEngine::init()
         return false;
     }
 
-
-    // #JOHN need to verify that this is right. and also I should create N of these...
-    // these say something you need to figure out by reading this tomorrow; https://docs.vulkan.org/guide/latest/swapchain_semaphore_reuse.html
-    VkSemaphoreCreateInfo semaphoreCreateInfo{
-        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
-        .pNext = nullptr,
-        .flags = 0,
-    };
-    for (int i = 0; i < swapchainImageViews->size(); i++)
-    {
-        VkSemaphore semaphore = VK_NULL_HANDLE;
-        vkchk(vkCreateSemaphore(*device, &semaphoreCreateInfo, nullptr, &semaphore));
-        imageAvailableSemaphores.emplace_back(semaphore);
-    }
-
     return true;
 }
 
-void VulkanEngine::RenderAndPresentToSwapchain()
+void VulkanEngine::RenderAndPresentToSwapchain(VulkanCommandStructures& structures)
 {
     // #JOHN maybe move this to a different file when all is said and done
     // wait on the fence for this frame (per frame data thing) to say "hey I have handed this stuff off and I am ready"
 
     // Get this frame's sync primitives and command buffer and stuff:
-    PerFrameInFlightStructure& frameStruct = commandStructures.getPerFrameInFlightStructure(currentFrame);
+    PerFrameInFlightStructure& frameStruct = structures.getPerFrameInFlightStructure(currentFrame);
+
+    // wait on "this frame in flight" to be signaled
+    vkWaitForFences(*device, 1, &frameStruct.queueFinishedFence, VK_TRUE, UINT64_MAX);
+    // signal the fence once we have it
+    vkResetFences(*device, 1, &frameStruct.queueFinishedFence);
 
     uint32_t imageAcquiredIndex = 0;
     // #JOHN does this wait? or like what... this is kinda crazy that you can just call this on the CPU
@@ -240,7 +229,7 @@ void VulkanEngine::RenderAndPresentToSwapchain()
     // gonna assume everything is in BGRA for this test-like code
     const VkClearColorValue clearColor = {
         .float32 = {
-            1.0f, 0.0f, 0.0, 1.0f
+            0.0f, 1.0f, 0.0, 1.0f
         }
     };
 
@@ -273,7 +262,7 @@ void VulkanEngine::RenderAndPresentToSwapchain()
     VkDependencyInfo dependencyInfoToPresentable = {
         .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
         .imageMemoryBarrierCount = 1,
-        .pImageMemoryBarriers = &undefinedToWritable,
+        .pImageMemoryBarriers = &writableToPresentable,
     };
 
     // record the pipeline barrier transitioning the image to transferrable
@@ -284,9 +273,11 @@ void VulkanEngine::RenderAndPresentToSwapchain()
         .commandBuffer = frameStruct.commandBuffer,
     };
 
+    VkSemaphore waitSemaphore = structures.GetSemaphoreForImageIndex(imageAcquiredIndex);
+
     VkSemaphoreSubmitInfo semaphoreSubmitInfo = {
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
-        .semaphore = frameStruct.readyToPresentSemaphore,
+        .semaphore = waitSemaphore,
         .stageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT // #JOHN might be too much but whatever
     };
 
@@ -307,16 +298,29 @@ void VulkanEngine::RenderAndPresentToSwapchain()
 
     // OK now we finally submit this thing to the queue
     // #JOHN I don't think we need the fence for this part? the semaphore signal in this being done handles that I think
-    vkchk(vkQueueSubmit2(oneQueueToRuleThemAll, 1, &submitInfo, VK_NULL_HANDLE));
+    vkchk(vkQueueSubmit2(oneQueueToRuleThemAll, 1, &submitInfo, frameStruct.queueFinishedFence));
+
+    VkPresentInfoKHR presentInfo = {
+        .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+        .waitSemaphoreCount = 1,
+        .pWaitSemaphores = &waitSemaphore,
+        .swapchainCount = 1,
+        .pSwapchains = &swapchainInfo->swapchain,
+        .pImageIndices = &imageAcquiredIndex,
+    };
+    vkQueuePresentKHR(oneQueueToRuleThemAll, &presentInfo);
 }
 
-void VulkanEngine::draw()
+void VulkanEngine::mainLoop()
 {
+    // Create the frame structures used here (deallocated when scope runs out)
+    VulkanCommandStructures commandStructures(*device, physDeviceinfo->graphicsPresentQueueFamilyIndex, 3, swapchainImageViews->size());
+
     // the classic GLFW loop:
     while (!glfwWindowShouldClose(window))
     {
         // render image and present to swapchain
-        RenderAndPresentToSwapchain();
+        RenderAndPresentToSwapchain(commandStructures);
 
         // #JOHN is this happening at the right rate... not sure
         glfwPollEvents();

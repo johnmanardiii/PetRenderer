@@ -7,7 +7,7 @@
 #include "VulkanUtil.h"
 #include <cassert>
 
-VulkanCommandStructures::VulkanCommandStructures(VkDevice device, uint32_t queueFamilyIndex, uint32_t framesInFlight)
+VulkanCommandStructures::VulkanCommandStructures(VkDevice device, uint32_t queueFamilyIndex, uint32_t framesInFlight, uint32_t swapChainImageCount)
     : numFramesInFlight(framesInFlight), device(device), queueFamilyIndex(queueFamilyIndex)
 {
     assert(numFramesInFlight > 0);
@@ -40,20 +40,43 @@ VulkanCommandStructures::VulkanCommandStructures(VkDevice device, uint32_t queue
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
     };
 
+    VkFenceCreateInfo fenceCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+        .flags = VK_FENCE_CREATE_SIGNALED_BIT,  // start signaled so we don't need to reset on the first frame
+    };
+
     for (int i = 0; i < numFramesInFlight; i++)
     {
         PerFrameInFlightStructure perFrame;
 
         vkchk(vkAllocateCommandBuffers(device, &commandBufferAllocateInfo, &perFrame.commandBuffer));
+        vkchk(vkCreateFence(device, &fenceCreateInfo, nullptr, &perFrame.queueFinishedFence));
         vkchk(vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &perFrame.imageAcquiredSemaphore));
-        vkchk(vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &perFrame.readyToPresentSemaphore));
 
         frameInFlightStructures.emplace_back(perFrame);
+    }
+
+    for (int i = 0; i < swapChainImageCount; i++)
+    {
+        VkSemaphore semaphore;
+        vkchk(vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &semaphore));
+        imageAvailableSemaphores.emplace_back(semaphore);
     }
 }
 VulkanCommandStructures::~VulkanCommandStructures()
 {
     // destroy semaphores and all that
+    for (int i = 0; i < numFramesInFlight; i++)
+    {
+        vkDestroyFence(device, frameInFlightStructures[i].queueFinishedFence, nullptr);
+        vkDestroySemaphore(device, frameInFlightStructures[i].imageAcquiredSemaphore, nullptr);
+    }
+
+    // destroy per image semaphores
+    for (VkSemaphore semaphore : imageAvailableSemaphores)
+    {
+        vkDestroySemaphore(device, semaphore, nullptr);
+    }
 
     // Note: if the command pool is destroyed, it cleans up its command buffers
     if (commandPool != VK_NULL_HANDLE)
@@ -63,7 +86,7 @@ VulkanCommandStructures::~VulkanCommandStructures()
 }
 VulkanCommandStructures::VulkanCommandStructures(VulkanCommandStructures &&other) noexcept
     : commandPool(std::exchange(other.commandPool, VK_NULL_HANDLE)),
-      frameInFlightStructures(std::exchange(other.frameInFlightStructures, VK_NULL_HANDLE)), device(other.device),
+      frameInFlightStructures(std::move(other.frameInFlightStructures)), device(other.device),
       queueFamilyIndex(other.queueFamilyIndex)
 {
 }
@@ -75,7 +98,7 @@ VulkanCommandStructures &VulkanCommandStructures::operator=(VulkanCommandStructu
     device = other.device;
     queueFamilyIndex = other.queueFamilyIndex;
     commandPool = std::exchange(other.commandPool, VK_NULL_HANDLE);
-    frameInFlightStructures = std::exchange(other.frameInFlightStructures, VK_NULL_HANDLE);
+    frameInFlightStructures = std::move(other.frameInFlightStructures);
 
     return *this;
 }
