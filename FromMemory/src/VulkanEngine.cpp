@@ -13,6 +13,7 @@
 #include <fmt/printf.h>
 #include <queue>
 #include <vector>
+#include "glm/trigonometric.hpp"
 
 VulkanEngine::~VulkanEngine()
 {
@@ -182,6 +183,12 @@ void VulkanEngine::RenderAndPresentToSwapchain(VulkanCommandStructures& structur
     // reset the command buffer associated with this frame
     vkResetCommandBuffer(frameStruct.commandBuffer, 0);
 
+    VkCommandBufferBeginInfo beginInfo = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+    };
+
+    vkBeginCommandBuffer(frameStruct.commandBuffer, &beginInfo);
+
     // get the clear image from our list of images
     VkImage acquiredImage = swapchainInfo->swapchainImages[imageAcquiredIndex];
 
@@ -197,7 +204,7 @@ void VulkanEngine::RenderAndPresentToSwapchain(VulkanCommandStructures& structur
 
     // transition the swapchain image from undefined to "writable"
     VkImageMemoryBarrier2 undefinedToWritable = {
-        .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
+        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
         .pNext = nullptr,
         // #JOHN understanding of this is... the stage where "at least this must be completed by previously submitted things"
         // we want... IDK I guess all commands to be finished? I don't think there is anything super important before this
@@ -229,7 +236,7 @@ void VulkanEngine::RenderAndPresentToSwapchain(VulkanCommandStructures& structur
     // gonna assume everything is in BGRA for this test-like code
     const VkClearColorValue clearColor = {
         .float32 = {
-            0.0f, 1.0f, 0.0, 1.0f
+            0.0f, (glm::sin(elapsedTime * 2) + 1) * .5f, 0.0, 1.0f
         }
     };
 
@@ -239,7 +246,7 @@ void VulkanEngine::RenderAndPresentToSwapchain(VulkanCommandStructures& structur
 
     // transition the swapchain image from undefined to "writable"
     VkImageMemoryBarrier2 writableToPresentable = {
-        .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
+        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
         .pNext = nullptr,
 
         // the last thing we did was clear (how does anyone keep these connections all in their head?)
@@ -281,20 +288,29 @@ void VulkanEngine::RenderAndPresentToSwapchain(VulkanCommandStructures& structur
         .stageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT // #JOHN might be too much but whatever
     };
 
+    VkSemaphoreSubmitInfo semaphoreWaitInfo = {
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+        .semaphore = frameStruct.imageAcquiredSemaphore,
+        .stageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT // #JOHN might be too much but whatever
+    };
+
     // gonna use the V1 submit info since that seems more simple
-    VkSubmitInfo2 submitInfo = {.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+    VkSubmitInfo2 submitInfo = {
+        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
         .pNext = nullptr,
         .flags = 0, // don't care about protected submissions :D
         // gonna be explicit about not needing a wait to submit the info for this, since the initial semaphores in this
         // already handle that
-        .waitSemaphoreInfoCount = 0,
-        .pWaitSemaphoreInfos = nullptr,
+        .waitSemaphoreInfoCount = 1,
+        .pWaitSemaphoreInfos = &semaphoreWaitInfo,
         .commandBufferInfoCount = 1,
         .pCommandBufferInfos = &cmdSubmitInfo,
         // when this is signaled, then the image is presentable to a swapchain and in the right format
         .signalSemaphoreInfoCount = 1,
         .pSignalSemaphoreInfos = &semaphoreSubmitInfo,
     };
+
+    vkEndCommandBuffer(frameStruct.commandBuffer);
 
     // OK now we finally submit this thing to the queue
     // #JOHN I don't think we need the fence for this part? the semaphore signal in this being done handles that I think
@@ -313,6 +329,7 @@ void VulkanEngine::RenderAndPresentToSwapchain(VulkanCommandStructures& structur
 
 void VulkanEngine::mainLoop()
 {
+    double startTime = glfwGetTime();
     // Create the frame structures used here (deallocated when scope runs out)
     VulkanCommandStructures commandStructures(*device, physDeviceinfo->graphicsPresentQueueFamilyIndex, 3, swapchainImageViews->size());
 
@@ -327,5 +344,6 @@ void VulkanEngine::mainLoop()
 
         // update what frame we are on for the frames in flight structures
         currentFrame++;
+        elapsedTime = glfwGetTime() - startTime;
     }
 }
