@@ -4,7 +4,7 @@ target_sources(PetRenderer PRIVATE
         VulkanEngine.cpp
         VulkanPhysicalDeviceSelector.cpp
         VulkanLogicalDeviceCreator.cpp
-        VulkanCreateSwapchain.cpp
+        VulkanSwapchainResources.cpp
         VulkanCommandBufferCreator.cpp
 )
 

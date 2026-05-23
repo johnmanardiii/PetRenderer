@@ -7,7 +7,7 @@
 #include "VulkanUtil.h"
 #include <cassert>
 
-VulkanCommandStructures::VulkanCommandStructures(VkDevice device, uint32_t queueFamilyIndex, uint32_t framesInFlight, uint32_t swapChainImageCount)
+VulkanCommandStructures::VulkanCommandStructures(VkDevice device, uint32_t queueFamilyIndex, uint32_t framesInFlight)
     : numFramesInFlight(framesInFlight), device(device), queueFamilyIndex(queueFamilyIndex)
 {
     assert(numFramesInFlight > 0);
@@ -56,12 +56,7 @@ VulkanCommandStructures::VulkanCommandStructures(VkDevice device, uint32_t queue
         frameInFlightStructures.emplace_back(perFrame);
     }
 
-    for (int i = 0; i < swapChainImageCount; i++)
-    {
-        VkSemaphore semaphore;
-        vkchk(vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &semaphore));
-        imageAvailableSemaphores.emplace_back(semaphore);
-    }
+
 }
 VulkanCommandStructures::~VulkanCommandStructures()
 {
@@ -70,12 +65,6 @@ VulkanCommandStructures::~VulkanCommandStructures()
     {
         vkDestroyFence(device, frameInFlightStructures[i].queueFinishedFence, nullptr);
         vkDestroySemaphore(device, frameInFlightStructures[i].imageAcquiredSemaphore, nullptr);
-    }
-
-    // destroy per image semaphores
-    for (VkSemaphore semaphore : imageAvailableSemaphores)
-    {
-        vkDestroySemaphore(device, semaphore, nullptr);
     }
 
     // Note: if the command pool is destroyed, it cleans up its command buffers

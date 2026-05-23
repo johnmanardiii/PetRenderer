@@ -3,10 +3,10 @@
 //
 #include "VulkanEngine.h"
 
-#include "VulkanCreateSwapchain.h"
 #include "VulkanInstanceBuilder.h"
 #include "VulkanLogicalDeviceCreator.h"
 #include "VulkanPhysicalDeviceSelector.h"
+#include "VulkanSwapchainResources.h"
 #include "VulkanUtil.h"
 #include "vulkan/vulkan_core.h"
 
@@ -20,7 +20,7 @@ VulkanEngine::~VulkanEngine()
     // once we should close, we wait for the device to be idle:
     vkDeviceWaitIdle(*device);
 
-    delete commandStructures;
+    delete frameInFlightStructures;
 
     // clean up vulkan resources if we have them
     // #JOHN in the future, once you have the device, query present support with
@@ -30,6 +30,13 @@ VulkanEngine::~VulkanEngine()
     // clean up image views of swapchain before destroying the swapchain:
     // lowkey the swapchain clean up should be abstracted since it will need to happen before destructor in rebuild
     // #JOHN
+
+    // destroy per image semaphores
+    for (VkSemaphore semaphore : imageAvailableSemaphores)
+    {
+        vkDestroySemaphore(*device, semaphore, nullptr);
+    }
+
     if (swapchainImageViews)
     {
         for (VkImageView swapchainImageView : *swapchainImageViews)
@@ -157,6 +164,8 @@ bool VulkanEngine::init()
     // assign our queue created from the device
     vkGetDeviceQueue(*device, physDeviceinfo->graphicsPresentQueueFamilyIndex, 0, &oneQueueToRuleThemAll);
 
+
+    // ------------- #JOHN everthing here should be moved to something that isn't persistent, destroyed before engine, and repeatable separately ------------------
     swapchainInfo = VulkanCreateSwapchain::CreateSwapchain(
         *device, physDeviceinfo->physicalDevice, *surface,
         {.width = static_cast<uint32_t>(width), .height = static_cast<uint32_t>(height)});
@@ -177,9 +186,22 @@ bool VulkanEngine::init()
         return false;
     }
 
+    VkSemaphoreCreateInfo semaphoreCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+    };
+    for (int i = 0; i < swapchainImageViews->size(); i++)
+    {
+        VkSemaphore semaphore;
+        vkchk(vkCreateSemaphore(*device, &semaphoreCreateInfo, nullptr, &semaphore));
+        imageAvailableSemaphores.emplace_back(semaphore);
+    }
+
     // Create the frame structures used here (deallocated when scope runs out)
     // #JOHN not a fan of how this is created... and managed... also tied to swapchain...
-    commandStructures = new VulkanCommandStructures(*device, physDeviceinfo->graphicsPresentQueueFamilyIndex, 3, swapchainImageViews->size());
+    // #JOHN lowkey - the swapchain part of this needs to be recreatable, but thw whole "per frame in flight structures" doesn't.
+    frameInFlightStructures = new VulkanCommandStructures(*device, physDeviceinfo->graphicsPresentQueueFamilyIndex, 3);
+
+    // ------------- #JOHN everthing here should be moved to something that isn't persistent, destroyed before engine, and repeatable separately ------------------
 
     return true;
 }
@@ -199,7 +221,7 @@ void VulkanEngine::RenderAndPresentToSwapchain()
     // wait on the fence for this frame (per frame data thing) to say "hey I have handed this stuff off and I am ready"
 
     // Get this frame's sync primitives and command buffer and stuff:
-    PerFrameInFlightStructure& frameStruct = commandStructures->getPerFrameInFlightStructure(currentFrame);
+    PerFrameInFlightStructure& frameStruct = frameInFlightStructures->getPerFrameInFlightStructure(currentFrame);
 
     // wait on "this frame in flight" to be signaled
     vkWaitForFences(*device, 1, &frameStruct.queueFinishedFence, VK_TRUE, UINT64_MAX);
@@ -313,7 +335,7 @@ void VulkanEngine::RenderAndPresentToSwapchain()
         .commandBuffer = frameStruct.commandBuffer,
     };
 
-    VkSemaphore waitSemaphore = commandStructures->GetSemaphoreForImageIndex(imageAcquiredIndex);
+    VkSemaphore waitSemaphore = imageAvailableSemaphores[imageAcquiredIndex];
 
     VkSemaphoreSubmitInfo semaphoreSubmitInfo = {
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,

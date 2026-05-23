@@ -4,8 +4,6 @@
 
 #ifndef VULKANCREATESWAPCHAIN_H
 #define VULKANCREATESWAPCHAIN_H
-#include "VulkanLogicalDeviceCreator.h"
-#include "VulkanPhysicalDeviceSelector.h"
 
 #include <optional>
 #include <vector>
