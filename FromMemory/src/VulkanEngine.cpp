@@ -346,4 +346,7 @@ void VulkanEngine::mainLoop()
         currentFrame++;
         elapsedTime = glfwGetTime() - startTime;
     }
+
+    // once we should close, we wait for the device to be idle:
+    vkDeviceWaitIdle(*device);
 }
