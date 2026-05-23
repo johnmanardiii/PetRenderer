@@ -25,18 +25,17 @@ class VulkanEngine
 
     bool init();
 
-    // da main draw loop
-    void mainLoop();
-
     // I don't want to think about what would happen if you copied this thing
     VulkanEngine(const VulkanEngine &) = delete;
     VulkanEngine &operator=(const VulkanEngine &) = delete;
     VulkanEngine(VulkanEngine &&) = delete;
     VulkanEngine &operator=(VulkanEngine &&) = delete;
 
+    void Iterate();
+
   private:
     // #JOHN this probably belongs within a different file... but for now just want to see something
-    void RenderAndPresentToSwapchain(VulkanCommandStructures& structures);
+    void RenderAndPresentToSwapchain();
     bool loadedVulkan = false;
 
     // probably where the instance and resources go.
@@ -58,6 +57,8 @@ class VulkanEngine
     SDL_Window *window = nullptr;
     uint32_t currentFrame = 0; // always incrementing, doesn't loop around w/ modulo
     float elapsedTime = 0.0f;
+
+    VulkanCommandStructures* commandStructures;
 };
 
 #endif // VULKAN_ENGINE_H

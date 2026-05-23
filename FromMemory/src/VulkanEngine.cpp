@@ -17,6 +17,11 @@
 
 VulkanEngine::~VulkanEngine()
 {
+    // once we should close, we wait for the device to be idle:
+    vkDeviceWaitIdle(*device);
+
+    delete commandStructures;
+
     // clean up vulkan resources if we have them
     // #JOHN in the future, once you have the device, query present support with
     // glfwGetPhysicalDevicePresentationSupport.
@@ -89,7 +94,7 @@ bool VulkanEngine::init()
     loadedVulkan = true;
 
     uint32_t count;
-    char const * const * extensions = SDL_Vulkan_GetInstanceExtensions(&count);
+    char const *const *extensions = SDL_Vulkan_GetInstanceExtensions(&count);
     // convert to vector since I don't like that double pointer stuff
     std::vector<const char *> requiredExtensions;
     for (uint32_t i = 0; i < count; i++)
@@ -115,7 +120,8 @@ bool VulkanEngine::init()
     // #JOHN move these values out to the class itself
     int width = 640;
     int height = 480;
-    window = SDL_CreateWindow("Pet Renderer", width, height, SDL_WINDOW_VULKAN); // #JOHN if I ever want resizability it goes here
+    window = SDL_CreateWindow("Pet Renderer", width, height,
+                              SDL_WINDOW_VULKAN); // #JOHN if I ever want resizability it goes here
 
     // Get a vulkan window surface from glfw
     VkSurfaceKHR surface_handle;
@@ -132,7 +138,7 @@ bool VulkanEngine::init()
 
     // gather a valid physical device
     VulkanPhysicalDeviceSelector selector;
-     physDeviceinfo = selector.selectPhysicalDevice(*instance, *surface);
+    physDeviceinfo = selector.selectPhysicalDevice(*instance, *surface);
 
     if (!physDeviceinfo)
     {
@@ -171,16 +177,29 @@ bool VulkanEngine::init()
         return false;
     }
 
+    // Create the frame structures used here (deallocated when scope runs out)
+    // #JOHN not a fan of how this is created... and managed... also tied to swapchain...
+    commandStructures = new VulkanCommandStructures(*device, physDeviceinfo->graphicsPresentQueueFamilyIndex, 3, swapchainImageViews->size());
+
     return true;
 }
 
-void VulkanEngine::RenderAndPresentToSwapchain(VulkanCommandStructures& structures)
+void VulkanEngine::Iterate()
+{
+    // render image and present to swapchain
+    RenderAndPresentToSwapchain();
+
+    // update what frame we are on for the frames in flight structures
+    currentFrame++;
+    elapsedTime = SDL_GetTicksNS() / 1000000000.0f;
+}
+void VulkanEngine::RenderAndPresentToSwapchain()
 {
     // #JOHN maybe move this to a different file when all is said and done
     // wait on the fence for this frame (per frame data thing) to say "hey I have handed this stuff off and I am ready"
 
     // Get this frame's sync primitives and command buffer and stuff:
-    PerFrameInFlightStructure& frameStruct = structures.getPerFrameInFlightStructure(currentFrame);
+    PerFrameInFlightStructure& frameStruct = commandStructures->getPerFrameInFlightStructure(currentFrame);
 
     // wait on "this frame in flight" to be signaled
     vkWaitForFences(*device, 1, &frameStruct.queueFinishedFence, VK_TRUE, UINT64_MAX);
@@ -294,7 +313,7 @@ void VulkanEngine::RenderAndPresentToSwapchain(VulkanCommandStructures& structur
         .commandBuffer = frameStruct.commandBuffer,
     };
 
-    VkSemaphore waitSemaphore = structures.GetSemaphoreForImageIndex(imageAcquiredIndex);
+    VkSemaphore waitSemaphore = commandStructures->GetSemaphoreForImageIndex(imageAcquiredIndex);
 
     VkSemaphoreSubmitInfo semaphoreSubmitInfo = {
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
@@ -339,30 +358,4 @@ void VulkanEngine::RenderAndPresentToSwapchain(VulkanCommandStructures& structur
         .pImageIndices = &imageAcquiredIndex,
     };
     vkQueuePresentKHR(oneQueueToRuleThemAll, &presentInfo);
-}
-
-void VulkanEngine::mainLoop()
-{
-    // Create the frame structures used here (deallocated when scope runs out)
-    VulkanCommandStructures commandStructures(*device, physDeviceinfo->graphicsPresentQueueFamilyIndex, 3, swapchainImageViews->size());
-
-    bool running = true;
-    while (running)
-    {
-        SDL_Event event;
-        while (SDL_PollEvent(&event))
-        {
-            if (event.type == SDL_EVENT_QUIT) running = false;
-        }
-
-        // render image and present to swapchain
-        RenderAndPresentToSwapchain(commandStructures);
-
-        // update what frame we are on for the frames in flight structures
-        currentFrame++;
-        elapsedTime = SDL_GetTicksNS() / 1000000000.0f;
-    }
-
-    // once we should close, we wait for the device to be idle:
-    vkDeviceWaitIdle(*device);
 }
