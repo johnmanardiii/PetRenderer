@@ -16,4 +16,4 @@ target_include_directories(PetRenderer PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 # not entirely sure why yet but I couldn't put this in the third party dir #JOHN
 find_package(Vulkan REQUIRED)
 
-target_link_libraries(PetRenderer PRIVATE glfw Vulkan::Vulkan fmt::fmt)
+target_link_libraries(PetRenderer PRIVATE SDL3::SDL3 Vulkan::Vulkan fmt::fmt)

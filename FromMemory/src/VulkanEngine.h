@@ -8,7 +8,9 @@
 #define GLFW_INCLUDE_VULKAN
 #include "VulkanCommandBufferCreator.h"
 
-#include <GLFW/glfw3.h> // #JOHn not sure why but this is making me think I haven't mastered the skill of managing my includes
+#include <vulkan/vulkan.h>
+#include <SDL3/SDL.h>
+#include <SDL3/SDL_vulkan.h>
 
 #include "VulkanCreateSwapchain.h"
 
@@ -35,6 +37,7 @@ class VulkanEngine
   private:
     // #JOHN this probably belongs within a different file... but for now just want to see something
     void RenderAndPresentToSwapchain(VulkanCommandStructures& structures);
+    bool loadedVulkan = false;
 
     // probably where the instance and resources go.
     // #JOHN reconsider the optionals at this point since like... they are required?
@@ -52,7 +55,7 @@ class VulkanEngine
 
     // #JOHN when I have more energy think through how I could make GLFW calls RAII since I don't like these raw
     // pointers
-    GLFWwindow *window = nullptr;
+    SDL_Window *window = nullptr;
     uint32_t currentFrame = 0; // always incrementing, doesn't loop around w/ modulo
     float elapsedTime = 0.0f;
 };

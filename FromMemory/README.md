@@ -47,3 +47,9 @@
 
 ## 5/18/2026
 * when you get back to this, make sure the per frame things are cleaned up, the semaphores per swapchain image are cleaned up, then figure out where you need the CPU to wait, and also just in general get your mind around the synchronization stuff.
+
+
+## 5/23/2026
+* coming back to this project, the two biggest things that are bothering me are:
+  * the whole "clear" swapchain and write color (technically transfer color) is all within the engine. it should be structured as: "hey report back to me when you have something for the swapchain"
+  * my swapchain doesn't rebuild itself ever... so it will be begging for release and i am currently ignoring it... it eats at my conscious 

@@ -56,9 +56,17 @@ VulkanEngine::~VulkanEngine()
         vkDestroyInstance(*instance, nullptr);
     }
 
-    glfwDestroyWindow(window);
+    if (window)
+    {
+        SDL_DestroyWindow(window);
+    }
 
-    glfwTerminate(); // #JOHN honestly wrap this in RAII too since it is annoying to manage
+    if (loadedVulkan)
+    {
+        SDL_Vulkan_UnloadLibrary();
+    }
+
+    SDL_Quit(); // #JOHN honestly wrap this in RAII too since it is annoying to manage
 }
 
 bool VulkanEngine::init()
@@ -66,20 +74,22 @@ bool VulkanEngine::init()
     // #JOHN there may need to be some loader madness that happens here (volk)
     // but it is working without it so we move on
     /* Initialize the library */
-    if (!glfwInit())
+    if (!SDL_Init(SDL_INIT_VIDEO))
     {
         fmt::printf("Failed to initialize GLFW\n");
         return false;
     }
-    // check to make sure glfw vulkan is supported
-    if (glfwVulkanSupported() == GLFW_API_UNAVAILABLE)
+
+    // load vulkan (can be passed in a path here)
+    if (!SDL_Vulkan_LoadLibrary(nullptr))
     {
-        fmt::printf("Vulkan is not supported on this platform, exiting!");
+        fmt::printf("Failed to initialize SDL_Vulkan_LoadLibrary: %s\n", SDL_GetError());
         return false;
     }
+    loadedVulkan = true;
 
     uint32_t count;
-    const char **extensions = glfwGetRequiredInstanceExtensions(&count);
+    char const * const * extensions = SDL_Vulkan_GetInstanceExtensions(&count);
     // convert to vector since I don't like that double pointer stuff
     std::vector<const char *> requiredExtensions;
     for (uint32_t i = 0; i < count; i++)
@@ -102,15 +112,19 @@ bool VulkanEngine::init()
         return false;
     }
 
-    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     // #JOHN move these values out to the class itself
     int width = 640;
     int height = 480;
-    window = glfwCreateWindow(640, 480, "Window Title", nullptr, nullptr);
+    window = SDL_CreateWindow("Pet Renderer", width, height, SDL_WINDOW_VULKAN); // #JOHN if I ever want resizability it goes here
 
     // Get a vulkan window surface from glfw
     VkSurfaceKHR surface_handle;
-    vkchk(glfwCreateWindowSurface(*instance, window, nullptr, &surface_handle));
+    // vkchk(glfwCreateWindowSurface(*instance, window, nullptr, &surface_handle));
+    if (!SDL_Vulkan_CreateSurface(window, *instance, nullptr, &surface_handle))
+    {
+        fmt::printf("Failed to create vulkan surface\n");
+        return false;
+    }
 
     // #JOHN doesn't seem like it follows the most awesome pattern but whatevs.
     // really can't fail in this way... why optional?
@@ -329,22 +343,24 @@ void VulkanEngine::RenderAndPresentToSwapchain(VulkanCommandStructures& structur
 
 void VulkanEngine::mainLoop()
 {
-    double startTime = glfwGetTime();
     // Create the frame structures used here (deallocated when scope runs out)
     VulkanCommandStructures commandStructures(*device, physDeviceinfo->graphicsPresentQueueFamilyIndex, 3, swapchainImageViews->size());
 
-    // the classic GLFW loop:
-    while (!glfwWindowShouldClose(window))
+    bool running = true;
+    while (running)
     {
+        SDL_Event event;
+        while (SDL_PollEvent(&event))
+        {
+            if (event.type == SDL_EVENT_QUIT) running = false;
+        }
+
         // render image and present to swapchain
         RenderAndPresentToSwapchain(commandStructures);
 
-        // #JOHN is this happening at the right rate... not sure
-        glfwPollEvents();
-
         // update what frame we are on for the frames in flight structures
         currentFrame++;
-        elapsedTime = glfwGetTime() - startTime;
+        elapsedTime = SDL_GetTicksNS() / 1000000000.0f;
     }
 
     // once we should close, we wait for the device to be idle:
