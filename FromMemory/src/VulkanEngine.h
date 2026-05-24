@@ -43,13 +43,12 @@ class VulkanEngine
     std::optional<PhysicalDeviceInfoWeCareAbout> physDeviceinfo;
     VkQueue oneQueueToRuleThemAll = VK_NULL_HANDLE; // #JOHN rename once we have a better idea for this
     SDL_Window *window = nullptr;
-    VulkanCommandStructures* frameInFlightStructures;
-
-    // could probably group these together into a logical class #JOHN and then destroy it as one thing
-    std::optional<SwapchainInfo> swapchainInfo;
     std::optional<VkSurfaceKHR> surface;
-    std::vector<VkSemaphore> imageAvailableSemaphores;
-    std::optional<std::vector<VkImageView>> swapchainImageViews;
+    std::optional<VulkanCommandStructures> frameInFlightStructures;
+
+    // swap chain stuff that is RAII so it cleans itself up
+    // #JOHN this pointer doesn't feel right...
+    std::optional<VulkanSwapchainResources> swapchainResources;
 
     uint32_t currentFrame = 0; // always incrementing, doesn't loop around w/ modulo
     float elapsedTime = 0.0f;

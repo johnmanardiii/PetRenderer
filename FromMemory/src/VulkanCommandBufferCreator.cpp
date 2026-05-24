@@ -61,10 +61,10 @@ VulkanCommandStructures::VulkanCommandStructures(VkDevice device, uint32_t queue
 VulkanCommandStructures::~VulkanCommandStructures()
 {
     // destroy semaphores and all that
-    for (int i = 0; i < numFramesInFlight; i++)
+    for (PerFrameInFlightStructure& structure : frameInFlightStructures)
     {
-        vkDestroyFence(device, frameInFlightStructures[i].queueFinishedFence, nullptr);
-        vkDestroySemaphore(device, frameInFlightStructures[i].imageAcquiredSemaphore, nullptr);
+        vkDestroyFence(device, structure.queueFinishedFence, nullptr);
+        vkDestroySemaphore(device, structure.imageAcquiredSemaphore, nullptr);
     }
 
     // Note: if the command pool is destroyed, it cleans up its command buffers

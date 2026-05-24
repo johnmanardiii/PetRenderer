@@ -10,47 +10,18 @@
 #include "VulkanUtil.h"
 #include "vulkan/vulkan_core.h"
 
-#include <fmt/printf.h>
-#include <queue>
-#include <vector>
 #include "glm/trigonometric.hpp"
+
+#include <fmt/printf.h>
+#include <vector>
 
 VulkanEngine::~VulkanEngine()
 {
     // once we should close, we wait for the device to be idle:
     vkDeviceWaitIdle(*device);
 
-    delete frameInFlightStructures;
-
-    // clean up vulkan resources if we have them
-    // #JOHN in the future, once you have the device, query present support with
-    // glfwGetPhysicalDevicePresentationSupport.
-    // https://www.glfw.org/docs/3.3/group__vulkan.html#gaff3823355cdd7e2f3f9f4d9ea9518d92
-
-    // clean up image views of swapchain before destroying the swapchain:
-    // lowkey the swapchain clean up should be abstracted since it will need to happen before destructor in rebuild
-    // #JOHN
-
-    // destroy per image semaphores
-    for (VkSemaphore semaphore : imageAvailableSemaphores)
-    {
-        vkDestroySemaphore(*device, semaphore, nullptr);
-    }
-
-    if (swapchainImageViews)
-    {
-        for (VkImageView swapchainImageView : *swapchainImageViews)
-        {
-            vkDestroyImageView(*device, swapchainImageView, nullptr);
-        }
-    }
-
-    if (swapchainInfo)
-    {
-        // #JOHN kinda interesting, like I know that *device is valid since otherwise the swapchain couldn't have
-        // been created in the control flow below, but still makes me 2% nervous.
-        vkDestroySwapchainKHR(*device, swapchainInfo->swapchain, nullptr);
-    }
+    frameInFlightStructures.reset(); // not sure if this is the right semantics but it works
+    swapchainResources.reset();
 
     if (device)
     {
@@ -128,11 +99,11 @@ bool VulkanEngine::init()
     int width = 640;
     int height = 480;
     window = SDL_CreateWindow("Pet Renderer", width, height,
-                              SDL_WINDOW_VULKAN); // #JOHN if I ever want resizability it goes here
+                              SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE); // #JOHN if I ever want resizability it goes here
 
     // Get a vulkan window surface from glfw
     VkSurfaceKHR surface_handle;
-    // vkchk(glfwCreateWindowSurface(*instance, window, nullptr, &surface_handle));
+
     if (!SDL_Vulkan_CreateSurface(window, *instance, nullptr, &surface_handle))
     {
         fmt::printf("Failed to create vulkan surface\n");
@@ -164,44 +135,10 @@ bool VulkanEngine::init()
     // assign our queue created from the device
     vkGetDeviceQueue(*device, physDeviceinfo->graphicsPresentQueueFamilyIndex, 0, &oneQueueToRuleThemAll);
 
+    swapchainResources.emplace(*device, physDeviceinfo->physicalDevice, *surface,
+                                 VkExtent2D{.width = static_cast<uint32_t>(width), .height = static_cast<uint32_t>(height)});
 
-    // ------------- #JOHN everthing here should be moved to something that isn't persistent, destroyed before engine, and repeatable separately ------------------
-    swapchainInfo = VulkanCreateSwapchain::CreateSwapchain(
-        *device, physDeviceinfo->physicalDevice, *surface,
-        {.width = static_cast<uint32_t>(width), .height = static_cast<uint32_t>(height)});
-
-    if (!swapchainInfo)
-    {
-        fmt::printf("Failed to create swapchain.\n");
-        return false;
-    }
-
-    fmt::print("Created swapchain successfully.\n");
-
-    swapchainImageViews = VulkanCreateSwapchain::CreateSwapchainImageViews(*device, *swapchainInfo);
-
-    if (!swapchainImageViews)
-    {
-        fmt::printf("Failed to create swapchain image views.\n");
-        return false;
-    }
-
-    VkSemaphoreCreateInfo semaphoreCreateInfo = {
-        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
-    };
-    for (int i = 0; i < swapchainImageViews->size(); i++)
-    {
-        VkSemaphore semaphore;
-        vkchk(vkCreateSemaphore(*device, &semaphoreCreateInfo, nullptr, &semaphore));
-        imageAvailableSemaphores.emplace_back(semaphore);
-    }
-
-    // Create the frame structures used here (deallocated when scope runs out)
-    // #JOHN not a fan of how this is created... and managed... also tied to swapchain...
-    // #JOHN lowkey - the swapchain part of this needs to be recreatable, but thw whole "per frame in flight structures" doesn't.
-    frameInFlightStructures = new VulkanCommandStructures(*device, physDeviceinfo->graphicsPresentQueueFamilyIndex, 3);
-
-    // ------------- #JOHN everthing here should be moved to something that isn't persistent, destroyed before engine, and repeatable separately ------------------
+    frameInFlightStructures = VulkanCommandStructures(*device, physDeviceinfo->graphicsPresentQueueFamilyIndex, 3);
 
     return true;
 }
@@ -213,27 +150,29 @@ void VulkanEngine::Iterate()
 
     // update what frame we are on for the frames in flight structures
     currentFrame++;
-    elapsedTime = SDL_GetTicksNS() / 1000000000.0f;
+    elapsedTime = SDL_GetTicksNS() / 1000000000.0;
 }
+
 void VulkanEngine::RenderAndPresentToSwapchain()
 {
-    // #JOHN maybe move this to a different file when all is said and done
-    // wait on the fence for this frame (per frame data thing) to say "hey I have handed this stuff off and I am ready"
-
     // Get this frame's sync primitives and command buffer and stuff:
-    PerFrameInFlightStructure& frameStruct = frameInFlightStructures->getPerFrameInFlightStructure(currentFrame);
+    PerFrameInFlightStructure &frameStruct = frameInFlightStructures->getPerFrameInFlightStructure(currentFrame);
 
     // wait on "this frame in flight" to be signaled
     vkWaitForFences(*device, 1, &frameStruct.queueFinishedFence, VK_TRUE, UINT64_MAX);
-    // signal the fence once we have it
-    vkResetFences(*device, 1, &frameStruct.queueFinishedFence);
 
     uint32_t imageAcquiredIndex = 0;
-    // #JOHN does this wait? or like what... this is kinda crazy that you can just call this on the CPU
-    // I guess that is why we have the timeout?
-    vkchk(vkAcquireNextImageKHR(*device, swapchainInfo->swapchain, 1000000000,
-        frameStruct.imageAcquiredSemaphore, VK_NULL_HANDLE, &imageAcquiredIndex));
+    VkResult acquireResult = (swapchainResources->AcquireNextImage(frameStruct.imageAcquiredSemaphore, imageAcquiredIndex));
+
+    if (acquireResult == VK_ERROR_OUT_OF_DATE_KHR)
+    {
+        return;
+    }
+    vkchk(acquireResult);
     // once the image acquired semaphore goes off, we have the image in the pipeline
+
+    // reset the fence, valid
+    vkResetFences(*device, 1, &frameStruct.queueFinishedFence);
 
     // reset the command buffer associated with this frame
     vkResetCommandBuffer(frameStruct.commandBuffer, 0);
@@ -245,7 +184,7 @@ void VulkanEngine::RenderAndPresentToSwapchain()
     vkBeginCommandBuffer(frameStruct.commandBuffer, &beginInfo);
 
     // get the clear image from our list of images
-    VkImage acquiredImage = swapchainInfo->swapchainImages[imageAcquiredIndex];
+    VkImage acquiredImage = swapchainResources->GetImage(imageAcquiredIndex);
 
     // #JOHN once done, convert this whole "turn image from this to that" insane amt of code
     // #JOHN temp little subresource range we are going to use to describe our baby image:
@@ -261,11 +200,13 @@ void VulkanEngine::RenderAndPresentToSwapchain()
     VkImageMemoryBarrier2 undefinedToWritable = {
         .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
         .pNext = nullptr,
-        // #JOHN understanding of this is... the stage where "at least this must be completed by previously submitted things"
-        // we want... IDK I guess all commands to be finished? I don't think there is anything super important before this
+        // #JOHN understanding of this is... the stage where "at least this must be completed by previously submitted
+        // things" we want... IDK I guess all commands to be finished? I don't think there is anything super important
+        // before this
         .srcStageMask = VK_PIPELINE_STAGE_2_NONE,
         .srcAccessMask = 0, // apparently this doesn't matter, we don't care about the undefined, just acquired mem
-        // this means "what stages need to wait on this thing to be done" before continuing, which is like whatever vkclear needs?
+        // this means "what stages need to wait on this thing to be done" before continuing, which is like whatever
+        // vkclear needs?
         .dstStageMask = VK_PIPELINE_STAGE_2_CLEAR_BIT, // this is just the clear one
         .dstAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
         .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
@@ -274,8 +215,7 @@ void VulkanEngine::RenderAndPresentToSwapchain()
         .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .image = acquiredImage, // the swapchain image we want to clear and have acquired by index from the swapchain
-        .subresourceRange = subresourceRange
-    };
+        .subresourceRange = subresourceRange};
 
     // now we wrap this monster in a uhh dependency info struct (turducken-like API design right here):
     VkDependencyInfo dependencyInfoToWritable = {
@@ -289,14 +229,10 @@ void VulkanEngine::RenderAndPresentToSwapchain()
 
     // now we clear it (I don't care about time yet that will be easy to change let's just make it blue):
     // gonna assume everything is in BGRA for this test-like code
-    const VkClearColorValue clearColor = {
-        .float32 = {
-            0.0f, (glm::sin(elapsedTime * 2) + 1) * .5f, 0.0, 1.0f
-        }
-    };
+    const VkClearColorValue clearColor = {.float32 = {0.0f, (glm::sin(elapsedTime * 2) + 1) * .5f, 0.0, 1.0f}};
 
-    vkCmdClearColorImage(frameStruct.commandBuffer, acquiredImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-        &clearColor, 1, &subresourceRange);
+    vkCmdClearColorImage(frameStruct.commandBuffer, acquiredImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clearColor, 1,
+                         &subresourceRange);
     // Ok now we gotta wait on this to finish (set src to whatever it is we need here like finish transferring
 
     // transition the swapchain image from undefined to "writable"
@@ -309,7 +245,7 @@ void VulkanEngine::RenderAndPresentToSwapchain()
         .srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
         // the next thing we are going to do is present...
         // so the semaphore will tell the presentation engine to go forth and venture into presentation land
-        .dstStageMask = VK_PIPELINE_STAGE_2_NONE,   // #JOHN this doesn't seem right...
+        .dstStageMask = VK_PIPELINE_STAGE_2_NONE, // #JOHN this doesn't seem right...
         .dstAccessMask = 0,
 
         .oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
@@ -317,8 +253,7 @@ void VulkanEngine::RenderAndPresentToSwapchain()
         .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .image = acquiredImage, // the swapchain image we want to clear and have acquired by index from the swapchain
-        .subresourceRange = subresourceRange
-    };
+        .subresourceRange = subresourceRange};
 
     // now we wrap this monster in a uhh dependency info struct (turducken-like API design right here):
     VkDependencyInfo dependencyInfoToPresentable = {
@@ -335,7 +270,7 @@ void VulkanEngine::RenderAndPresentToSwapchain()
         .commandBuffer = frameStruct.commandBuffer,
     };
 
-    VkSemaphore waitSemaphore = imageAvailableSemaphores[imageAcquiredIndex];
+    VkSemaphore waitSemaphore = swapchainResources->GetImageAvailableSemaphore(imageAcquiredIndex);
 
     VkSemaphoreSubmitInfo semaphoreSubmitInfo = {
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
@@ -371,13 +306,5 @@ void VulkanEngine::RenderAndPresentToSwapchain()
     // #JOHN I don't think we need the fence for this part? the semaphore signal in this being done handles that I think
     vkchk(vkQueueSubmit2(oneQueueToRuleThemAll, 1, &submitInfo, frameStruct.queueFinishedFence));
 
-    VkPresentInfoKHR presentInfo = {
-        .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
-        .waitSemaphoreCount = 1,
-        .pWaitSemaphores = &waitSemaphore,
-        .swapchainCount = 1,
-        .pSwapchains = &swapchainInfo->swapchain,
-        .pImageIndices = &imageAcquiredIndex,
-    };
-    vkQueuePresentKHR(oneQueueToRuleThemAll, &presentInfo);
+    vkchk(swapchainResources->PresentImage(oneQueueToRuleThemAll, waitSemaphore, imageAcquiredIndex));
 }

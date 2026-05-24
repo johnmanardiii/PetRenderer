@@ -52,7 +52,8 @@ static VkSurfaceFormat2KHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFo
     // std::vector<VkSurfaceFormat
     VkSurfaceFormat2KHR desiredFormat = formats[0];
     // currently only supporting BGRA for simplicity
-    std::vector<std::pair<VkFormat, VkColorSpaceKHR>> priorityFormats{{VK_FORMAT_B8G8R8A8_SRGB, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR}};
+    std::vector<std::pair<VkFormat, VkColorSpaceKHR>> priorityFormats{
+        {VK_FORMAT_B8G8R8A8_SRGB, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR}};
     // look for our real desired format if we can find it:
     for (const auto &priorityFormat : priorityFormats)
     {
@@ -71,7 +72,7 @@ static VkSurfaceFormat2KHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFo
 }
 
 // #JOHN this should probably take an old swapchain as an option here.
-std::optional<SwapchainInfo> VulkanCreateSwapchain::CreateSwapchain(VkDevice device, VkPhysicalDevice physicalDevice,
+std::optional<SwapchainInfo> CreateSwapchain(VkDevice device, VkPhysicalDevice physicalDevice,
                                                                     VkSurfaceKHR surface, VkExtent2D fallbackExtentSize)
 {
     // Present Modes:
@@ -232,10 +233,11 @@ std::optional<SwapchainInfo> VulkanCreateSwapchain::CreateSwapchain(VkDevice dev
     std::vector<VkImage> swapchainImages(swapchainImageCount);
     vkchk(vkGetSwapchainImagesKHR(device, swapchain, &swapchainImageCount, swapchainImages.data()));
 
-    return SwapchainInfo{.swapchain = swapchain, .swapchainImageFormat = swapchainInfo.imageFormat, .swapchainImages = swapchainImages};
+    return SwapchainInfo{
+        .swapchain = swapchain, .swapchainImageFormat = swapchainInfo.imageFormat, .swapchainImages = swapchainImages};
 }
 
-std::optional<std::vector<VkImageView>> CreateSwapchainImageViews(VkDevice device, const SwapchainInfo& swapchainInfo)
+std::vector<VkImageView> CreateSwapchainImageViews(VkDevice device, const SwapchainInfo &swapchainInfo)
 {
     size_t swapchainImageCount = swapchainInfo.swapchainImages.size();
     std::vector<VkImageView> swapchainImageViews(swapchainImageCount);
@@ -277,3 +279,123 @@ std::optional<std::vector<VkImageView>> CreateSwapchainImageViews(VkDevice devic
 }
 
 } // namespace VulkanCreateSwapchain
+
+VulkanSwapchainResources::VulkanSwapchainResources(VkDevice device, VkPhysicalDevice physicalDevice,
+                                                   VkSurfaceKHR surface, VkExtent2D fallbackExtentSize)
+    : device(device), physicalDevice(physicalDevice), surface(surface), fallbackExtentSize(fallbackExtentSize)
+{
+    CreateSwapchainResources();
+}
+VulkanSwapchainResources::~VulkanSwapchainResources()
+{
+    DestroySwapchainResources();
+}
+
+bool VulkanSwapchainResources::Recreate()
+{
+    // #JOHN need to figure out what can go wrong or right here and if I want it to auto call the create / destroy
+    // associated with ctor / dtor
+    DestroySwapchainResources();
+    return CreateSwapchainResources();
+}
+VkResult VulkanSwapchainResources::PresentImage(VkQueue presentQueue, VkSemaphore waitSemaphore, uint32_t &imageIndex)
+{
+    VkPresentInfoKHR presentInfo = {
+        .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+        .waitSemaphoreCount = 1,
+        .pWaitSemaphores = &waitSemaphore,
+        .swapchainCount = 1,
+        .pSwapchains = &swapchainInfo->swapchain,
+        .pImageIndices = &imageIndex,
+    };
+    VkResult presentResult = vkQueuePresentKHR(presentQueue, &presentInfo);
+
+    if (presentResult == VK_ERROR_OUT_OF_DATE_KHR
+        || presentResult == VK_SUBOPTIMAL_KHR)
+    {
+        rebuildAtTopOfFrame = true; // problem for tomorrow : )
+        return VK_SUCCESS;
+    }
+    return presentResult;
+}
+VkResult VulkanSwapchainResources::AcquireNextImage(VkSemaphore imageAcquiredSemaphore, uint32_t& imageIndex, uint32_t timeout)
+{
+    if (rebuildAtTopOfFrame)
+    {
+        rebuildAtTopOfFrame = false;
+        if (!Recreate())
+        {
+            fmt::print("Failed to recreate swapchain.\n");
+            return VK_ERROR_UNKNOWN;
+        }
+    }
+
+    // first time I am not crashing the program on non-success lol
+    VkResult acquireResult = vkAcquireNextImageKHR(device, swapchainInfo->swapchain, timeout, imageAcquiredSemaphore,
+                                VK_NULL_HANDLE, &imageIndex);
+
+    // conditions to rebuild the swapchain:
+    // #JOHN in the future, this needs to report back to the engine the actual report code and it should handle "i need new surface pws..."
+    if (acquireResult == VK_SUBOPTIMAL_KHR)
+    {
+        // rebuild next frame semaphore already signaled though
+        rebuildAtTopOfFrame = true;
+        return VK_SUCCESS;
+    }
+    if (acquireResult == VK_ERROR_OUT_OF_DATE_KHR) // tehre is a "lost fullscreen exclusive" and idk what it does so I won't ahdnle it here, just crash
+    {
+        rebuildAtTopOfFrame = true;
+    }
+
+    // leave it up to caller from here I did my best
+    return acquireResult;
+
+}
+
+void VulkanSwapchainResources::DestroySwapchainResources()
+{
+    // wait for the device to be idle so we aren't destroying anything in use:
+    vkDeviceWaitIdle(device);
+
+    for (VkSemaphore semaphore : imageAvailableSemaphores)
+    {
+        vkDestroySemaphore(device, semaphore, nullptr);
+    }
+    imageAvailableSemaphores.clear();
+
+    for (VkImageView swapchainImageView : swapchainImageViews)
+    {
+        vkDestroyImageView(device, swapchainImageView, nullptr);
+    }
+    swapchainImageViews.clear();
+
+    if (swapchainInfo)
+    {
+        vkDestroySwapchainKHR(device, swapchainInfo->swapchain, nullptr);
+    }
+}
+
+bool VulkanSwapchainResources::CreateSwapchainResources()
+{
+    swapchainInfo = VulkanCreateSwapchain::CreateSwapchain(device, physicalDevice, surface, fallbackExtentSize);
+
+    if (!swapchainInfo)
+    {
+        fmt::printf("Failed to create swapchain.\n");
+        return false;
+    }
+
+    swapchainImageViews = VulkanCreateSwapchain::CreateSwapchainImageViews(device, *swapchainInfo);
+
+    VkSemaphoreCreateInfo semaphoreCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+    };
+
+    for (int i = 0; i < swapchainImageViews.size(); i++)
+    {
+        VkSemaphore semaphore;
+        vkchk(vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &semaphore));
+        imageAvailableSemaphores.emplace_back(semaphore);
+    }
+    return true;
+}
