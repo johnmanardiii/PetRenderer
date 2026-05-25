@@ -8,6 +8,7 @@
 
 // bootstrap library
 #include "VkBootstrap.h"
+#include "DeletionQueue.h"
 
 struct FrameData
 {
@@ -17,6 +18,8 @@ struct FrameData
 
 	VkCommandPool _commandPool;
 	VkCommandBuffer _mainCommandBuffer;
+
+	DeletionQueue _deletionQueue;
 };
 
 constexpr unsigned int FRAME_OVERLAP = 2;
@@ -64,6 +67,13 @@ public:
 	VkQueue _graphicsQueue;
 	uint32_t _graphicsQueueFamily;
 
+	DeletionQueue _mainDeletionQueue;
+	VmaAllocator _allocator;
+
+	// draw resources
+	AllocatedImage _drawImage;
+	VkExtent2D _drawExtent;
+
 private:
 
 	void create_swapchain(uint32_t width, uint32_t height);
@@ -73,4 +83,6 @@ private:
 	void init_swapchain();
 	void init_commands();
 	void init_sync_structures();
+
+	void draw_background(VkCommandBuffer cmd);
 };

@@ -162,12 +162,14 @@ void VulkanEngine::RenderAndPresentToSwapchain()
     vkWaitForFences(*device, 1, &frameStruct.queueFinishedFence, VK_TRUE, UINT64_MAX);
 
     uint32_t imageAcquiredIndex = 0;
+    // #JOHN this may need to tell the external system of an update... so that the engine itself can rebuild whatever
+    // images it needs. maybe I'll have an internal rendering resolution and not resize but instead go for "settings" like other games.
     VkResult acquireResult = (swapchainResources->AcquireNextImage(frameStruct.imageAcquiredSemaphore, imageAcquiredIndex));
 
     if (acquireResult == VK_ERROR_OUT_OF_DATE_KHR)
     {
         return;
-    }
+     }
     vkchk(acquireResult);
     // once the image acquired semaphore goes off, we have the image in the pipeline
 
