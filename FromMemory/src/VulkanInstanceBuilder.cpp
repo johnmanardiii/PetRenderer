@@ -55,25 +55,43 @@ std::optional<VkInstance> VulkanInstanceBuilder::GetInstance()
     std::vector<VkExtensionProperties> availableExtensions(instanceExtensionCount);
     vkchk(vkEnumerateInstanceExtensionProperties(nullptr, &instanceExtensionCount, availableExtensions.data()));
 
-    std::vector<const char *> extensionNames = {};
-
-    std::vector<const char *> presentDesiredExtensions;
-    for (const auto &extensionInfo : availableExtensions)
+    // retrieve all extensions from the found and enabled layers and add them to available extensions
+    std::vector<VkExtensionProperties> layerExtensions;
+    for (const char* layer : presentDesiredLayers)
     {
-        for (const auto &extensionName : RequiredExtensions)
+        uint32_t propertyCount = 0;
+        vkchk(vkEnumerateInstanceExtensionProperties(layer, &propertyCount, nullptr));
+        layerExtensions.resize(propertyCount);
+        vkchk(vkEnumerateInstanceExtensionProperties(layer, &propertyCount, layerExtensions.data()));
+
+        // append to total list of available extensions
+        availableExtensions.insert(availableExtensions.end(), layerExtensions.begin(), layerExtensions.end());
+    }
+
+    // de-duplicate required extensions
+    std::ranges::sort(RequiredLayers);
+    auto last = std::ranges::unique(RequiredLayers).begin();
+    RequiredLayers.erase(last, RequiredLayers.end());
+
+    // return early if not all extensions in the required extensions are present
+    for (const auto& extensionName : RequiredExtensions)
+    {
+        bool bFound = false;
+        for (const auto& extensionInfo : availableExtensions)
         {
             if (strcmp(extensionInfo.extensionName, extensionName) == 0)
             {
-                presentDesiredExtensions.push_back(extensionName);
-                fmt::print("Found present desired extension: {}\n", extensionName);
+                bFound = true;
+                break;
             }
         }
-    }
 
-    if (presentDesiredExtensions.size() != RequiredExtensions.size())
-    {
-        fmt::printf("Failed to retrieve debug extension names.\n");
-        return std::nullopt;
+        if (!bFound)
+        {
+            // dependent on the above break but it should be chill
+            fmt::printf("Failed to retrieve debug extension names.\n");
+            return std::nullopt;
+        }
     }
 
     VkApplicationInfo applicationInfo = {.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
@@ -100,6 +118,23 @@ std::optional<VkInstance> VulkanInstanceBuilder::GetInstance()
         pNext = &debugcallbackCreateInfo;
     }
 
+    VkValidationFeatureEnableEXT enables = {
+        VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT
+    };
+    // enable syncrhonization validation
+    VkValidationFeaturesEXT validationFeatures = {
+        .sType = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT,
+        .enabledValidationFeatureCount = 1,
+        .pEnabledValidationFeatures = &enables
+    };
+    const bool bUseSyncValidation = true;
+    if (bUseSyncValidation)
+    {
+        validationFeatures.pNext = pNext;
+        pNext = &validationFeatures;
+    }
+
+
     // create the vulkan instance and try to make validation layers enabled
     VkInstanceCreateInfo info = {
         .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
@@ -107,8 +142,8 @@ std::optional<VkInstance> VulkanInstanceBuilder::GetInstance()
         .pApplicationInfo = &applicationInfo,
         .enabledLayerCount = static_cast<uint32_t>(presentDesiredLayers.size()),
         .ppEnabledLayerNames = presentDesiredLayers.data(),
-        .enabledExtensionCount = static_cast<uint32_t>(presentDesiredExtensions.size()),
-        .ppEnabledExtensionNames = presentDesiredExtensions.data(),
+        .enabledExtensionCount = static_cast<uint32_t>(RequiredExtensions.size()),
+        .ppEnabledExtensionNames = RequiredExtensions.data(),
     };
 
     VkInstance instance = VK_NULL_HANDLE;

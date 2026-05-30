@@ -81,6 +81,11 @@ bool VulkanEngine::init()
     }
     requiredExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
     requiredExtensions.push_back(VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME);
+    // #JOHN need to do some querying before you can push this back... vkEnumerateInstanceExtensionProperties
+    //   https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/vkEnumerateInstanceExtensionProperties.html
+    // something something need to query the layers or something to enable the extensions in the actual list
+    // something about "implicitly enable layers / explitly enabled layers"
+    requiredExtensions.push_back(VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME);
 
     // #JOHN you need to pass the vulkan version here.
     instance = VulkanInstanceBuilder()

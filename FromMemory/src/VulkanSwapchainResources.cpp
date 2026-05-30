@@ -341,7 +341,7 @@ VkResult VulkanSwapchainResources::AcquireNextImage(VkSemaphore imageAcquiredSem
         // rebuild next frame semaphore already signaled though
         rebuildAtTopOfFrame = true;
         return VK_SUCCESS;
-    }/
+    }
     if (acquireResult == VK_ERROR_OUT_OF_DATE_KHR) // tehre is a "lost fullscreen exclusive" and idk what it does so I won't ahdnle it here, just crash
     {
         rebuildAtTopOfFrame = true;
