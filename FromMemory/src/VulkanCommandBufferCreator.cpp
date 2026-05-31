@@ -4,6 +4,7 @@
 
 #include "VulkanCommandBufferCreator.h"
 
+#include "VulkanDebugUtil.h"
 #include "VulkanUtil.h"
 #include <cassert>
 
@@ -23,6 +24,9 @@ VulkanCommandStructures::VulkanCommandStructures(VkDevice device, uint32_t queue
     };
     // let's create a command pool from the provided queue family index:
     vkchk(vkCreateCommandPool(device, &commandPoolCreateInfo, nullptr, &commandPool));
+
+    // name the command pool
+    DebugSetName(device, VK_OBJECT_TYPE_COMMAND_POOL, commandPool, "FrameInFlight CommandPool");
 
     // #JOHN question for the class... in our case where we have multiple frames in flight, but like
     // single threaded recording, is that a one command pool, multiple (n frames) command buffer case?
@@ -52,6 +56,14 @@ VulkanCommandStructures::VulkanCommandStructures(VkDevice device, uint32_t queue
         vkchk(vkAllocateCommandBuffers(device, &commandBufferAllocateInfo, &perFrame.commandBuffer));
         vkchk(vkCreateFence(device, &fenceCreateInfo, nullptr, &perFrame.queueFinishedFence));
         vkchk(vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &perFrame.imageAcquiredSemaphore));
+
+        // name all of these per-frame in flight structures:
+        std::string commandBufferName = fmt::format("FrameInFlight {} CommandBuffer", i);
+        DebugSetName(device, VK_OBJECT_TYPE_COMMAND_BUFFER, perFrame.commandBuffer, commandBufferName.c_str());
+        std::string fenceName = fmt::format("FrameInFlight {} Finished Fence", i);
+        DebugSetName(device, VK_OBJECT_TYPE_FENCE, perFrame.queueFinishedFence, fenceName.c_str());
+        std::string semaphoreName = fmt::format("FrameInFlight {} Image Acquired Semaphore", i);
+        DebugSetName(device, VK_OBJECT_TYPE_SEMAPHORE, perFrame.imageAcquiredSemaphore, semaphoreName.c_str());
 
         frameInFlightStructures.emplace_back(perFrame);
     }

@@ -3,6 +3,7 @@
 //
 #include "VulkanEngine.h"
 
+#include "VulkanDebugUtil.h"
 #include "VulkanInstanceBuilder.h"
 #include "VulkanLogicalDeviceCreator.h"
 #include "VulkanPhysicalDeviceSelector.h"
@@ -103,7 +104,7 @@ bool VulkanEngine::init()
         return false;
     }
 
-    volkLoadInstance(*instance);
+    volkLoadInstanceOnly(*instance);
 
     // #JOHN move these values out to the class itself
     int width = 640;
@@ -146,6 +147,9 @@ bool VulkanEngine::init()
 
     // assign our queue created from the device
     vkGetDeviceQueue(*device, physDeviceinfo->graphicsPresentQueueFamilyIndex, 0, &oneQueueToRuleThemAll);
+
+    // Name this one queue
+    DebugSetName(*device, VK_OBJECT_TYPE_QUEUE, oneQueueToRuleThemAll, "One Graphics Queue I am using for everything");
 
     swapchainResources.emplace(*device, physDeviceinfo->physicalDevice, *surface,
                                  VkExtent2D{.width = static_cast<uint32_t>(width), .height = static_cast<uint32_t>(height)});
