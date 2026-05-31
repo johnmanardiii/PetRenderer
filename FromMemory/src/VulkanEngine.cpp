@@ -8,12 +8,12 @@
 #include "VulkanPhysicalDeviceSelector.h"
 #include "VulkanSwapchainResources.h"
 #include "VulkanUtil.h"
-#include "vulkan/vulkan_core.h"
 
 #include "glm/trigonometric.hpp"
 
 #include <fmt/printf.h>
 #include <vector>
+#include <volk.h>
 
 VulkanEngine::~VulkanEngine()
 {
@@ -54,6 +54,9 @@ VulkanEngine::~VulkanEngine()
 
 bool VulkanEngine::init()
 {
+    // setup volk
+    volkInitialize();
+
     // #JOHN there may need to be some loader madness that happens here (volk)
     // but it is working without it so we move on
     /* Initialize the library */
@@ -100,6 +103,8 @@ bool VulkanEngine::init()
         return false;
     }
 
+    volkLoadInstance(*instance);
+
     // #JOHN move these values out to the class itself
     int width = 640;
     int height = 480;
@@ -136,6 +141,8 @@ bool VulkanEngine::init()
         fmt::printf("Failed to create logical device.\n");
         return false;
     }
+
+    volkLoadDevice(*device);
 
     // assign our queue created from the device
     vkGetDeviceQueue(*device, physDeviceinfo->graphicsPresentQueueFamilyIndex, 0, &oneQueueToRuleThemAll);

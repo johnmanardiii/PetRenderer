@@ -5,8 +5,8 @@
 #ifndef VULKANCOMMANDBUFFERCREATOR_H
 #define VULKANCOMMANDBUFFERCREATOR_H
 
-#include "vulkan/vulkan.h"
 #include <vector>
+#include <volk.h>
 
 // created per frame in flight
 

@@ -6,7 +6,7 @@
 #define VULKANLOGICALDEVICECREATOR_H
 
 #include "VulkanPhysicalDeviceSelector.h"
-#include "vulkan/vulkan.h"
+#include <volk.h>
 #include <optional>
 
 class VulkanLogicalDeviceCreator {

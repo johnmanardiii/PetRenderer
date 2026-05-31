@@ -4,6 +4,7 @@
 
 #include "VulkanSwapchainResources.h"
 
+#include "VulkanDebugUtil.h"
 #include "VulkanUtil.h"
 
 #include <cassert>
@@ -395,6 +396,11 @@ bool VulkanSwapchainResources::CreateSwapchainResources()
     {
         VkSemaphore semaphore;
         vkchk(vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &semaphore));
+
+        // name the object as what it is:
+        std::string semaphoreName = fmt::format("Image Available Semaphore {}", i);
+        DebugSetName(device, VK_OBJECT_TYPE_SEMAPHORE, semaphore, semaphoreName.c_str());
+
         imageAvailableSemaphores.emplace_back(semaphore);
     }
     return true;

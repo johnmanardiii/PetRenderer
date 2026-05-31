@@ -13,3 +13,10 @@ FetchContent_Declare(
         GIT_REPOSITORY https://github.com/fmtlib/fmt
         GIT_TAG        e69e5f977d458f2650bb346dadf2ad30c5320281) # 10.2.1
 FetchContent_MakeAvailable(fmt)
+
+FetchContent_Declare(
+        volk
+        GIT_REPOSITORY https://github.com/zeux/volk
+        GIT_TAG 1.4.350
+)
+FetchContent_MakeAvailable(volk)

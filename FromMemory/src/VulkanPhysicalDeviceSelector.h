@@ -5,7 +5,7 @@
 #ifndef VULKANPHYSICALDEVICESELECTOR_H
 #define VULKANPHYSICALDEVICESELECTOR_H
 
-#include "vulkan/vulkan.h"
+#include <volk.h>
 #include <optional>
 
 /*

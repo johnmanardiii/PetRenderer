@@ -8,7 +8,7 @@
 #include <SDL3/SDL_video.h>
 #include <optional>
 #include <vector>
-#include <vulkan/vulkan_core.h>
+#include <volk.h>
 
 /*
  * Misc things I need later that I determined from creating the swapchain

@@ -5,7 +5,7 @@
 #ifndef VULKANHELPERS_H
 #define VULKANHELPERS_H
 
-#include "vulkan/vulkan.h"
+#include <volk.h>
 #include <optional>
 #include <string>
 #include <vector>

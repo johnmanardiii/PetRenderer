@@ -56,7 +56,6 @@ VulkanCommandStructures::VulkanCommandStructures(VkDevice device, uint32_t queue
         frameInFlightStructures.emplace_back(perFrame);
     }
 
-
 }
 VulkanCommandStructures::~VulkanCommandStructures()
 {

@@ -5,8 +5,9 @@
 #ifndef VULKAN_UTIL_PR_H
 #define VULKAN_UTIL_PR_H
 
-#include "vulkan/vk_enum_string_helper.h"
 #include <fmt/printf.h>
+#include <volk.h>
+#include <vulkan/vk_enum_string_helper.h>
 
 // macro so I don't have to check the VkResult every single time
 inline void vkchk(VkResult result)
