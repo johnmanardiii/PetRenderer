@@ -6,6 +6,7 @@
 #define VULKAN_ENGINE_H
 
 #define GLFW_INCLUDE_VULKAN
+#include "J3Alloc.h"
 #include "VulkanCommandBufferCreator.h"
 #include "VulkanPhysicalDeviceSelector.h"
 
@@ -34,7 +35,8 @@ class VulkanEngine
     void Iterate();
 
   private:
-
+    // #JOHN move this to a new class that manages these swapchain dependent things
+    VkImage CreateOffscreenRenderImage(VkExtent2D extent);
     void RenderAndPresentToSwapchain();
     bool loadedVulkan = false;
 
@@ -45,6 +47,7 @@ class VulkanEngine
     SDL_Window *window = nullptr;
     std::optional<VkSurfaceKHR> surface;
     std::optional<VulkanCommandStructures> frameInFlightStructures;
+    J3Alloc j3a;
 
     // swap chain stuff that is RAII so it cleans itself up
     // #JOHN this pointer doesn't feel right...

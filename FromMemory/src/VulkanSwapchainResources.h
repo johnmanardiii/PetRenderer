@@ -20,6 +20,7 @@ struct SwapchainInfo
     VkSwapchainKHR swapchain;
     VkFormat swapchainImageFormat;
     std::vector<VkImage> swapchainImages;
+    VkExtent2D swapchainExtent;
 };
 
 class VulkanSwapchainResources
@@ -40,6 +41,7 @@ class VulkanSwapchainResources
     VkResult AcquireNextImage(VkSemaphore imageAcquiredSemaphore, uint32_t& imageIndex, uint32_t timeout = 1000000000);
     VkImage GetImage(uint32_t imageIndex) {return swapchainInfo->swapchainImages[imageIndex];}
     VkSemaphore GetImageAvailableSemaphore(uint32_t imageIndex) { return imageAvailableSemaphores[imageIndex]; }
+    [[nodiscard]] VkExtent2D CurrentSwapchainExtent() const {return swapchainInfo->swapchainExtent;}
   private:
     void DestroySwapchainResources();
     bool CreateSwapchainResources();

@@ -145,6 +145,8 @@ bool VulkanEngine::init()
 
     volkLoadDevice(*device);
 
+    j3a.Initialize(physDeviceinfo->physicalDevice, *device);
+
     // assign our queue created from the device
     vkGetDeviceQueue(*device, physDeviceinfo->graphicsPresentQueueFamilyIndex, 0, &oneQueueToRuleThemAll);
 
@@ -153,6 +155,9 @@ bool VulkanEngine::init()
 
     swapchainResources.emplace(*device, physDeviceinfo->physicalDevice, *surface,
                                  VkExtent2D{.width = static_cast<uint32_t>(width), .height = static_cast<uint32_t>(height)});
+
+    // #JOHN in the future... tie this to swapchain creation and destruction via observer pattern
+    CreateOffscreenRenderImage(swapchainResources->CurrentSwapchainExtent());
 
     frameInFlightStructures = VulkanCommandStructures(*device, physDeviceinfo->graphicsPresentQueueFamilyIndex, 3);
 
@@ -167,6 +172,54 @@ void VulkanEngine::Iterate()
     // update what frame we are on for the frames in flight structures
     currentFrame++;
     elapsedTime = SDL_GetTicksNS() / 1000000000.0;
+}
+
+VkImage VulkanEngine::CreateOffscreenRenderImage(VkExtent2D extent)
+{
+// #JOHN
+
+    // Create the image struct based on the params
+    VkImageCreateInfo imageCreateInfo = {.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
+    imageCreateInfo.flags = 0;
+    // these... should probably be passed in... and honestly should the
+    imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
+    imageCreateInfo.format = VK_FORMAT_R16G16B16A16_SFLOAT;
+    imageCreateInfo.extent = VkExtent3D{extent.width, extent.height, 1};
+    imageCreateInfo.mipLevels = 1;
+    imageCreateInfo.arrayLayers = 1;
+    // #JOHN need to look into MSAA more. However for now... just going to make an image :)
+    // RTR 5.4 Antialiasing
+    // read https://docs.vulkan.org/spec/latest/chapters/primsrast.html#primsrast-multisampling
+    // https://docs.vulkan.org/tutorial/latest/10_Multisampling.html
+    // https://docs.vulkan.org/samples/latest/samples/performance/msaa/README.html
+    // https://therealmjp.github.io/posts/msaa-overview/
+    // https://www.rastergrid.com/blog/gpu-tech/2021/10/multisampling-primer/
+    // https://learn.microsoft.com/en-us/windows/win32/direct3d11/d3d10-graphics-programming-guide-rasterizer-stage-rules
+    imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+    // render image is on GPU and never leaves... trapped there muahaha
+    imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+    // #JOHN don't forget to come back and add whatever we need to write to from a compute shader
+    imageCreateInfo.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    imageCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    imageCreateInfo.queueFamilyIndexCount = 1;
+    // queue family not needed since we are doing exclusive
+
+    // Create the actual iamge
+    VkImage offscreenImage;
+    vkchk(vkCreateImage(*device, &imageCreateInfo, nullptr, &offscreenImage));
+
+    VkImageMemoryRequirementsInfo2 memoryRequirementsInfo = {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_REQUIREMENTS_INFO_2,
+        .image = offscreenImage
+    };
+    VkMemoryRequirements2 memoryRequirements {
+        .sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2,
+    };
+    vkGetImageMemoryRequirements2(*device, &memoryRequirementsInfo, &memoryRequirements);
+
+    int i = 0;
+
+    return offscreenImage;
 }
 
 void VulkanEngine::RenderAndPresentToSwapchain()

@@ -235,7 +235,7 @@ std::optional<SwapchainInfo> CreateSwapchain(VkDevice device, VkPhysicalDevice p
     vkchk(vkGetSwapchainImagesKHR(device, swapchain, &swapchainImageCount, swapchainImages.data()));
 
     return SwapchainInfo{
-        .swapchain = swapchain, .swapchainImageFormat = swapchainInfo.imageFormat, .swapchainImages = swapchainImages};
+        .swapchain = swapchain, .swapchainImageFormat = swapchainInfo.imageFormat, .swapchainImages = swapchainImages, .swapchainExtent = swapChainExtent};
 }
 
 std::vector<VkImageView> CreateSwapchainImageViews(VkDevice device, const SwapchainInfo &swapchainInfo)
@@ -319,6 +319,7 @@ VkResult VulkanSwapchainResources::PresentImage(VkQueue presentQueue, VkSemaphor
     }
     return presentResult;
 }
+
 VkResult VulkanSwapchainResources::AcquireNextImage(VkSemaphore imageAcquiredSemaphore, uint32_t& imageIndex, uint32_t timeout)
 {
     if (rebuildAtTopOfFrame)
