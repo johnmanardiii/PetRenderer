@@ -29,6 +29,7 @@ class J3Alloc
 {
   public:
     void Initialize(VkPhysicalDevice physDevice, VkDevice device);
+    uint32_t FindMemoryType(uint32_t typeBits, VkMemoryPropertyFlags properties);
 
   private:
     void VerifyImageSupport();
@@ -36,7 +37,10 @@ class J3Alloc
     // initializes the j3 memory heaps
     void CreateMemoryHeaps(const VkPhysicalDeviceMemoryProperties &properties);
 
+
     std::vector<J3MemoryHeap> memoryHeaps;
+    // all memory types by index since the code cares about this and not necessarily the heaps.
+    std::vector<VkMemoryType> memoryTypes;
     VkPhysicalDevice physDevice = VK_NULL_HANDLE;
     VkDevice device = VK_NULL_HANDLE;
 };

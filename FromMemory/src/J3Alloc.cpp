@@ -15,6 +15,33 @@ void J3Alloc::Initialize(VkPhysicalDevice physDevice, VkDevice device)
     VerifyImageSupport();
     ReadInProperties();
 }
+
+/*
+ * Given some properties that we want, query memory heaps of desired type.
+ * memory type bits comes from VkMemoryRequirements - its an index into memory types : )
+ * memory property flags comes from the programmer specifying what flags they want the properties to have
+ *
+ * Returns the memory type index that is valid for this type, or -1 if invalid (and asserts)
+ *
+ * #JOHN ideally this would have some more checking ahead of time
+ */
+uint32_t J3Alloc::FindMemoryType(uint32_t typeBits, VkMemoryPropertyFlags properties)
+{
+    for (uint32_t memoryTypeIndex = 0; memoryTypeIndex < memoryTypes.size(); memoryTypeIndex++)
+    {
+        const bool bTypeSupported = (typeBits & (1u << memoryTypeIndex)) != 0;
+        const bool bHasDesiredProperties = (memoryTypes[memoryTypeIndex].propertyFlags & properties) == properties;
+
+        if (bTypeSupported && bHasDesiredProperties)
+        {
+            return memoryTypeIndex;
+        }
+    }
+    fmt::printf("Memory Type Requested Not Found.");
+    assert(false);
+    return -1;
+}
+
 void J3Alloc::VerifyImageSupport()
 {
     // #JOHN this belongs somewhere, just not here.. i am realizing
@@ -47,25 +74,30 @@ void J3Alloc::ReadInProperties()
     vkGetPhysicalDeviceMemoryProperties2(physDevice, &memProperties);
 
     CreateMemoryHeaps(memProperties.memoryProperties);
-    int i = 0;
 }
 
 void J3Alloc::CreateMemoryHeaps(const VkPhysicalDeviceMemoryProperties &properties)
 {
     memoryHeaps.resize(properties.memoryHeapCount);
-    for (int i = 0; i < properties.memoryHeapCount; i++)
+    for (uint32_t i = 0; i < properties.memoryHeapCount; i++)
     {
         if (properties.memoryHeaps[i].flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT)
         {
             memoryHeaps[i].bIsDeviceLocal = true;
         }
 
-        memoryHeaps[i].size = properties.memoryHeaps->size;
+        memoryHeaps[i].size = properties.memoryHeaps[i].size;
     }
 
     // now iterate over all of the memory types, assigning them to the memory heaps
-    for (int i = 0; i < properties.memoryTypeCount; i++)
+    for (uint32_t i = 0; i < properties.memoryTypeCount; i++)
     {
         memoryHeaps[properties.memoryTypes[i].heapIndex].memoryTypes.push_back(properties.memoryTypes[i]);
+    }
+
+    memoryTypes.resize(properties.memoryTypeCount);
+    for (uint32_t i = 0; i < properties.memoryTypeCount; i++)
+    {
+        memoryTypes[i] = properties.memoryTypes[i];
     }
 }
