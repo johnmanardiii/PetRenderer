@@ -28,6 +28,7 @@ struct J3MemoryHeap
 class J3Alloc
 {
   public:
+
     void Initialize(VkPhysicalDevice physDevice, VkDevice device);
     uint32_t FindMemoryType(uint32_t typeBits, VkMemoryPropertyFlags properties);
 

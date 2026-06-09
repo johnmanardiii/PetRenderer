@@ -35,8 +35,6 @@ class VulkanEngine
     void Iterate();
 
   private:
-    // #JOHN move this to a new class that manages these swapchain dependent things
-    VkImageView CreateOffscreenRenderImage(VkExtent2D extent);
     void RenderAndPresentToSwapchain();
     bool loadedVulkan = false;
 

@@ -282,8 +282,8 @@ std::vector<VkImageView> CreateSwapchainImageViews(VkDevice device, const Swapch
 } // namespace VulkanCreateSwapchain
 
 VulkanSwapchainResources::VulkanSwapchainResources(VkDevice device, VkPhysicalDevice physicalDevice,
-                                                   VkSurfaceKHR surface, VkExtent2D fallbackExtentSize)
-    : device(device), physicalDevice(physicalDevice), surface(surface), fallbackExtentSize(fallbackExtentSize)
+                                                   VkSurfaceKHR surface, VkExtent2D fallbackExtentSize, J3Alloc* j3Alloc)
+    : device(device), physicalDevice(physicalDevice), surface(surface), fallbackExtentSize(fallbackExtentSize), j3Alloc(j3Alloc)
 {
     CreateSwapchainResources();
 }
@@ -299,6 +299,7 @@ bool VulkanSwapchainResources::Recreate()
     DestroySwapchainResources();
     return CreateSwapchainResources();
 }
+
 VkResult VulkanSwapchainResources::PresentImage(VkQueue presentQueue, VkSemaphore waitSemaphore, uint32_t &imageIndex)
 {
     VkPresentInfoKHR presentInfo = {
@@ -351,7 +352,6 @@ VkResult VulkanSwapchainResources::AcquireNextImage(VkSemaphore imageAcquiredSem
 
     // leave it up to caller from here I did my best
     return acquireResult;
-
 }
 
 void VulkanSwapchainResources::DestroySwapchainResources()
@@ -359,6 +359,11 @@ void VulkanSwapchainResources::DestroySwapchainResources()
     // wait for the device to be idle so we aren't destroying anything in use:
     vkDeviceWaitIdle(device);
 
+    // clear stuff depending on the swapchain
+    DestroyOffscreenRenderImageInfo(device, *offscreenRenderImageInfo);
+    offscreenRenderImageInfo.reset();
+
+    // delete the swapchain and it's resources
     for (VkSemaphore semaphore : imageAvailableSemaphores)
     {
         vkDestroySemaphore(device, semaphore, nullptr);
@@ -404,5 +409,9 @@ bool VulkanSwapchainResources::CreateSwapchainResources()
 
         imageAvailableSemaphores.emplace_back(semaphore);
     }
+
+    assert(!offscreenRenderImageInfo);
+    offscreenRenderImageInfo.emplace(createOffscreenRenderImageInfo(device, swapchainInfo->swapchainExtent, j3Alloc));
+
     return true;
 }
