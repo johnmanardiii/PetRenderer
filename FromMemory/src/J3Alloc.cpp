@@ -55,7 +55,7 @@ void J3Alloc::VerifyImageSupport()
     // format feature transfer dest - maps to this: https://docs.vulkan.org/refpages/latest/refpages/source/vkCmdClearColorImage.html#:~:text=VUID%2DvkCmdClearColorImage%2Dimage%2D01993%0AThe%20format%20features%20of%20image%20must%20contain%20VK_FORMAT_FEATURE_TRANSFER_DST_BIT
     // #JOHN no idea... how i get this to do everything I need or figure out that "yep i can use 16 bit images for this kinda thing"
     // #JOHN probably going to need to also eventually check the color attachment... wish I could assert when I tried doing that to make sure it was allowed
-    VkFormatFeatureFlags     requiredFormatFlags = VK_FORMAT_FEATURE_TRANSFER_DST_BIT;
+    VkFormatFeatureFlags requiredFormatFlags = VK_FORMAT_FEATURE_TRANSFER_DST_BIT | VK_FORMAT_FEATURE_BLIT_SRC_BIT;
 
     VkFormatProperties formatProperties;
     vkGetPhysicalDeviceFormatProperties(physDevice, requiredFormat, &formatProperties);

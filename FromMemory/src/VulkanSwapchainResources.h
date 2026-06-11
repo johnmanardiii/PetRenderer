@@ -52,6 +52,11 @@ class VulkanSwapchainResources
         return swapchainInfo->swapchainExtent;
     }
 
+    [[nodiscard]] std::optional<OffscreenRenderImageInfo> GetOffscreenRenderImageInfo() const
+    {
+        return offscreenRenderImageInfo;
+    }
+
   private:
     bool Recreate();
     void DestroySwapchainResources();

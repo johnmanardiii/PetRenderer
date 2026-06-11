@@ -35,6 +35,7 @@ class VulkanEngine
     void Iterate();
 
   private:
+    void RenderToOffscreenImage(VkCommandBuffer commandBuffer);
     void RenderAndPresentToSwapchain();
     bool loadedVulkan = false;
 

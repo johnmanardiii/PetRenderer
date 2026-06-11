@@ -177,6 +177,84 @@ void VulkanEngine::Iterate()
     elapsedTime = SDL_GetTicksNS() / 1000000000.0;
 }
 
+void VulkanEngine::RenderToOffscreenImage(VkCommandBuffer commandBuffer)
+{
+    std::optional<OffscreenRenderImageInfo> offscreenRenderImageInfo = swapchainResources->GetOffscreenRenderImageInfo();
+    if (!offscreenRenderImageInfo)
+    {
+        return;
+    }
+    // we have a reset command buffer and fence is ready so we are good to go
+
+    // transfer our offscreen render image to be optimal for transfer dst
+    // transition the swapchain image from undefined to "writable"
+    // wait for "blit" to finish, transfer must be done before clear
+
+    VkImageSubresourceRange subresourceRange = {
+        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+        .baseMipLevel = 0,
+        .levelCount = 1,
+        .baseArrayLayer = 0,
+        .layerCount = 1,
+    };
+
+    VkImageMemoryBarrier2 undefinedToWritable = {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+        .pNext = nullptr,
+        .srcStageMask = VK_PIPELINE_STAGE_2_BLIT_BIT,
+        .srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+        .dstStageMask = VK_PIPELINE_STAGE_2_CLEAR_BIT,
+        .dstAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+        .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+        .newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .image = offscreenRenderImageInfo->offscreenImage,
+        .subresourceRange = subresourceRange
+    };
+
+    VkDependencyInfo dependencyInfoToWritable = {
+        .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+        .imageMemoryBarrierCount = 1,
+        .pImageMemoryBarriers = &undefinedToWritable,
+    };
+
+    // record the pipeline barrier transitioning the image to transferrable
+    vkCmdPipelineBarrier2(commandBuffer, &dependencyInfoToWritable);
+
+    // now that it has been transferred, we clear the image
+    const VkClearColorValue clearColor = {.float32 = {0.0f, (glm::sin(elapsedTime * 2) + 1) * .5f, 0.0, 1.0f}};
+
+    vkCmdClearColorImage(commandBuffer, offscreenRenderImageInfo->offscreenImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clearColor, 1,
+                         &subresourceRange);
+
+    // Create a memory barrier that makes the clear finish before transitioning the image to a
+    // transfer source for blit
+    VkImageMemoryBarrier2 writableToPresentable = {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+        .pNext = nullptr,
+        .srcStageMask = VK_PIPELINE_STAGE_2_CLEAR_BIT,
+        .srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+        .dstStageMask = VK_PIPELINE_STAGE_2_BLIT_BIT,
+        .dstAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+        .oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        .newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .image = offscreenRenderImageInfo->offscreenImage, // the swapchain image we want to clear and have acquired by index from the swapchain
+        .subresourceRange = subresourceRange};
+
+    // now we wrap this monster in a uhh dependency info struct (turducken-like API design right here):
+    VkDependencyInfo dependencyInfoToPresentable = {
+        .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+        .imageMemoryBarrierCount = 1,
+        .pImageMemoryBarriers = &writableToPresentable,
+    };
+
+    // record the pipeline barrier transitioning the image to transferrable
+    vkCmdPipelineBarrier2(commandBuffer, &dependencyInfoToPresentable);
+}
+
 void VulkanEngine::RenderAndPresentToSwapchain()
 {
     // Get this frame's sync primitives and command buffer and stuff:
@@ -201,6 +279,8 @@ void VulkanEngine::RenderAndPresentToSwapchain()
 
     // reset the fence, valid
     vkResetFences(*device, 1, &frameStruct.queueFinishedFence);
+
+    // #JOHN everything after this is "post acquired swapchain image"
 
     // reset the command buffer associated with this frame
     vkResetCommandBuffer(frameStruct.commandBuffer, 0);
@@ -243,7 +323,8 @@ void VulkanEngine::RenderAndPresentToSwapchain()
         .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .image = acquiredImage, // the swapchain image we want to clear and have acquired by index from the swapchain
-        .subresourceRange = subresourceRange};
+        .subresourceRange = subresourceRange
+    };
 
     // now we wrap this monster in a uhh dependency info struct (turducken-like API design right here):
     VkDependencyInfo dependencyInfoToWritable = {
