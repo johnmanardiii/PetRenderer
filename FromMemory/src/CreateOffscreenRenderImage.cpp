@@ -4,6 +4,7 @@
 
 #include "CreateOffscreenRenderImage.h"
 
+#include "VulkanDebugUtil.h"
 #include "VulkanUtil.h"
 
 void DestroyOffscreenRenderImageInfo(VkDevice device, OffscreenRenderImageInfo &offscreenRenderImageInfo)
@@ -18,6 +19,7 @@ void DestroyOffscreenRenderImageInfo(VkDevice device, OffscreenRenderImageInfo &
 OffscreenRenderImageInfo createOffscreenRenderImageInfo(VkDevice device, VkExtent2D swapchainExtent, J3Alloc *allocator)
 {
     OffscreenRenderImageInfo offscreenRenderImageInfo;
+    offscreenRenderImageInfo.extent = swapchainExtent;
 
     // Create the image struct based on the params
     VkImageCreateInfo imageCreateInfo = {.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
@@ -93,6 +95,8 @@ OffscreenRenderImageInfo createOffscreenRenderImageInfo(VkDevice device, VkExten
     };
 
     vkchk(vkCreateImageView(device, &viewCreateInfo, nullptr, &offscreenRenderImageInfo.offscreenImageView));
+
+    DebugSetName(device, VK_OBJECT_TYPE_IMAGE, offscreenRenderImageInfo.offscreenImage, "Offscreen Render Image");
 
     return offscreenRenderImageInfo;
 }

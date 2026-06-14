@@ -12,6 +12,7 @@
 // #JOHN - eventually this could be abstracted into whatever image but for now its offscreen image
 struct OffscreenRenderImageInfo
 {
+    VkExtent2D extent;
     VkImageView offscreenImageView = VK_NULL_HANDLE;
     VkImage offscreenImage = VK_NULL_HANDLE;
 
