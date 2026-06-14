@@ -24,7 +24,7 @@ static void AssertPhysicalDeviceHasSync2Features(VkPhysicalDevice physDevice)
 
 // #JOHN technically this signature doesn't make any sense because we assert if the device fails to be created
 // but whatevs.
-std::optional<VkDevice> VulkanLogicalDeviceCreator::CreateLogicalDevice(const PhysicalDeviceInfoWeCareAbout &deviceInfo)
+VkDevice CreateLogicalDevice(const PhysicalDeviceInfoWeCareAbout &deviceInfo)
 {
     // guarantee we have sync 2 or assert on this device... could probably be part of the whole "device selection thing" #JOHN, but I
     //  am pretty sure this is gonna work OK for my needs...

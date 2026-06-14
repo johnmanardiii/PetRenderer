@@ -19,29 +19,26 @@
 VulkanEngine::~VulkanEngine()
 {
     // once we should close, we wait for the device to be idle:
-    if (device)
+    if (device != VK_NULL_HANDLE)
     {
-        vkDeviceWaitIdle(*device);
+        vkDeviceWaitIdle(device);
     }
 
     frameInFlightStructures.reset(); // not sure if this is the right semantics but it works
     swapchainResources.reset();
 
-    if (device)
-    {
-        vkDestroyDevice(*device, nullptr);
-    }
+    vkDestroyDevice(device, nullptr);
+    device = VK_NULL_HANDLE;
 
-    if (instance.has_value() && surface.has_value())
+    if (instance != VK_NULL_HANDLE && surface.has_value())
     {
-        vkDestroySurfaceKHR(*instance, *surface, nullptr);
+        vkDestroySurfaceKHR(instance, *surface, nullptr);
     }
 
     // cleanup vulkan handle stuff (move this to RAII class engine) #JOHN
-    if (instance)
-    {
-        vkDestroyInstance(*instance, nullptr);
-    }
+    // (vulkan handles NULL handle for us)
+    vkDestroyInstance(instance, nullptr);
+    instance = VK_NULL_HANDLE;
 
     if (window)
     {
@@ -107,7 +104,7 @@ bool VulkanEngine::init()
         return false;
     }
 
-    volkLoadInstanceOnly(*instance);
+    volkLoadInstanceOnly(instance);
 
     // #JOHN move these values out to the class itself
     int width = 640;
@@ -119,7 +116,7 @@ bool VulkanEngine::init()
     // Get a vulkan window surface from glfw
     VkSurfaceKHR surface_handle;
 
-    if (!SDL_Vulkan_CreateSurface(window, *instance, nullptr, &surface_handle))
+    if (!SDL_Vulkan_CreateSurface(window, instance, nullptr, &surface_handle))
     {
         fmt::printf("Failed to create vulkan surface\n");
         return false;
@@ -131,7 +128,7 @@ bool VulkanEngine::init()
 
     // gather a valid physical device
     VulkanPhysicalDeviceSelector selector;
-    physDeviceinfo = selector.selectPhysicalDevice(*instance, *surface);
+    physDeviceinfo = selector.selectPhysicalDevice(instance, *surface);
 
     if (!physDeviceinfo)
     {
@@ -140,28 +137,28 @@ bool VulkanEngine::init()
     }
 
     // create a logical device from the physical one
-    device = VulkanLogicalDeviceCreator::CreateLogicalDevice(*physDeviceinfo);
+    device = CreateLogicalDevice(*physDeviceinfo);
     if (!device)
     {
         fmt::printf("Failed to create logical device.\n");
         return false;
     }
 
-    volkLoadDevice(*device);
+    volkLoadDevice(device);
 
-    j3a.Initialize(physDeviceinfo->physicalDevice, *device);
+    j3a.Initialize(physDeviceinfo->physicalDevice, device);
 
     // assign our queue created from the device
-    vkGetDeviceQueue(*device, physDeviceinfo->graphicsPresentQueueFamilyIndex, 0, &oneQueueToRuleThemAll);
+    vkGetDeviceQueue(device, physDeviceinfo->graphicsPresentQueueFamilyIndex, 0, &oneQueueToRuleThemAll);
 
     // Name this one queue
-    DebugSetName(*device, VK_OBJECT_TYPE_QUEUE, oneQueueToRuleThemAll, "One Graphics Queue I am using for everything");
+    DebugSetName(device, VK_OBJECT_TYPE_QUEUE, oneQueueToRuleThemAll, "One Graphics Queue I am using for everything");
 
     swapchainResources.emplace(
-        *device, physDeviceinfo->physicalDevice, *surface,
+        device, physDeviceinfo->physicalDevice, *surface,
         VkExtent2D{.width = static_cast<uint32_t>(width), .height = static_cast<uint32_t>(height)}, &j3a);
 
-    frameInFlightStructures = VulkanCommandStructures(*device, physDeviceinfo->graphicsPresentQueueFamilyIndex, 3);
+    frameInFlightStructures = VulkanCommandStructures(device, physDeviceinfo->graphicsPresentQueueFamilyIndex, 3);
 
     return true;
 }
@@ -250,10 +247,14 @@ void VulkanEngine::RenderToOffscreenImage(VkCommandBuffer commandBuffer)
 }
 void VulkanEngine::BlitOffscreenImageToSwapchainImage(VkCommandBuffer commandBuffer, VkImage acquiredImage)
 {
+    if (!swapchainResources)
+    {
+        return;
+    }
     std::optional<OffscreenRenderImageInfo> offscreenRenderImageInfo =
         swapchainResources->GetOffscreenRenderImageInfo();
 
-    if (!offscreenRenderImageInfo || !swapchainResources)
+    if (!offscreenRenderImageInfo)
     {
         // #JOHN - not a huge fan of this pattern w/ the optionals.
         return;
@@ -349,7 +350,7 @@ void VulkanEngine::RenderAndPresentToSwapchain()
     PerFrameInFlightStructure &frameStruct = frameInFlightStructures->getPerFrameInFlightStructure(currentFrame);
 
     // wait on "this frame in flight" to be signaled
-    vkWaitForFences(*device, 1, &frameStruct.queueFinishedFence, VK_TRUE, UINT64_MAX);
+    vkWaitForFences(device, 1, &frameStruct.queueFinishedFence, VK_TRUE, UINT64_MAX);
 
     uint32_t imageAcquiredIndex = 0;
     // #JOHN this may need to tell the external system of an update... so that the engine itself can rebuild whatever
@@ -366,7 +367,7 @@ void VulkanEngine::RenderAndPresentToSwapchain()
     // once the image acquired semaphore goes off, we have the image in the pipeline
 
     // reset the fence, valid
-    vkResetFences(*device, 1, &frameStruct.queueFinishedFence);
+    vkResetFences(device, 1, &frameStruct.queueFinishedFence);
 
     // reset the command buffer associated with this frame
     vkResetCommandBuffer(frameStruct.commandBuffer, 0);

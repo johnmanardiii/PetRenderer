@@ -40,8 +40,8 @@ class VulkanEngine
     void RenderAndPresentToSwapchain();
     bool loadedVulkan = false;
 
-    std::optional<VkInstance> instance;
-    std::optional<VkDevice> device;
+    VkInstance instance = VK_NULL_HANDLE;
+    VkDevice device = VK_NULL_HANDLE;
     std::optional<PhysicalDeviceInfoWeCareAbout> physDeviceinfo;
     VkQueue oneQueueToRuleThemAll = VK_NULL_HANDLE; // #JOHN rename once we have a better idea for this
     SDL_Window *window = nullptr;

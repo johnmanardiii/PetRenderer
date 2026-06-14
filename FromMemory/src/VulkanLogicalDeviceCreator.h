@@ -7,14 +7,8 @@
 
 #include "VulkanPhysicalDeviceSelector.h"
 #include <volk.h>
-#include <optional>
 
-class VulkanLogicalDeviceCreator {
-public:
-    static std::optional<VkDevice> CreateLogicalDevice(const PhysicalDeviceInfoWeCareAbout& deviceInfo);
-private:
-
-};
+VkDevice CreateLogicalDevice(const PhysicalDeviceInfoWeCareAbout& deviceInfo);
 
 
 

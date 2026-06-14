@@ -15,7 +15,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL DebugCreateInstanceCallback(VkDebugUtilsMessageSe
     return VK_FALSE;
 }
 
-std::optional<VkInstance> VulkanInstanceBuilder::GetInstance()
+VkInstance VulkanInstanceBuilder::GetInstance()
 {
     // #JOHN break out all of this instance stuff into a class / funciton in
     // a different file where you can just pass a "release" bool.
@@ -45,7 +45,7 @@ std::optional<VkInstance> VulkanInstanceBuilder::GetInstance()
     if (presentDesiredLayers.size() != RequiredLayers.size())
     {
         fmt::printf("Failed to retrieve present desired layers.\n");
-        return std::nullopt;
+        return VK_NULL_HANDLE;
     }
 
     // #JOHN figure out extensions that we want
@@ -90,7 +90,7 @@ std::optional<VkInstance> VulkanInstanceBuilder::GetInstance()
         {
             // dependent on the above break but it should be chill
             fmt::printf("Failed to retrieve debug extension names.\n");
-            return std::nullopt;
+            return VK_NULL_HANDLE;
         }
     }
 

@@ -35,7 +35,7 @@ public:
         return *this;
     }
 
-    std::optional<VkInstance> GetInstance();
+    VkInstance GetInstance();
 
 private:
     std::vector<std::string> RequiredLayers;
