@@ -364,11 +364,11 @@ void VulkanSwapchainResources::DestroySwapchainResources()
     offscreenRenderImageInfo.reset();
 
     // delete the swapchain and it's resources
-    for (VkSemaphore semaphore : imageAvailableSemaphores)
+    for (VkSemaphore semaphore : swapchainImageReadyToPresentSemaphores)
     {
         vkDestroySemaphore(device, semaphore, nullptr);
     }
-    imageAvailableSemaphores.clear();
+    swapchainImageReadyToPresentSemaphores.clear();
 
     for (VkImageView swapchainImageView : swapchainImageViews)
     {
@@ -407,7 +407,7 @@ bool VulkanSwapchainResources::CreateSwapchainResources()
         std::string semaphoreName = fmt::format("Image Available Semaphore {}", i);
         DebugSetName(device, VK_OBJECT_TYPE_SEMAPHORE, semaphore, semaphoreName.c_str());
 
-        imageAvailableSemaphores.emplace_back(semaphore);
+        swapchainImageReadyToPresentSemaphores.emplace_back(semaphore);
     }
 
     assert(!offscreenRenderImageInfo);

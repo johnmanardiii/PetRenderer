@@ -24,6 +24,8 @@ VulkanEngine::~VulkanEngine()
         vkDeviceWaitIdle(device);
     }
 
+    DestroyDescriptorInformation(device, descriptorInfo);
+
     frameInFlightStructures.reset(); // not sure if this is the right semantics but it works
     swapchainResources.reset();
 
@@ -160,6 +162,10 @@ bool VulkanEngine::init()
 
     frameInFlightStructures = VulkanCommandStructures(device, physDeviceinfo->graphicsPresentQueueFamilyIndex, 3);
 
+    // #JOHN this doesn't belong directly in the engine, but rather whatever represents our "draw passes" and this goes
+    // into the "compute shader draws a picture with 16x16 lines" logic
+    AllocateDescriptorInfo(device, descriptorInfo);
+
     return true;
 }
 
@@ -198,7 +204,8 @@ void VulkanEngine::RenderToOffscreenImage(VkCommandBuffer commandBuffer)
     VkImageMemoryBarrier2 undefinedToWritable = {.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
                                                  .pNext = nullptr,
                                                  .srcStageMask = VK_PIPELINE_STAGE_2_BLIT_BIT,
-                                                 .srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+                                                 .srcAccessMask =
+                                                     0, // don't need to make any data available, its gonna be cleared
                                                  .dstStageMask = VK_PIPELINE_STAGE_2_CLEAR_BIT,
                                                  .dstAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
                                                  .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
@@ -276,7 +283,7 @@ void VulkanEngine::BlitOffscreenImageToSwapchainImage(VkCommandBuffer commandBuf
         VkImageMemoryBarrier2 undefinedToTransferDst = {
             .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
             .pNext = nullptr,
-            .srcStageMask = VK_PIPELINE_STAGE_2_NONE,
+            .srcStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT,
             .srcAccessMask = 0,                           // we don't care about last swapchain image contents here:
             .dstStageMask = VK_PIPELINE_STAGE_2_BLIT_BIT, // this is just the clear one
             .dstAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
@@ -317,7 +324,9 @@ void VulkanEngine::BlitOffscreenImageToSwapchainImage(VkCommandBuffer commandBuf
         VkExtent2D swapchainExtent = swapchainResources->CurrentSwapchainExtent();
         VkOffset3D dstOffsets[2];
         dstOffsets[0] = {.x = 0, .y = 0, .z = 0};
-        dstOffsets[1] = {.x = static_cast<int32_t>(swapchainExtent.width), .y = static_cast<int32_t>(swapchainExtent.height), .z = 1};
+        dstOffsets[1] = {.x = static_cast<int32_t>(swapchainExtent.width),
+                         .y = static_cast<int32_t>(swapchainExtent.height),
+                         .z = 1};
 
         VkImageBlit2 offscreenToSwapchainBlit = {
             .sType = VK_STRUCTURE_TYPE_IMAGE_BLIT_2,
@@ -399,9 +408,9 @@ void VulkanEngine::RenderAndPresentToSwapchain()
     VkImageMemoryBarrier2 writableToPresentable = {
         .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
         .pNext = nullptr,
-        .srcStageMask = VK_PIPELINE_STAGE_2_BLIT_BIT,   // last thing we did to the swapchain image was blit
+        .srcStageMask = VK_PIPELINE_STAGE_2_BLIT_BIT, // last thing we did to the swapchain image was blit
         .srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
-        .dstStageMask = VK_PIPELINE_STAGE_2_NONE,   // what should wait on this...? is anything else a stage? no..
+        .dstStageMask = VK_PIPELINE_STAGE_2_NONE, // what should wait on this...? is anything else a stage? no..
         .dstAccessMask = 0,
         .oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
         .newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
@@ -419,22 +428,28 @@ void VulkanEngine::RenderAndPresentToSwapchain()
     // record the pipeline barrier transitioning the image to transferrable
     vkCmdPipelineBarrier2(frameStruct.commandBuffer, &dependencyInfoToPresentable);
 
+    vkEndCommandBuffer(frameStruct.commandBuffer);
+
+    // Submit command buffer to the queue
     VkCommandBufferSubmitInfo cmdSubmitInfo = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO,
         .commandBuffer = frameStruct.commandBuffer,
     };
 
-    VkSemaphore waitSemaphore = swapchainResources->GetImageAvailableSemaphore(imageAcquiredIndex);
-
-    VkSemaphoreSubmitInfo semaphoreSubmitInfo = {
-        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
-        .semaphore = waitSemaphore,
-        .stageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT // #JOHN might be too much but whatever
-    };
-
     VkSemaphoreSubmitInfo semaphoreWaitInfo = {
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
         .semaphore = frameStruct.imageAcquiredSemaphore,
+        // make the transfer wait for this semaphore... its the first thing that happens to the swapchain image is that
+        // it gets transferred to
+        .stageMask = VK_PIPELINE_STAGE_TRANSFER_BIT,
+    };
+
+    VkSemaphore swapchainImageReadySemaphore =
+        swapchainResources->GetSwapchainImageReadyToPresentSemaphore(imageAcquiredIndex);
+
+    VkSemaphoreSubmitInfo semaphoreSubmitInfo = {
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+        .semaphore = swapchainImageReadySemaphore,
         .stageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT // #JOHN might be too much but whatever
     };
 
@@ -451,12 +466,7 @@ void VulkanEngine::RenderAndPresentToSwapchain()
         .signalSemaphoreInfoCount = 1,
         .pSignalSemaphoreInfos = &semaphoreSubmitInfo,
     };
-
-    vkEndCommandBuffer(frameStruct.commandBuffer);
-
-    // OK now we finally submit this thing to the queue
-    // #JOHN I don't think we need the fence for this part? the semaphore signal in this being done handles that I think
     vkchk(vkQueueSubmit2(oneQueueToRuleThemAll, 1, &submitInfo, frameStruct.queueFinishedFence));
 
-    vkchk(swapchainResources->PresentImage(oneQueueToRuleThemAll, waitSemaphore, imageAcquiredIndex));
+    vkchk(swapchainResources->PresentImage(oneQueueToRuleThemAll, swapchainImageReadySemaphore, imageAcquiredIndex));
 }

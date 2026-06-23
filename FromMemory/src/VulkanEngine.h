@@ -6,6 +6,7 @@
 #define VULKAN_ENGINE_H
 
 #define GLFW_INCLUDE_VULKAN
+#include "DescriptorAllocator.h"
 #include "J3Alloc.h"
 #include "VulkanCommandBufferCreator.h"
 #include "VulkanPhysicalDeviceSelector.h"
@@ -42,16 +43,18 @@ class VulkanEngine
 
     VkInstance instance = VK_NULL_HANDLE;
     VkDevice device = VK_NULL_HANDLE;
-    std::optional<PhysicalDeviceInfoWeCareAbout> physDeviceinfo;
     VkQueue oneQueueToRuleThemAll = VK_NULL_HANDLE; // #JOHN rename once we have a better idea for this
-    SDL_Window *window = nullptr;
-    std::optional<VkSurfaceKHR> surface;
     std::optional<VulkanCommandStructures> frameInFlightStructures;
+    std::optional<PhysicalDeviceInfoWeCareAbout> physDeviceinfo;
     J3Alloc j3a;
 
-    // swap chain stuff that is RAII so it cleans itself up
-    // #JOHN this pointer doesn't feel right...
+    SDL_Window *window = nullptr;
+
+    std::optional<VkSurfaceKHR> surface;
     std::optional<VulkanSwapchainResources> swapchainResources;
+
+    // random rendering stuff
+    DescriptorInformation descriptorInfo;
 
     uint32_t currentFrame = 0; // always incrementing, doesn't loop around w/ modulo
     float elapsedTime = 0.0f;

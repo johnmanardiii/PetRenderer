@@ -43,9 +43,9 @@ class VulkanSwapchainResources
     {
         return swapchainInfo->swapchainImages[imageIndex];
     }
-    VkSemaphore GetImageAvailableSemaphore(uint32_t imageIndex)
+    VkSemaphore GetSwapchainImageReadyToPresentSemaphore(uint32_t imageIndex) const
     {
-        return imageAvailableSemaphores[imageIndex];
+        return swapchainImageReadyToPresentSemaphores[imageIndex];
     }
     [[nodiscard]] VkExtent2D CurrentSwapchainExtent() const
     {
@@ -69,7 +69,7 @@ class VulkanSwapchainResources
     VkSurfaceKHR surface;
 
     std::optional<SwapchainInfo> swapchainInfo;
-    std::vector<VkSemaphore> imageAvailableSemaphores;
+    std::vector<VkSemaphore> swapchainImageReadyToPresentSemaphores;
     std::vector<VkImageView> swapchainImageViews;
 
     VkExtent2D fallbackExtentSize;
