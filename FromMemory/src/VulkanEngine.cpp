@@ -24,6 +24,8 @@ VulkanEngine::~VulkanEngine()
         vkDeviceWaitIdle(device);
     }
 
+    pipelineObjects.reset();
+
     DestroyDescriptorInformation(device, descriptorInfo);
 
     frameInFlightStructures.reset(); // not sure if this is the right semantics but it works
@@ -165,6 +167,8 @@ bool VulkanEngine::init()
     // #JOHN this doesn't belong directly in the engine, but rather whatever represents our "draw passes" and this goes
     // into the "compute shader draws a picture with 16x16 lines" logic
     AllocateDescriptorInfo(device, descriptorInfo);
+
+    pipelineObjects.emplace(device, descriptorInfo.descriptorSetLayout);
 
     return true;
 }

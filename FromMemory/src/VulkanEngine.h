@@ -6,6 +6,7 @@
 #define VULKAN_ENGINE_H
 
 #define GLFW_INCLUDE_VULKAN
+#include "CreatePipeline.h"
 #include "DescriptorAllocator.h"
 #include "J3Alloc.h"
 #include "VulkanCommandBufferCreator.h"
@@ -55,6 +56,7 @@ class VulkanEngine
 
     // random rendering stuff
     DescriptorInformation descriptorInfo;
+    std::optional<PipelineObjects> pipelineObjects;
 
     uint32_t currentFrame = 0; // always incrementing, doesn't loop around w/ modulo
     float elapsedTime = 0.0f;
