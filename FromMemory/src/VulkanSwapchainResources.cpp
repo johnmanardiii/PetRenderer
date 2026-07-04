@@ -73,8 +73,8 @@ static VkSurfaceFormat2KHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFo
 }
 
 // #JOHN this should probably take an old swapchain as an option here.
-std::optional<SwapchainInfo> CreateSwapchain(VkDevice device, VkPhysicalDevice physicalDevice,
-                                                                    VkSurfaceKHR surface, VkExtent2D fallbackExtentSize)
+std::optional<SwapchainInfo> CreateSwapchain(VkDevice device, VkPhysicalDevice physicalDevice, VkSurfaceKHR surface,
+                                             VkExtent2D fallbackExtentSize)
 {
     // Present Modes:
     // https://docs.vulkan.org/refpages/latest/refpages/source/vkGetPhysicalDeviceSurfacePresentModesKHR.html
@@ -234,8 +234,10 @@ std::optional<SwapchainInfo> CreateSwapchain(VkDevice device, VkPhysicalDevice p
     std::vector<VkImage> swapchainImages(swapchainImageCount);
     vkchk(vkGetSwapchainImagesKHR(device, swapchain, &swapchainImageCount, swapchainImages.data()));
 
-    return SwapchainInfo{
-        .swapchain = swapchain, .swapchainImageFormat = swapchainInfo.imageFormat, .swapchainImages = swapchainImages, .swapchainExtent = swapChainExtent};
+    return SwapchainInfo{.swapchain = swapchain,
+                         .swapchainImageFormat = swapchainInfo.imageFormat,
+                         .swapchainImages = swapchainImages,
+                         .swapchainExtent = swapChainExtent};
 }
 
 std::vector<VkImageView> CreateSwapchainImageViews(VkDevice device, const SwapchainInfo &swapchainInfo)
@@ -282,8 +284,10 @@ std::vector<VkImageView> CreateSwapchainImageViews(VkDevice device, const Swapch
 } // namespace VulkanCreateSwapchain
 
 VulkanSwapchainResources::VulkanSwapchainResources(VkDevice device, VkPhysicalDevice physicalDevice,
-                                                   VkSurfaceKHR surface, VkExtent2D fallbackExtentSize, J3Alloc* j3Alloc)
-    : device(device), physicalDevice(physicalDevice), surface(surface), fallbackExtentSize(fallbackExtentSize), j3Alloc(j3Alloc)
+                                                   VkSurfaceKHR surface, VkExtent2D fallbackExtentSize,
+                                                   J3Alloc *j3Alloc)
+    : device(device), physicalDevice(physicalDevice), surface(surface), fallbackExtentSize(fallbackExtentSize),
+      j3Alloc(j3Alloc)
 {
     CreateSwapchainResources();
 }
@@ -312,8 +316,7 @@ VkResult VulkanSwapchainResources::PresentImage(VkQueue presentQueue, VkSemaphor
     };
     VkResult presentResult = vkQueuePresentKHR(presentQueue, &presentInfo);
 
-    if (presentResult == VK_ERROR_OUT_OF_DATE_KHR
-        || presentResult == VK_SUBOPTIMAL_KHR)
+    if (presentResult == VK_ERROR_OUT_OF_DATE_KHR || presentResult == VK_SUBOPTIMAL_KHR)
     {
         rebuildAtTopOfFrame = true; // problem for tomorrow : )
         return VK_SUCCESS;
@@ -321,11 +324,14 @@ VkResult VulkanSwapchainResources::PresentImage(VkQueue presentQueue, VkSemaphor
     return presentResult;
 }
 
-VkResult VulkanSwapchainResources::AcquireNextImage(VkSemaphore imageAcquiredSemaphore, uint32_t& imageIndex, uint32_t timeout)
+VkResult VulkanSwapchainResources::AcquireNextImage(VkSemaphore imageAcquiredSemaphore, uint32_t &imageIndex,
+                                                    uint32_t timeout)
 {
+    bJustRebuilt = false;
     if (rebuildAtTopOfFrame)
     {
         rebuildAtTopOfFrame = false;
+        bJustRebuilt = true;
         if (!Recreate())
         {
             fmt::print("Failed to recreate swapchain.\n");
@@ -335,17 +341,19 @@ VkResult VulkanSwapchainResources::AcquireNextImage(VkSemaphore imageAcquiredSem
 
     // first time I am not crashing the program on non-success lol
     VkResult acquireResult = vkAcquireNextImageKHR(device, swapchainInfo->swapchain, timeout, imageAcquiredSemaphore,
-                                VK_NULL_HANDLE, &imageIndex);
+                                                   VK_NULL_HANDLE, &imageIndex);
 
     // conditions to rebuild the swapchain:
-    // #JOHN in the future, this needs to report back to the engine the actual report code and it should handle "i need new surface pws..."
+    // #JOHN in the future, this needs to report back to the engine the actual report code and it should handle "i need
+    // new surface pws..."
     if (acquireResult == VK_SUBOPTIMAL_KHR)
     {
         // rebuild next frame semaphore already signaled though
         rebuildAtTopOfFrame = true;
         return VK_SUCCESS;
     }
-    if (acquireResult == VK_ERROR_OUT_OF_DATE_KHR) // tehre is a "lost fullscreen exclusive" and idk what it does so I won't ahdnle it here, just crash
+    if (acquireResult == VK_ERROR_OUT_OF_DATE_KHR) // tehre is a "lost fullscreen exclusive" and idk what it does so I
+                                                   // won't ahdnle it here, just crash
     {
         rebuildAtTopOfFrame = true;
     }
@@ -356,12 +364,20 @@ VkResult VulkanSwapchainResources::AcquireNextImage(VkSemaphore imageAcquiredSem
 
 void VulkanSwapchainResources::DestroySwapchainResources()
 {
+    if (device == VK_NULL_HANDLE)
+    {
+        // this should never happen but whatever
+        return;
+    }
     // wait for the device to be idle so we aren't destroying anything in use:
     vkDeviceWaitIdle(device);
 
     // clear stuff depending on the swapchain
-    DestroyOffscreenRenderImageInfo(device, *offscreenRenderImageInfo);
-    offscreenRenderImageInfo.reset();
+    if (offscreenRenderImageInfo)
+    {
+        DestroyOffscreenRenderImageInfo(device, *offscreenRenderImageInfo);
+        offscreenRenderImageInfo.reset();
+    }
 
     // delete the swapchain and it's resources
     for (VkSemaphore semaphore : swapchainImageReadyToPresentSemaphores)

@@ -16,6 +16,11 @@ struct PipelineObjects
 
     PipelineObjects(VkDevice device, VkDescriptorSetLayout descriptorSetLayout);
     ~PipelineObjects();
+
+    PipelineObjects(const PipelineObjects&) = delete;
+    PipelineObjects& operator=(const PipelineObjects&) = delete;
+    PipelineObjects(PipelineObjects&&) = delete;
+    PipelineObjects& operator=(PipelineObjects&&) = delete;
 };
 
 #endif //CREATEPIPELINE_H

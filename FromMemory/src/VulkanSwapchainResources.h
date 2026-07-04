@@ -57,7 +57,10 @@ class VulkanSwapchainResources
         return offscreenRenderImageInfo;
     }
 
-  private:
+    // #JOHN - hack for a real event system that I am starting to desperately need:
+    bool bJustRebuilt = false;
+private:
+
     bool Recreate();
     void DestroySwapchainResources();
     bool CreateSwapchainResources();

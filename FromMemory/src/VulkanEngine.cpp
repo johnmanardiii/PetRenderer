@@ -22,17 +22,16 @@ VulkanEngine::~VulkanEngine()
     if (device != VK_NULL_HANDLE)
     {
         vkDeviceWaitIdle(device);
+        pipelineObjects.reset();
+
+        DestroyDescriptorInformation(device, descriptorInfo);
+
+        frameInFlightStructures.reset(); // not sure if this is the right semantics but it works
+        swapchainResources.reset();
+
+        vkDestroyDevice(device, nullptr);
+        device = VK_NULL_HANDLE;
     }
-
-    pipelineObjects.reset();
-
-    DestroyDescriptorInformation(device, descriptorInfo);
-
-    frameInFlightStructures.reset(); // not sure if this is the right semantics but it works
-    swapchainResources.reset();
-
-    vkDestroyDevice(device, nullptr);
-    device = VK_NULL_HANDLE;
 
     if (instance != VK_NULL_HANDLE && surface.has_value())
     {
@@ -170,6 +169,23 @@ bool VulkanEngine::init()
 
     pipelineObjects.emplace(device, descriptorInfo.descriptorSetLayout);
 
+    // #JOHN - kind of inefficient here but update the descriptor set to the image, feel like i could do this once at
+    // startup
+    std::optional<OffscreenRenderImageInfo> offscreenRenderImageInfo =
+        swapchainResources->GetOffscreenRenderImageInfo();
+    assert(offscreenRenderImageInfo.has_value());
+    const VkDescriptorImageInfo imageInfo = {.imageView = offscreenRenderImageInfo->offscreenImageView,
+                                             .imageLayout = VK_IMAGE_LAYOUT_GENERAL};
+    VkWriteDescriptorSet writeDescriptorSet = {.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                                               .dstSet = descriptorInfo.descriptorSet,
+                                               .dstBinding = 0,
+                                               .dstArrayElement = 0,
+                                               .descriptorCount = 1,
+                                               .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+                                               .pImageInfo = &imageInfo};
+    // #JOHN in a real program... when is this type of thing called?
+    vkUpdateDescriptorSets(device, 1, &writeDescriptorSet, 0, nullptr);
+
     return true;
 }
 
@@ -210,10 +226,10 @@ void VulkanEngine::RenderToOffscreenImage(VkCommandBuffer commandBuffer)
                                                  .srcStageMask = VK_PIPELINE_STAGE_2_BLIT_BIT,
                                                  .srcAccessMask =
                                                      0, // don't need to make any data available, its gonna be cleared
-                                                 .dstStageMask = VK_PIPELINE_STAGE_2_CLEAR_BIT,
-                                                 .dstAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+                                                 .dstStageMask = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                                                 .dstAccessMask = VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT,
                                                  .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-                                                 .newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                                                 .newLayout = VK_IMAGE_LAYOUT_GENERAL,
                                                  .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
                                                  .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
                                                  .image = offscreenRenderImageInfo->offscreenImage,
@@ -228,19 +244,22 @@ void VulkanEngine::RenderToOffscreenImage(VkCommandBuffer commandBuffer)
     // record the pipeline barrier transitioning the image to transferrable
     vkCmdPipelineBarrier2(commandBuffer, &dependencyInfoToWritable);
 
-    // now that it has been transferred, we clear the image
-    const VkClearColorValue clearColor = {.float32 = {0.0f, (glm::sin(elapsedTime * 2) + 1) * .5f, 0.0, 1.0f}};
+    // bind the pipeline
+    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipelineObjects->pipeline);
 
-    vkCmdClearColorImage(commandBuffer, offscreenRenderImageInfo->offscreenImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                         &clearColor, 1, &subresourceRange);
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipelineObjects->layout, 0, 1,
+                            &descriptorInfo.descriptorSet, 0, nullptr);
+
+    auto [width, height] = swapchainResources->CurrentSwapchainExtent();
+    vkCmdDispatch(commandBuffer, ceil(width / 16.0), ceil(height / 16.0), 1);
 
     VkImageMemoryBarrier2 offscreenToTransferRead = {.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
                                                      .pNext = nullptr,
-                                                     .srcStageMask = VK_PIPELINE_STAGE_2_CLEAR_BIT,
-                                                     .srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+                                                     .srcStageMask = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                                                     .srcAccessMask = VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT,
                                                      .dstStageMask = VK_PIPELINE_STAGE_2_BLIT_BIT,
                                                      .dstAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT,
-                                                     .oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                                                     .oldLayout = VK_IMAGE_LAYOUT_GENERAL,
                                                      .newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
                                                      .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
                                                      .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
@@ -371,6 +390,23 @@ void VulkanEngine::RenderAndPresentToSwapchain()
     // like other games.
     VkResult acquireResult =
         (swapchainResources->AcquireNextImage(frameStruct.imageAcquiredSemaphore, imageAcquiredIndex));
+    if (swapchainResources->bJustRebuilt)
+    {
+        std::optional<OffscreenRenderImageInfo> offscreenRenderImageInfo =
+            swapchainResources->GetOffscreenRenderImageInfo();
+        assert(offscreenRenderImageInfo.has_value());
+        const VkDescriptorImageInfo imageInfo = {.imageView = offscreenRenderImageInfo->offscreenImageView,
+                                                 .imageLayout = VK_IMAGE_LAYOUT_GENERAL};
+        VkWriteDescriptorSet writeDescriptorSet = {.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                                                   .dstSet = descriptorInfo.descriptorSet,
+                                                   .dstBinding = 0,
+                                                   .dstArrayElement = 0,
+                                                   .descriptorCount = 1,
+                                                   .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+                                                   .pImageInfo = &imageInfo};
+        // #JOHN in a real program... when is this type of thing called?
+        vkUpdateDescriptorSets(device, 1, &writeDescriptorSet, 0, nullptr);
+    }
 
     if (acquireResult == VK_ERROR_OUT_OF_DATE_KHR)
     {
