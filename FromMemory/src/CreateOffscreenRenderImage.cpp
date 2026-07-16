@@ -19,6 +19,7 @@ void DestroyOffscreenRenderImageInfo(VkDevice device, OffscreenRenderImageInfo &
 OffscreenRenderImageInfo createOffscreenRenderImageInfo(VkDevice device, VkExtent2D swapchainExtent, J3Alloc *allocator)
 {
     OffscreenRenderImageInfo offscreenRenderImageInfo;
+    offscreenRenderImageInfo.device = device;
     offscreenRenderImageInfo.extent = swapchainExtent;
 
     // Create the image struct based on the params
