@@ -11,6 +11,7 @@
 #include <optional>
 #include <vector>
 #include <volk.h>
+#include "Signal.h"
 
 /*
  * Misc things I need later that I determined from creating the swapchain
@@ -57,8 +58,8 @@ class VulkanSwapchainResources
         return offscreenRenderImageInfo;
     }
 
-    // #JOHN - hack for a real event system that I am starting to desperately need:
-    bool bJustRebuilt = false;
+    Signal<> onSwapchainRebuild;
+
 private:
 
     bool Recreate();

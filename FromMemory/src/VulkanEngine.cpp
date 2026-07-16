@@ -186,6 +186,8 @@ bool VulkanEngine::init()
     // #JOHN in a real program... when is this type of thing called?
     vkUpdateDescriptorSets(device, 1, &writeDescriptorSet, 0, nullptr);
 
+    RegisterOnSwapchainRebuildCallbacks();
+
     return true;
 }
 
@@ -197,6 +199,28 @@ void VulkanEngine::Iterate()
     // update what frame we are on for the frames in flight structures
     currentFrame++;
     elapsedTime = SDL_GetTicksNS() / 1000000000.0;
+}
+
+void VulkanEngine::RegisterOnSwapchainRebuildCallbacks()
+{
+    if (swapchainResources)
+    {
+        swapchainResources->onSwapchainRebuild.connect([this]() {
+            std::optional<OffscreenRenderImageInfo> offscreenRenderImageInfo =
+            swapchainResources->GetOffscreenRenderImageInfo();
+            assert(offscreenRenderImageInfo.has_value());
+            const VkDescriptorImageInfo imageInfo = {.imageView = offscreenRenderImageInfo->offscreenImageView,
+                                                     .imageLayout = VK_IMAGE_LAYOUT_GENERAL};
+            VkWriteDescriptorSet writeDescriptorSet = {.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                                                       .dstSet = descriptorInfo.descriptorSet,
+                                                       .dstBinding = 0,
+                                                       .dstArrayElement = 0,
+                                                       .descriptorCount = 1,
+                                                       .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+                                                       .pImageInfo = &imageInfo};
+            vkUpdateDescriptorSets(device, 1, &writeDescriptorSet, 0, nullptr);
+        });
+    }
 }
 
 void VulkanEngine::RenderToOffscreenImage(VkCommandBuffer commandBuffer)
@@ -275,6 +299,7 @@ void VulkanEngine::RenderToOffscreenImage(VkCommandBuffer commandBuffer)
     // record the pipeline barrier transitioning the image to transferrable
     vkCmdPipelineBarrier2(commandBuffer, &dependencyInfoToPresentable);
 }
+
 void VulkanEngine::BlitOffscreenImageToSwapchainImage(VkCommandBuffer commandBuffer, VkImage acquiredImage)
 {
     if (!swapchainResources)
@@ -390,23 +415,6 @@ void VulkanEngine::RenderAndPresentToSwapchain()
     // like other games.
     VkResult acquireResult =
         (swapchainResources->AcquireNextImage(frameStruct.imageAcquiredSemaphore, imageAcquiredIndex));
-    if (swapchainResources->bJustRebuilt)
-    {
-        std::optional<OffscreenRenderImageInfo> offscreenRenderImageInfo =
-            swapchainResources->GetOffscreenRenderImageInfo();
-        assert(offscreenRenderImageInfo.has_value());
-        const VkDescriptorImageInfo imageInfo = {.imageView = offscreenRenderImageInfo->offscreenImageView,
-                                                 .imageLayout = VK_IMAGE_LAYOUT_GENERAL};
-        VkWriteDescriptorSet writeDescriptorSet = {.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-                                                   .dstSet = descriptorInfo.descriptorSet,
-                                                   .dstBinding = 0,
-                                                   .dstArrayElement = 0,
-                                                   .descriptorCount = 1,
-                                                   .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-                                                   .pImageInfo = &imageInfo};
-        // #JOHN in a real program... when is this type of thing called?
-        vkUpdateDescriptorSets(device, 1, &writeDescriptorSet, 0, nullptr);
-    }
 
     if (acquireResult == VK_ERROR_OUT_OF_DATE_KHR)
     {

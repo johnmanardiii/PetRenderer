@@ -327,16 +327,15 @@ VkResult VulkanSwapchainResources::PresentImage(VkQueue presentQueue, VkSemaphor
 VkResult VulkanSwapchainResources::AcquireNextImage(VkSemaphore imageAcquiredSemaphore, uint32_t &imageIndex,
                                                     uint32_t timeout)
 {
-    bJustRebuilt = false;
     if (rebuildAtTopOfFrame)
     {
         rebuildAtTopOfFrame = false;
-        bJustRebuilt = true;
         if (!Recreate())
         {
             fmt::print("Failed to recreate swapchain.\n");
             return VK_ERROR_UNKNOWN;
         }
+        onSwapchainRebuild.emit();
     }
 
     // first time I am not crashing the program on non-success lol
@@ -427,6 +426,10 @@ bool VulkanSwapchainResources::CreateSwapchainResources()
     }
 
     assert(!offscreenRenderImageInfo);
+
+    // #JOHN - for here, we need some kind of "on swapchain... deleted? recreated? same honestly for the descriptor
+    // it should be listening to not just recreated but each "destroy" / "create" individually I think...
+    // it is wrong to group them together here to some extent.
     offscreenRenderImageInfo.emplace(createOffscreenRenderImageInfo(device, swapchainInfo->swapchainExtent, j3Alloc));
 
     return true;
