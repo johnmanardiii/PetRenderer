@@ -38,7 +38,7 @@ public:
         if (this != &other)
         {
             // #JOHN - oh yeah you need to avoid the assignment to self... really need to watch that cpp con talk again
-            m_map(std::move(other.m_map));
+            m_map = std::move(other.m_map);
             m_iCurrentID = std::move(other.m_iCurrentID);
         }
 
@@ -51,12 +51,12 @@ public:
         return m_iCurrentID;
     }
 
-    int disconnect(int id)
+    void disconnect(int id)
     {
         m_map.erase(id);
     }
 
-    int disconnect_all()
+    void disconnect_all()
     {
         m_map.clear();
     }

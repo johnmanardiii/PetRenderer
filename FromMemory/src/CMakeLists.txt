@@ -11,7 +11,6 @@ target_sources(PetRenderer PRIVATE
         DescriptorAllocator.cpp
         ShaderLoader.cpp
         CreatePipeline.cpp
-        Signal.cpp
 )
 
 target_include_directories(PetRenderer PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})

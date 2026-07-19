@@ -81,6 +81,7 @@ private:
 
     // #JOHN - stuff that isn't quite "the swapchain" but needs to be rebuilt on that lifetime so I am putting it here
     // for now even though my OOP body is screaming at me to decouple this
+    // 7/19/2026 john - this actually doesn't bother me too much, should revisit eventually though
     std::optional<OffscreenRenderImageInfo> offscreenRenderImageInfo;
 };
 
