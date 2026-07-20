@@ -289,7 +289,6 @@ VulkanSwapchainResources::VulkanSwapchainResources(VkDevice device, VkPhysicalDe
     : device(device), physicalDevice(physicalDevice), surface(surface), fallbackExtentSize(fallbackExtentSize),
       j3Alloc(j3Alloc)
 {
-    CreateSwapchainResources();
 }
 VulkanSwapchainResources::~VulkanSwapchainResources()
 {
@@ -304,6 +303,11 @@ bool VulkanSwapchainResources::Recreate()
     return CreateSwapchainResources();
 }
 
+void VulkanSwapchainResources::Initialize()
+{
+    // #JOHN should I have some kind of bool saying "is initialized"?
+    CreateSwapchainResources();
+}
 VkResult VulkanSwapchainResources::PresentImage(VkQueue presentQueue, VkSemaphore waitSemaphore, uint32_t &imageIndex)
 {
     VkPresentInfoKHR presentInfo = {
@@ -335,7 +339,6 @@ VkResult VulkanSwapchainResources::AcquireNextImage(VkSemaphore imageAcquiredSem
             fmt::print("Failed to recreate swapchain.\n");
             return VK_ERROR_UNKNOWN;
         }
-        onSwapchainRebuild.emit();
     }
 
     // first time I am not crashing the program on non-success lol
@@ -432,5 +435,7 @@ bool VulkanSwapchainResources::CreateSwapchainResources()
     // it is wrong to group them together here to some extent.
     offscreenRenderImageInfo.emplace(createOffscreenRenderImageInfo(device, swapchainInfo->swapchainExtent, j3Alloc));
 
+
+    onSwapchainCreated.emit();
     return true;
 }

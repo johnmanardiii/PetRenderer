@@ -37,17 +37,23 @@ class VulkanSwapchainResources
     VulkanSwapchainResources(const VulkanSwapchainResources &) = delete;
     VulkanSwapchainResources &operator=(const VulkanSwapchainResources &) = delete;
 
+    void Initialize();
+
     // #JOHN lose out on a fence here but don't really mind
     VkResult PresentImage(VkQueue queue, VkSemaphore waitSemaphore, uint32_t &imageIndex);
+
     VkResult AcquireNextImage(VkSemaphore imageAcquiredSemaphore, uint32_t &imageIndex, uint32_t timeout = 1000000000);
+
     VkImage GetImage(uint32_t imageIndex)
     {
         return swapchainInfo->swapchainImages[imageIndex];
     }
+
     VkSemaphore GetSwapchainImageReadyToPresentSemaphore(uint32_t imageIndex) const
     {
         return swapchainImageReadyToPresentSemaphores[imageIndex];
     }
+
     [[nodiscard]] VkExtent2D CurrentSwapchainExtent() const
     {
         return swapchainInfo->swapchainExtent;
@@ -58,7 +64,7 @@ class VulkanSwapchainResources
         return offscreenRenderImageInfo;
     }
 
-    Signal<> onSwapchainRebuild;
+    Signal<> onSwapchainCreated;
 
 private:
 

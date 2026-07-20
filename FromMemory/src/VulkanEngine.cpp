@@ -161,7 +161,7 @@ bool VulkanEngine::init()
         device, physDeviceinfo->physicalDevice, *surface,
         VkExtent2D{.width = static_cast<uint32_t>(width), .height = static_cast<uint32_t>(height)}, &j3a);
 
-    frameInFlightStructures = VulkanCommandStructures(device, physDeviceinfo->graphicsPresentQueueFamilyIndex, 3);
+
 
     // #JOHN this doesn't belong directly in the engine, but rather whatever represents our "draw passes" and this goes
     // into the "compute shader draws a picture with 16x16 lines" logic
@@ -169,24 +169,14 @@ bool VulkanEngine::init()
 
     pipelineObjects.emplace(device, descriptorInfo.descriptorSetLayout);
 
-    // #JOHN - kind of inefficient here but update the descriptor set to the image, feel like i could do this once at
-    // startup
-    std::optional<OffscreenRenderImageInfo> offscreenRenderImageInfo =
-        swapchainResources->GetOffscreenRenderImageInfo();
-    assert(offscreenRenderImageInfo.has_value());
-    const VkDescriptorImageInfo imageInfo = {.imageView = offscreenRenderImageInfo->offscreenImageView,
-                                             .imageLayout = VK_IMAGE_LAYOUT_GENERAL};
-    VkWriteDescriptorSet writeDescriptorSet = {.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-                                               .dstSet = descriptorInfo.descriptorSet,
-                                               .dstBinding = 0,
-                                               .dstArrayElement = 0,
-                                               .descriptorCount = 1,
-                                               .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-                                               .pImageInfo = &imageInfo};
-    // #JOHN in a real program... when is this type of thing called?
-    vkUpdateDescriptorSets(device, 1, &writeDescriptorSet, 0, nullptr);
+    // #JOHN - hidden dependency on the "pipeline objects" and descriptor set stuff.
+    // #JOHN - kinda gross ordering depdendency right here.
+    RegisterOnSwapchainCreatedCallbacks();
+    swapchainResources->Initialize();
 
-    RegisterOnSwapchainRebuildCallbacks();
+    frameInFlightStructures = VulkanCommandStructures(device, physDeviceinfo->graphicsPresentQueueFamilyIndex, 3);
+
+
 
     return true;
 }
@@ -201,11 +191,11 @@ void VulkanEngine::Iterate()
     elapsedTime = SDL_GetTicksNS() / 1000000000.0;
 }
 
-void VulkanEngine::RegisterOnSwapchainRebuildCallbacks()
+void VulkanEngine::RegisterOnSwapchainCreatedCallbacks()
 {
     if (swapchainResources)
     {
-        swapchainResources->onSwapchainRebuild.connect([this]() {
+        swapchainResources->onSwapchainCreated.connect([this]() {
             std::optional<OffscreenRenderImageInfo> offscreenRenderImageInfo =
                 swapchainResources->GetOffscreenRenderImageInfo();
             assert(offscreenRenderImageInfo.has_value());
