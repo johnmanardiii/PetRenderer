@@ -207,7 +207,7 @@ void VulkanEngine::RegisterOnSwapchainRebuildCallbacks()
     {
         swapchainResources->onSwapchainRebuild.connect([this]() {
             std::optional<OffscreenRenderImageInfo> offscreenRenderImageInfo =
-            swapchainResources->GetOffscreenRenderImageInfo();
+                swapchainResources->GetOffscreenRenderImageInfo();
             assert(offscreenRenderImageInfo.has_value());
             const VkDescriptorImageInfo imageInfo = {.imageView = offscreenRenderImageInfo->offscreenImageView,
                                                      .imageLayout = VK_IMAGE_LAYOUT_GENERAL};
@@ -231,42 +231,20 @@ void VulkanEngine::RenderToOffscreenImage(VkCommandBuffer commandBuffer)
     {
         return;
     }
-    // we have a reset command buffer and fence is ready so we are good to go
 
     // transfer our offscreen render image to be optimal for transfer dst
     // transition the swapchain image from undefined to "writable"
     // wait for "blit" to finish, transfer must be done before clear
-
-    VkImageSubresourceRange subresourceRange = {
-        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-        .baseMipLevel = 0,
-        .levelCount = 1,
-        .baseArrayLayer = 0,
-        .layerCount = 1,
-    };
-
-    VkImageMemoryBarrier2 undefinedToWritable = {.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
-                                                 .pNext = nullptr,
-                                                 .srcStageMask = VK_PIPELINE_STAGE_2_BLIT_BIT,
-                                                 .srcAccessMask =
-                                                     0, // don't need to make any data available, its gonna be cleared
-                                                 .dstStageMask = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                                                 .dstAccessMask = VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT,
-                                                 .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-                                                 .newLayout = VK_IMAGE_LAYOUT_GENERAL,
-                                                 .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-                                                 .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-                                                 .image = offscreenRenderImageInfo->offscreenImage,
-                                                 .subresourceRange = subresourceRange};
-
-    VkDependencyInfo dependencyInfoToWritable = {
-        .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
-        .imageMemoryBarrierCount = 1,
-        .pImageMemoryBarriers = &undefinedToWritable,
-    };
-
-    // record the pipeline barrier transitioning the image to transferrable
-    vkCmdPipelineBarrier2(commandBuffer, &dependencyInfoToWritable);
+    TransitionVkImageFormat({
+        .cmd = commandBuffer,
+        .srcStageMask = VK_PIPELINE_STAGE_2_BLIT_BIT,
+        .srcAccessMask = 0, // don't need to make any data available, its gonna be cleared
+        .dstStageMask = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+        .dstAccessMask = VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT,
+        .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+        .newLayout = VK_IMAGE_LAYOUT_GENERAL,
+        .image = offscreenRenderImageInfo->offscreenImage,
+    });
 
     // bind the pipeline
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipelineObjects->pipeline);
@@ -277,27 +255,17 @@ void VulkanEngine::RenderToOffscreenImage(VkCommandBuffer commandBuffer)
     auto [width, height] = swapchainResources->CurrentSwapchainExtent();
     vkCmdDispatch(commandBuffer, ceil(width / 16.0), ceil(height / 16.0), 1);
 
-    VkImageMemoryBarrier2 offscreenToTransferRead = {.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
-                                                     .pNext = nullptr,
-                                                     .srcStageMask = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                                                     .srcAccessMask = VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT,
-                                                     .dstStageMask = VK_PIPELINE_STAGE_2_BLIT_BIT,
-                                                     .dstAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT,
-                                                     .oldLayout = VK_IMAGE_LAYOUT_GENERAL,
-                                                     .newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                                                     .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-                                                     .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-                                                     .image = offscreenRenderImageInfo->offscreenImage,
-                                                     .subresourceRange = subresourceRange};
-
-    VkDependencyInfo dependencyInfoToPresentable = {
-        .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
-        .imageMemoryBarrierCount = 1,
-        .pImageMemoryBarriers = &offscreenToTransferRead,
-    };
-
-    // record the pipeline barrier transitioning the image to transferrable
-    vkCmdPipelineBarrier2(commandBuffer, &dependencyInfoToPresentable);
+    // after the offscreen image has been written to, convert it to be transferred over to the swapchain image
+    TransitionVkImageFormat({
+        .cmd = commandBuffer,
+        .srcStageMask = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+        .srcAccessMask = VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT,
+        .dstStageMask = VK_PIPELINE_STAGE_2_BLIT_BIT,
+        .dstAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT,
+        .oldLayout = VK_IMAGE_LAYOUT_GENERAL,
+        .newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+        .image = offscreenRenderImageInfo->offscreenImage,
+    });
 }
 
 void VulkanEngine::BlitOffscreenImageToSwapchainImage(VkCommandBuffer commandBuffer, VkImage acquiredImage)
@@ -318,12 +286,12 @@ void VulkanEngine::BlitOffscreenImageToSwapchainImage(VkCommandBuffer commandBuf
     // Transition our acquired image to be ready for blit
     TransitionVkImageFormat({
         .cmd = commandBuffer,
-        .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-        .newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
         .srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
         .srcAccessMask = 0,
         .dstStageMask = VK_PIPELINE_STAGE_2_BLIT_BIT,
         .dstAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+        .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+        .newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
         .image = acquiredImage,
     });
 
@@ -420,12 +388,12 @@ void VulkanEngine::RenderAndPresentToSwapchain()
     // transition swapchain image from being blit to present
     TransitionVkImageFormat({
         .cmd = frameStruct.commandBuffer,
-        .oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-        .newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
         .srcStageMask = VK_PIPELINE_STAGE_2_BLIT_BIT,
         .srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
         .dstStageMask = VK_PIPELINE_STAGE_2_NONE,
         .dstAccessMask = 0,
+        .oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        .newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
         .image = acquiredImage,
     });
 

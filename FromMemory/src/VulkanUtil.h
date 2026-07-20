@@ -29,12 +29,15 @@ inline void vkchk(VkResult result)
 struct ImageTransitionArgs
 {
     VkCommandBuffer cmd;
+
+    VkPipelineStageFlags2 srcStageMask;
+    VkAccessFlags2 srcAccessMask;
+    VkPipelineStageFlags2 dstStageMask;
+    VkAccessFlags2 dstAccessMask;
+
     VkImageLayout oldLayout;
     VkImageLayout newLayout;
-    VkPipelineStageFlags2 srcStageMask;
-    VkAccessFlags srcAccessMask;
-    VkPipelineStageFlags2 dstStageMask;
-    VkAccessFlags dstAccessMask;
+
     VkImage image;
 
     // usually assumed to be these values
