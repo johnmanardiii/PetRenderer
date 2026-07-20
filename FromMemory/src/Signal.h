@@ -39,7 +39,7 @@ public:
         {
             // #JOHN - oh yeah you need to avoid the assignment to self... really need to watch that cpp con talk again
             m_map = std::move(other.m_map);
-            m_iCurrentID = std::move(other.m_iCurrentID);
+            m_iCurrentID = other.m_iCurrentID;
         }
 
         return *this;

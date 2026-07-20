@@ -323,34 +323,17 @@ void VulkanEngine::BlitOffscreenImageToSwapchainImage(VkCommandBuffer commandBuf
         .layerCount = 1,
     };
 
-    {
-        // Transition the acquired swapchain image to a transfer destination (from undefined because we don't know what
-        // was in it)
-
-        // transition the swapchain image from undefined to "writable" for blit dst
-        VkImageMemoryBarrier2 undefinedToTransferDst = {
-            .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
-            .pNext = nullptr,
-            .srcStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT,
-            .srcAccessMask = 0,                           // we don't care about last swapchain image contents here:
-            .dstStageMask = VK_PIPELINE_STAGE_2_BLIT_BIT, // this is just the clear one
-            .dstAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
-            .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-            .newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .image =
-                acquiredImage, // the swapchain image we want to clear and have acquired by index from the swapchain
-            .subresourceRange = subresourceRange};
-
-        VkDependencyInfo dependencyInfoUndefinedToTransferDst = {
-            .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
-            .imageMemoryBarrierCount = 1,
-            .pImageMemoryBarriers = &undefinedToTransferDst,
-        };
-
-        vkCmdPipelineBarrier2(commandBuffer, &dependencyInfoUndefinedToTransferDst);
-    }
+    // Transition our acquired image to be ready for blit
+    TransitionFormatSimple({
+        .cmd = commandBuffer,
+        .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+        .newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        .srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+        .srcAccessMask = 0,
+        .dstStageMask = VK_PIPELINE_STAGE_2_BLIT_BIT,
+        .dstAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+        .image = acquiredImage,
+    });
 
     {
         // now it is time to set up the actual blit from the offscreen image into the swapchain image

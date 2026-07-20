@@ -25,4 +25,26 @@ inline void vkchk(VkResult result)
     }
 }
 
+// currently assumes no queue ownership transfer
+struct ImageTransitionArgs
+{
+    VkCommandBuffer cmd;
+    VkImageLayout oldLayout;
+    VkImageLayout newLayout;
+    VkPipelineStageFlags2 srcStageMask;
+    VkAccessFlags srcAccessMask;
+    VkPipelineStageFlags2 dstStageMask;
+    VkAccessFlags dstAccessMask;
+    VkImage image;
+
+    // usually assumed to be these values
+    VkImageAspectFlags aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    uint32_t baseMipLevel = 0;
+    uint32_t levelCount = 1;
+    uint32_t baseArrayLayer = 0;
+    uint32_t layerCount = 1;
+};
+
+void TransitionFormatSimple(const ImageTransitionArgs &args);
+
 #endif // VULKAN_UTIL_PR_H
