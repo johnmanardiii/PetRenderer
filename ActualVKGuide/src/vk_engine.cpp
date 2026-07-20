@@ -49,8 +49,6 @@ void VulkanEngine::init()
 
     init_descriptors();
 
-    init_descriptors();
-
     init_pipelines();
 
     // everything went fine
@@ -360,7 +358,7 @@ void VulkanEngine::init_swapchain()
     // add to deletion queues
     _mainDeletionQueue.push_function([=]() {
         vkDestroyImageView(_device, _drawImage.imageView, nullptr);
-        vkDestroyImage(_device, _drawImage.image, nullptr);
+        vmaDestroyImage(_allocator, _drawImage.image, _drawImage.allocation);
     });
 }
 
