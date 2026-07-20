@@ -4,7 +4,7 @@
 #include "VulkanUtil.h"
 
 
-void TransitionFormatSimple(const ImageTransitionArgs &args)
+void TransitionVkImageFormat(const ImageTransitionArgs &args)
 {
     VkImageSubresourceRange subresourceRange = {
         .aspectMask = args.aspectMask,

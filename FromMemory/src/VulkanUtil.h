@@ -45,6 +45,6 @@ struct ImageTransitionArgs
     uint32_t layerCount = 1;
 };
 
-void TransitionFormatSimple(const ImageTransitionArgs &args);
+void TransitionVkImageFormat(const ImageTransitionArgs &args);
 
 #endif // VULKAN_UTIL_PR_H

@@ -315,16 +315,8 @@ void VulkanEngine::BlitOffscreenImageToSwapchainImage(VkCommandBuffer commandBuf
         return;
     }
 
-    VkImageSubresourceRange subresourceRange = {
-        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-        .baseMipLevel = 0,
-        .levelCount = 1,
-        .baseArrayLayer = 0,
-        .layerCount = 1,
-    };
-
     // Transition our acquired image to be ready for blit
-    TransitionFormatSimple({
+    TransitionVkImageFormat({
         .cmd = commandBuffer,
         .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
         .newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
@@ -425,39 +417,17 @@ void VulkanEngine::RenderAndPresentToSwapchain()
 
     BlitOffscreenImageToSwapchainImage(frameStruct.commandBuffer, acquiredImage);
 
-    // #JOHN once done, convert this whole "turn image from this to that" insane amt of code
-    // #JOHN temp little subresource range we are going to use to describe our baby image:
-    VkImageSubresourceRange subresourceRange = {
-        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-        .baseMipLevel = 0,
-        .levelCount = 1,
-        .baseArrayLayer = 0,
-        .layerCount = 1,
-    };
-
-    // transition the swapchain image from undefined to "writable"
-    VkImageMemoryBarrier2 writableToPresentable = {
-        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
-        .pNext = nullptr,
-        .srcStageMask = VK_PIPELINE_STAGE_2_BLIT_BIT, // last thing we did to the swapchain image was blit
-        .srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
-        .dstStageMask = VK_PIPELINE_STAGE_2_NONE, // what should wait on this...? is anything else a stage? no..
-        .dstAccessMask = 0,
+    // transition swapchain image from being blit to present
+    TransitionVkImageFormat({
+        .cmd = frameStruct.commandBuffer,
         .oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
         .newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .srcStageMask = VK_PIPELINE_STAGE_2_BLIT_BIT,
+        .srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+        .dstStageMask = VK_PIPELINE_STAGE_2_NONE,
+        .dstAccessMask = 0,
         .image = acquiredImage,
-        .subresourceRange = subresourceRange};
-
-    VkDependencyInfo dependencyInfoToPresentable = {
-        .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
-        .imageMemoryBarrierCount = 1,
-        .pImageMemoryBarriers = &writableToPresentable,
-    };
-
-    // record the pipeline barrier transitioning the image to transferrable
-    vkCmdPipelineBarrier2(frameStruct.commandBuffer, &dependencyInfoToPresentable);
+    });
 
     vkEndCommandBuffer(frameStruct.commandBuffer);
 
