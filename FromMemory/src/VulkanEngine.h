@@ -52,7 +52,7 @@ class VulkanEngine
 
     SDL_Window *window = nullptr;
 
-    std::optional<VkSurfaceKHR> surface;
+    VkSurfaceKHR surface;
     std::optional<VulkanSwapchainResources> swapchainResources;
 
     // random rendering stuff

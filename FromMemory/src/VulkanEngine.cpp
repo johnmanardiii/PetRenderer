@@ -33,9 +33,9 @@ VulkanEngine::~VulkanEngine()
         device = VK_NULL_HANDLE;
     }
 
-    if (instance != VK_NULL_HANDLE && surface.has_value())
+    if (instance != VK_NULL_HANDLE && surface != VK_NULL_HANDLE)
     {
-        vkDestroySurfaceKHR(instance, *surface, nullptr);
+        vkDestroySurfaceKHR(instance, surface, nullptr);
     }
 
     // cleanup vulkan handle stuff (move this to RAII class engine) #JOHN
@@ -94,7 +94,6 @@ bool VulkanEngine::init()
     // something about "implicitly enable layers / explitly enabled layers"
     requiredExtensions.push_back(VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME);
 
-    // #JOHN you need to pass the vulkan version here.
     instance = VulkanInstanceBuilder()
                    .SetRequiredLayers({"VK_LAYER_KHRONOS_validation"})
                    .SetRequiredExtensions(requiredExtensions)
@@ -131,7 +130,7 @@ bool VulkanEngine::init()
 
     // gather a valid physical device
     VulkanPhysicalDeviceSelector selector;
-    physDeviceinfo = selector.selectPhysicalDevice(instance, *surface);
+    physDeviceinfo = selector.selectPhysicalDevice(instance, surface);
 
     if (!physDeviceinfo)
     {
@@ -158,7 +157,7 @@ bool VulkanEngine::init()
     DebugSetName(device, VK_OBJECT_TYPE_QUEUE, oneQueueToRuleThemAll, "One Graphics Queue I am using for everything");
 
     swapchainResources.emplace(
-        device, physDeviceinfo->physicalDevice, *surface,
+        device, physDeviceinfo->physicalDevice, surface,
         VkExtent2D{.width = static_cast<uint32_t>(width), .height = static_cast<uint32_t>(height)}, &j3a);
 
 
