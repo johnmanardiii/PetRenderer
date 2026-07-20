@@ -6,12 +6,13 @@
 #define VULKANCREATESWAPCHAIN_H
 
 #include "CreateOffscreenRenderImage.h"
+#include "FunctionalQueue.h"
 
+#include "Signal.h"
 #include <SDL3/SDL_video.h>
 #include <optional>
 #include <vector>
 #include <volk.h>
-#include "Signal.h"
 
 /*
  * Misc things I need later that I determined from creating the swapchain
@@ -67,7 +68,7 @@ class VulkanSwapchainResources
     Signal<> onSwapchainCreated;
 
 private:
-
+    FunctionalQueue deletionQueue;
     bool Recreate();
     void DestroySwapchainResources();
     bool CreateSwapchainResources();

@@ -305,7 +305,8 @@ bool VulkanSwapchainResources::Recreate()
 
 void VulkanSwapchainResources::Initialize()
 {
-    // #JOHN should I have some kind of bool saying "is initialized"?
+    // #JOHN should I have some kind of bool saying "is initialized"? I don't love the way this works...
+    // but it allows for things to register w/ initialization after construction...
     CreateSwapchainResources();
 }
 VkResult VulkanSwapchainResources::PresentImage(VkQueue presentQueue, VkSemaphore waitSemaphore, uint32_t &imageIndex)
@@ -369,39 +370,21 @@ void VulkanSwapchainResources::DestroySwapchainResources()
     if (device == VK_NULL_HANDLE)
     {
         // this should never happen but whatever
+        // #JOHN - this should probably make things not work at construction time, stored whole lifetime, no more
+        // checks like this... this should be something we can depend on.
         return;
     }
+
     // wait for the device to be idle so we aren't destroying anything in use:
     vkDeviceWaitIdle(device);
 
-    // clear stuff depending on the swapchain
-    if (offscreenRenderImageInfo)
-    {
-        DestroyOffscreenRenderImageInfo(device, *offscreenRenderImageInfo);
-        offscreenRenderImageInfo.reset();
-    }
-
-    // delete the swapchain and it's resources
-    for (VkSemaphore semaphore : swapchainImageReadyToPresentSemaphores)
-    {
-        vkDestroySemaphore(device, semaphore, nullptr);
-    }
-    swapchainImageReadyToPresentSemaphores.clear();
-
-    for (VkImageView swapchainImageView : swapchainImageViews)
-    {
-        vkDestroyImageView(device, swapchainImageView, nullptr);
-    }
-    swapchainImageViews.clear();
-
-    if (swapchainInfo)
-    {
-        vkDestroySwapchainKHR(device, swapchainInfo->swapchain, nullptr);
-    }
+    deletionQueue.Flush();
 }
 
 bool VulkanSwapchainResources::CreateSwapchainResources()
 {
+    // #JOHN - this shouldn't... be able to fail I think? Need to audit it but this is another optional that
+    // doesn't quite seem right... like it is depended on in an "error" case.
     swapchainInfo = VulkanCreateSwapchain::CreateSwapchain(device, physicalDevice, surface, fallbackExtentSize);
 
     if (!swapchainInfo)
@@ -410,7 +393,22 @@ bool VulkanSwapchainResources::CreateSwapchainResources()
         return false;
     }
 
+    deletionQueue.Register([this]() {
+        if (swapchainInfo)
+        {
+            vkDestroySwapchainKHR(device, swapchainInfo->swapchain, nullptr);
+        }
+    });
+
     swapchainImageViews = VulkanCreateSwapchain::CreateSwapchainImageViews(device, *swapchainInfo);
+
+    deletionQueue.Register([this]() {
+        for (VkImageView swapchainImageView : swapchainImageViews)
+        {
+            vkDestroyImageView(device, swapchainImageView, nullptr);
+        }
+        swapchainImageViews.clear();
+    });
 
     VkSemaphoreCreateInfo semaphoreCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
@@ -428,12 +426,30 @@ bool VulkanSwapchainResources::CreateSwapchainResources()
         swapchainImageReadyToPresentSemaphores.emplace_back(semaphore);
     }
 
+    deletionQueue.Register([this]() {
+        for (VkSemaphore semaphore : swapchainImageReadyToPresentSemaphores)
+        {
+            vkDestroySemaphore(device, semaphore, nullptr);
+        }
+
+        swapchainImageReadyToPresentSemaphores.clear();
+    });
+
     assert(!offscreenRenderImageInfo);
 
     // #JOHN - for here, we need some kind of "on swapchain... deleted? recreated? same honestly for the descriptor
     // it should be listening to not just recreated but each "destroy" / "create" individually I think...
     // it is wrong to group them together here to some extent.
     offscreenRenderImageInfo.emplace(createOffscreenRenderImageInfo(device, swapchainInfo->swapchainExtent, j3Alloc));
+
+    deletionQueue.Register([this]() {
+        // #JOHN - is there a way to make this not an optional value? I don't like modifying the "this" parameters.
+        if (offscreenRenderImageInfo)
+        {
+            DestroyOffscreenRenderImageInfo(device, *offscreenRenderImageInfo);
+            offscreenRenderImageInfo.reset();
+        }
+    });
 
 
     onSwapchainCreated.emit();
