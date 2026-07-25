@@ -8,8 +8,8 @@
 #define GLFW_INCLUDE_VULKAN
 #include "CreatePipeline.h"
 #include "DescriptorAllocator.h"
+#include "FrameInFlightStructures.h"
 #include "J3Alloc.h"
-#include "VulkanCommandBufferCreator.h"
 #include "VulkanPhysicalDeviceSelector.h"
 
 #include <SDL3/SDL.h>
@@ -46,7 +46,7 @@ class VulkanEngine
     VkInstance instance = VK_NULL_HANDLE;
     VkDevice device = VK_NULL_HANDLE;
     VkQueue oneQueueToRuleThemAll = VK_NULL_HANDLE; // #JOHN rename once we have a better idea for this
-    std::optional<VulkanCommandStructures> frameInFlightStructures;
+    std::optional<FrameInFlightStructures> frameInFlightStructures;
     std::optional<PhysicalDeviceInfoWeCareAbout> physDeviceinfo;
     J3Alloc j3a;
 

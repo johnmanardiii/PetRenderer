@@ -173,9 +173,7 @@ bool VulkanEngine::init()
     RegisterOnSwapchainCreatedCallbacks();
     swapchainResources->Initialize();
 
-    frameInFlightStructures = VulkanCommandStructures(device, physDeviceinfo->graphicsPresentQueueFamilyIndex, 3);
-
-
+    frameInFlightStructures = FrameInFlightStructures::Create(device, physDeviceinfo->graphicsPresentQueueFamilyIndex, 3);
 
     return true;
 }

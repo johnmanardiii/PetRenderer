@@ -8,6 +8,8 @@
 #include <fmt/printf.h>
 #include <volk.h>
 #include <vulkan/vk_enum_string_helper.h>
+#include <utility>
+#include <cassert>
 
 // macro so I don't have to check the VkResult every single time
 inline void vkchk(VkResult result)
@@ -49,5 +51,48 @@ struct ImageTransitionArgs
 };
 
 void TransitionVkImageFormat(const ImageTransitionArgs &args);
+
+// helper so I don't have to manually write the move constructor on all of these vulkan objects and things get
+// nulled out properly
+template <typename T>
+concept VulkanHandleConstructible = requires (T t)
+{
+    T{VK_NULL_HANDLE};
+    t = VK_NULL_HANDLE;
+};
+
+template <VulkanHandleConstructible T>
+class VkOwned
+{
+public:
+    // #JOHN - is there some way I could test yes this thing can be assigned to vk null handle appropriately?
+    // like some sort of modern cpp type check right here?
+    explicit VkOwned(T vulkanHandle) : handle(vulkanHandle) {}
+    VkOwned() : handle(VK_NULL_HANDLE) {}
+    ~VkOwned() = default;
+
+    // we don't do copying with these vulkan things
+    VkOwned(const VkOwned&) = delete;
+    VkOwned& operator=(const VkOwned&) = delete;
+
+    VkOwned(VkOwned&& other) noexcept : handle(std::exchange(other.handle, VK_NULL_HANDLE)) {};
+    VkOwned& operator=(VkOwned&& other) noexcept
+    {
+        // assert that our handle isn't null because... you don't really want to move over these resources imo
+        assert(handle == VK_NULL_HANDLE);
+
+        handle = std::exchange(other.handle, VK_NULL_HANDLE);
+        return *this;
+    }
+
+    // accessor so it can be used like normal
+    [[nodiscard]] T get() const { return handle; }
+    explicit operator bool() const { return handle != VK_NULL_HANDLE; }
+
+    void reset() { handle = VK_NULL_HANDLE; }
+
+private:
+    T handle;
+};
 
 #endif // VULKAN_UTIL_PR_H

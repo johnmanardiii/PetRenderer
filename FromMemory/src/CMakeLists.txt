@@ -5,7 +5,7 @@ target_sources(PetRenderer PRIVATE
         VulkanPhysicalDeviceSelector.cpp
         VulkanLogicalDeviceCreator.cpp
         VulkanSwapchainResources.cpp
-        VulkanCommandBufferCreator.cpp
+        FrameInFlightStructures.cpp
         J3Alloc.cpp
         CreateOffscreenRenderImage.cpp
         DescriptorAllocator.cpp
