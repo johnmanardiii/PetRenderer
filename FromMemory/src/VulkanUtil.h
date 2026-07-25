@@ -62,21 +62,21 @@ concept VulkanHandleConstructible = requires (T t)
 };
 
 template <VulkanHandleConstructible T>
-class VkOwned
+class VkHandleRef
 {
 public:
     // #JOHN - is there some way I could test yes this thing can be assigned to vk null handle appropriately?
     // like some sort of modern cpp type check right here?
-    explicit VkOwned(T vulkanHandle) : handle(vulkanHandle) {}
-    VkOwned() : handle(VK_NULL_HANDLE) {}
-    ~VkOwned() = default;
+    explicit VkHandleRef(T vulkanHandle) : handle(vulkanHandle) {}
+    VkHandleRef() : handle(VK_NULL_HANDLE) {}
+    ~VkHandleRef() = default;
 
     // we don't do copying with these vulkan things
-    VkOwned(const VkOwned&) = delete;
-    VkOwned& operator=(const VkOwned&) = delete;
+    VkHandleRef(const VkHandleRef&) = delete;
+    VkHandleRef& operator=(const VkHandleRef&) = delete;
 
-    VkOwned(VkOwned&& other) noexcept : handle(std::exchange(other.handle, VK_NULL_HANDLE)) {};
-    VkOwned& operator=(VkOwned&& other) noexcept
+    VkHandleRef(VkHandleRef&& other) noexcept : handle(std::exchange(other.handle, VK_NULL_HANDLE)) {};
+    VkHandleRef& operator=(VkHandleRef&& other) noexcept
     {
         // assert that our handle isn't null because... you don't really want to move over these resources imo
         assert(handle == VK_NULL_HANDLE);

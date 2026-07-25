@@ -24,9 +24,7 @@ struct PerFrameInFlightStructure
 /*
  * #JOHN not sure why i grouped all of this into like, one file and class but I felt like "command pool" and
  * command buffer were related enough to store them on the same thing.
- *
  */
-// #JOHN name of this is super vague...
 class FrameInFlightStructures
 {
 public:
@@ -49,8 +47,8 @@ public:
 private:
     FrameInFlightStructures(VkDevice device, VkCommandPool cmdPool, std::vector<PerFrameInFlightStructure> frameInFlightStructure);
 
-    VkOwned<VkDevice> device;
-    VkOwned<VkCommandPool> commandPool;
+    VkHandleRef<VkDevice> device;
+    VkHandleRef<VkCommandPool> commandPool;
 
     std::vector<PerFrameInFlightStructure> frameInFlightStructures;
 };
