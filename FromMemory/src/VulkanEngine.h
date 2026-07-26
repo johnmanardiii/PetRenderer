@@ -10,10 +10,8 @@
 #include "DescriptorAllocator.h"
 #include "FrameInFlightStructures.h"
 #include "J3Alloc.h"
+#include "Platform.h"
 #include "VulkanPhysicalDeviceSelector.h"
-
-#include <SDL3/SDL.h>
-#include <SDL3/SDL_vulkan.h>
 
 #include "VulkanSwapchainResources.h"
 
@@ -41,7 +39,9 @@ class VulkanEngine
     void RenderToOffscreenImage(VkCommandBuffer commandBuffer);
     void BlitOffscreenImageToSwapchainImage(VkCommandBuffer commandBuffer, VkImage acquiredImage);
     void RenderAndPresentToSwapchain();
-    bool loadedVulkan = false;
+
+    // This should be destructed last because it kinda owns vulkan. should have more guarantees on that #JOHN
+    std::optional<Platform> platform;
 
     VkInstance instance = VK_NULL_HANDLE;
     VkDevice device = VK_NULL_HANDLE;
@@ -49,8 +49,6 @@ class VulkanEngine
     std::optional<FrameInFlightStructures> frameInFlightStructures;
     std::optional<PhysicalDeviceInfoWeCareAbout> physDeviceinfo;
     J3Alloc j3a;
-
-    SDL_Window *window = nullptr;
 
     VkSurfaceKHR surface;
     std::optional<VulkanSwapchainResources> swapchainResources;
@@ -61,6 +59,8 @@ class VulkanEngine
 
     uint32_t currentFrame = 0; // always incrementing, doesn't loop around w/ modulo
     float elapsedTime = 0.0f;
+
+
 };
 
 #endif // VULKAN_ENGINE_H

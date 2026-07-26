@@ -42,50 +42,18 @@ VulkanEngine::~VulkanEngine()
     // (vulkan handles NULL handle for us)
     vkDestroyInstance(instance, nullptr);
     instance = VK_NULL_HANDLE;
-
-    if (window)
-    {
-        SDL_DestroyWindow(window);
-    }
-
-    if (loadedVulkan)
-    {
-        SDL_Vulkan_UnloadLibrary();
-    }
-
-    SDL_Quit(); // #JOHN honestly wrap this in RAII too since it is annoying to manage
 }
 
 bool VulkanEngine::init()
 {
-    // setup volk
     volkInitialize();
 
-    // #JOHN there may need to be some loader madness that happens here (volk)
-    // but it is working without it so we move on
-    /* Initialize the library */
-    if (!SDL_Init(SDL_INIT_VIDEO))
-    {
-        fmt::printf("Failed to initialize GLFW\n");
-        return false;
-    }
+    // #JOHN - temp code b4 we remove this awful optional pattern
+    int width = 640;
+    int height = 480;
+    platform = Platform::Create(width, height);
 
-    // load vulkan (can be passed in a path here)
-    if (!SDL_Vulkan_LoadLibrary(nullptr))
-    {
-        fmt::printf("Failed to initialize SDL_Vulkan_LoadLibrary: %s\n", SDL_GetError());
-        return false;
-    }
-    loadedVulkan = true;
-
-    uint32_t count;
-    char const *const *extensions = SDL_Vulkan_GetInstanceExtensions(&count);
-    // convert to vector since I don't like that double pointer stuff
-    std::vector<const char *> requiredExtensions;
-    for (uint32_t i = 0; i < count; i++)
-    {
-        requiredExtensions.push_back(extensions[i]);
-    }
+    std::vector<const char *> requiredExtensions = platform->GetRequiredExtensions();
     requiredExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
     requiredExtensions.push_back(VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME);
     // #JOHN need to do some querying before you can push this back... vkEnumerateInstanceExtensionProperties
@@ -108,17 +76,10 @@ bool VulkanEngine::init()
 
     volkLoadInstanceOnly(instance);
 
-    // #JOHN move these values out to the class itself
-    int width = 640;
-    int height = 480;
-    window =
-        SDL_CreateWindow("Pet Renderer", width, height,
-                         SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE); // #JOHN if I ever want resizability it goes here
-
     // Get a vulkan window surface from glfw
     VkSurfaceKHR surface_handle;
 
-    if (!SDL_Vulkan_CreateSurface(window, instance, nullptr, &surface_handle))
+    if (!SDL_Vulkan_CreateSurface(platform->GetWindow(), instance, nullptr, &surface_handle))
     {
         fmt::printf("Failed to create vulkan surface\n");
         return false;
@@ -156,6 +117,7 @@ bool VulkanEngine::init()
     // Name this one queue
     DebugSetName(device, VK_OBJECT_TYPE_QUEUE, oneQueueToRuleThemAll, "One Graphics Queue I am using for everything");
 
+    // #JOHN - should these be based on some window properties? Feel like the whole resize should be based on window.
     swapchainResources.emplace(
         device, physDeviceinfo->physicalDevice, surface,
         VkExtent2D{.width = static_cast<uint32_t>(width), .height = static_cast<uint32_t>(height)}, &j3a);
