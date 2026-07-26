@@ -7,6 +7,7 @@
 
 #include "fmt/printf.h"
 
+#include <cassert>
 #include <deque>
 #include <functional>
 
@@ -19,7 +20,7 @@
  */
 class FunctionalQueue
 {
-public:
+  public:
     FunctionalQueue() = default;
     ~FunctionalQueue()
     {
@@ -28,11 +29,27 @@ public:
             fmt::printf("FunctionalQueue destroyed without flush.\n");
         }
     }
-    FunctionalQueue(const FunctionalQueue&) = delete;
-    FunctionalQueue& operator=(const FunctionalQueue&) = delete;
+    FunctionalQueue(const FunctionalQueue &) = delete;
+    FunctionalQueue &operator=(const FunctionalQueue &) = delete;
+
+    // on move construct, we empty the other to ensure the functions aren't there any more
+    FunctionalQueue(FunctionalQueue &&other) : queue(std::exchange(other.queue, {}))
+    {
+    }
+
+    FunctionalQueue &operator=(FunctionalQueue &&other)
+    {
+        if (this != &other)
+        {
+            // ensure that this queue is empty... before moving something into it
+            assert(queue.empty());
+            queue = std::exchange(other.queue, {});
+        }
+        return *this;
+    }
 
     // can only push back rvalue funcs and then move them into the queue
-    void Register(std::function<void()>&& function)
+    void Register(std::function<void()> &&function)
     {
         queue.push_back(std::move(function));
     }
@@ -47,8 +64,8 @@ public:
         queue.clear();
     }
 
-private:
+  private:
     std::deque<std::function<void()>> queue;
 };
 
-#endif //FUNCTIONALQUEUE_H
+#endif // FUNCTIONALQUEUE_H

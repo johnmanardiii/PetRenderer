@@ -5,6 +5,16 @@ project(PetRenderer
         LANGUAGES CXX
 )
 
+# turn off exceptions https://learn.microsoft.com/en-us/cpp/build/reference/eh-exception-handling-model?view=msvc-170
+if (MSVC)
+    string(REPLACE "/EHsc" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+    add_compile_options(
+        /EHs-c- # no exception unwinding
+        /GR- # no RTTI
+    )
+    add_compile_definitions(_HAS_EXCEPTIONS=0)
+endif()
+
 set(CMAKE_CXX_STANDARD 23)
 
 set(CMAKE_CXX_STANDARD_REQUIRED True)

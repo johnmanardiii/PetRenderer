@@ -8,10 +8,10 @@
 
 #include <vector>
 
-std::optional<PhysicalDeviceInfoWeCareAbout> VulkanPhysicalDeviceSelector::selectPhysicalDevice(VkInstance instance,
+std::optional<PhysicalDeviceInfo> VulkanPhysicalDeviceSelector::selectPhysicalDevice(VkInstance instance,
                                                                                                 VkSurfaceKHR surface)
 {
-    std::optional<PhysicalDeviceInfoWeCareAbout> info;
+    std::optional<PhysicalDeviceInfo> info;
 
     // get the number of devices
     uint32_t physicalDeviceCount = 0;

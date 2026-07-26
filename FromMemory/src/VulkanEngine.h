@@ -49,7 +49,6 @@ class VulkanEngine
     VkDevice device = VK_NULL_HANDLE;
     VkQueue oneQueueToRuleThemAll = VK_NULL_HANDLE; // #JOHN rename once we have a better idea for this
     std::optional<FrameInFlightStructures> frameInFlightStructures;
-    std::optional<PhysicalDeviceInfoWeCareAbout> physDeviceinfo;
     J3Alloc j3a;
 
     std::optional<VulkanSwapchainResources> swapchainResources;

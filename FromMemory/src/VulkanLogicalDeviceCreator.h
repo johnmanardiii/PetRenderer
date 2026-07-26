@@ -8,7 +8,9 @@
 #include "VulkanPhysicalDeviceSelector.h"
 #include <volk.h>
 
-VkDevice CreateLogicalDevice(const PhysicalDeviceInfoWeCareAbout& deviceInfo);
+
+// #JOHN - this is currently not doing enough work to warrant its own file and single function.
+VkDevice CreateLogicalDevice(VkPhysicalDevice physDevice, uint32_t queueFamilyIndex);
 
 
 

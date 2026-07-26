@@ -14,7 +14,7 @@
  *  could honestly make it just get the resources it needs in the actual selection function but we shall see
  */
 // suuuuper simplified where we just want one queue capable of graphics + present
-struct PhysicalDeviceInfoWeCareAbout
+struct PhysicalDeviceInfo
 {
     VkPhysicalDevice physicalDevice;
     uint32_t
@@ -24,7 +24,7 @@ struct PhysicalDeviceInfoWeCareAbout
 class VulkanPhysicalDeviceSelector
 {
   public:
-    std::optional<PhysicalDeviceInfoWeCareAbout> selectPhysicalDevice(VkInstance instance, VkSurfaceKHR surface);
+    std::optional<PhysicalDeviceInfo> selectPhysicalDevice(VkInstance instance, VkSurfaceKHR surface);
 
   private:
     bool HasSwapChainExtension(VkPhysicalDevice device);

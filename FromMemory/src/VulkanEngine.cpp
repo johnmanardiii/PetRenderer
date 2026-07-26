@@ -46,23 +46,13 @@ bool VulkanEngine::init()
     int width = 640;
     int height = 480;
     platform = Platform::Create(width, height);
+    if (!platform) return false;
 
     gpuContext = GpuContext::Create(*platform);
-
-
-
-    // gather a valid physical device
-    VulkanPhysicalDeviceSelector selector;
-    physDeviceinfo = selector.selectPhysicalDevice(gpuContext->Instance(), gpuContext->Surface());
-
-    if (!physDeviceinfo)
-    {
-        fmt::printf("Failed to find a valid physical device.\n");
-        return false;
-    }
+    if (!gpuContext) return false;
 
     // create a logical device from the physical one
-    device = CreateLogicalDevice(*physDeviceinfo);
+    device = CreateLogicalDevice(gpuContext->PhysicalDevice(), gpuContext->GraphicsPresentQueue());
     if (!device)
     {
         fmt::printf("Failed to create logical device.\n");
@@ -71,20 +61,19 @@ bool VulkanEngine::init()
 
     volkLoadDevice(device);
 
-    j3a.Initialize(physDeviceinfo->physicalDevice, device);
+    j3a.Initialize(gpuContext->PhysicalDevice(), device);
 
     // assign our queue created from the device
-    vkGetDeviceQueue(device, physDeviceinfo->graphicsPresentQueueFamilyIndex, 0, &oneQueueToRuleThemAll);
+    vkGetDeviceQueue(device, gpuContext->GraphicsPresentQueue(), 0, &oneQueueToRuleThemAll);
 
     // Name this one queue
     DebugSetName(device, VK_OBJECT_TYPE_QUEUE, oneQueueToRuleThemAll, "One Graphics Queue I am using for everything");
 
     // #JOHN - should these be based on some window properties? Feel like the whole resize should be based on window.
+    // #JOHN - this should probably take the context itself and not all dis
     swapchainResources.emplace(
-        device, physDeviceinfo->physicalDevice, gpuContext->Surface(),
+        device, gpuContext->PhysicalDevice(), gpuContext->Surface(),
         VkExtent2D{.width = static_cast<uint32_t>(width), .height = static_cast<uint32_t>(height)}, &j3a);
-
-
 
     // #JOHN this doesn't belong directly in the engine, but rather whatever represents our "draw passes" and this goes
     // into the "compute shader draws a picture with 16x16 lines" logic
@@ -97,7 +86,8 @@ bool VulkanEngine::init()
     RegisterOnSwapchainCreatedCallbacks();
     swapchainResources->Initialize();
 
-    frameInFlightStructures = FrameInFlightStructures::Create(device, physDeviceinfo->graphicsPresentQueueFamilyIndex, 3);
+    frameInFlightStructures =
+        FrameInFlightStructures::Create(device, gpuContext->GraphicsPresentQueue(), 3);
 
     return true;
 }

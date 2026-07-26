@@ -24,11 +24,11 @@ static void AssertPhysicalDeviceHasSync2Features(VkPhysicalDevice physDevice)
 
 // #JOHN technically this signature doesn't make any sense because we assert if the device fails to be created
 // but whatevs.
-VkDevice CreateLogicalDevice(const PhysicalDeviceInfoWeCareAbout &deviceInfo)
+VkDevice CreateLogicalDevice(VkPhysicalDevice physDevice, uint32_t queueFamilyIndex)
 {
     // guarantee we have sync 2 or assert on this device... could probably be part of the whole "device selection thing" #JOHN, but I
     //  am pretty sure this is gonna work OK for my needs...
-    AssertPhysicalDeviceHasSync2Features(deviceInfo.physicalDevice);
+    AssertPhysicalDeviceHasSync2Features(physDevice);
 
     // Ok, seems like the hard part of writing this function is getting the device create info right,
     // like querying the extensions we need ahead of time and making sure they are there and appropriately
@@ -44,7 +44,7 @@ VkDevice CreateLogicalDevice(const PhysicalDeviceInfoWeCareAbout &deviceInfo)
 
     VkDeviceQueueCreateInfo queueCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-        .queueFamilyIndex = deviceInfo.graphicsPresentQueueFamilyIndex,
+        .queueFamilyIndex = queueFamilyIndex,
         .queueCount = 1,
         .pQueuePriorities = &queuePriority,
     };
@@ -67,7 +67,7 @@ VkDevice CreateLogicalDevice(const PhysicalDeviceInfoWeCareAbout &deviceInfo)
 
     // physical device features? gotta query this later
     VkDevice device;
-    vkchk(vkCreateDevice(deviceInfo.physicalDevice, &createInfo, nullptr, &device));
+    vkchk(vkCreateDevice(physDevice, &createInfo, nullptr, &device));
 
     return device;
 }

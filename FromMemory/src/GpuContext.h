@@ -6,32 +6,44 @@
 #define GPUCONTEXT_H
 
 #include "Platform.h"
+#include "ScopedFunctionalQueue.h"
+#include "VulkanPhysicalDeviceSelector.h"
 #include "VulkanUtil.h"
 
 #include <optional>
 
-class GpuContext {
-public:
-    static std::optional<GpuContext> Create(const Platform& platform);
-    ~GpuContext();
+class GpuContext
+{
+  public:
+    static std::optional<GpuContext> Create(const Platform &platform);
 
-    GpuContext(const GpuContext& other) = delete;
-    GpuContext& operator=(const GpuContext& other) = delete;
+    [[nodiscard]] VkInstance Instance() const
+    {
+        return instance.get();
+    };
+    [[nodiscard]] VkSurfaceKHR Surface() const
+    {
+        return surface.get();
+    };
+    [[nodiscard]] VkPhysicalDevice PhysicalDevice() const
+    {
+        return selectedPhysicalDeviceInfo.physicalDevice;
+    }
+    [[nodiscard]] uint32_t GraphicsPresentQueue() const
+    {
+        return selectedPhysicalDeviceInfo.graphicsPresentQueueFamilyIndex;
+    }
 
-    GpuContext(GpuContext&& other) = default;
-    GpuContext& operator=(GpuContext&& other) = default;
-
-    [[nodiscard]] VkInstance Instance() const { return instance.get(); };
-    [[nodiscard]] VkSurfaceKHR Surface() const { return surface.get(); };
-
-private:
-    GpuContext(VkInstance instance, VkSurfaceKHR surface);
+  private:
+    GpuContext(VkInstance instance, VkSurfaceKHR surface, PhysicalDeviceInfo selectedPhysicalDeviceInfo,
+               ScopedFunctionalQueue &&deletionQueue);
 
     VkHandleRef<VkInstance> instance;
     // surface may be rebuild on some platforms but not handled right now.
     VkHandleRef<VkSurfaceKHR> surface;
+    PhysicalDeviceInfo selectedPhysicalDeviceInfo;
+
+    ScopedFunctionalQueue deletionQueue;
 };
 
-
-
-#endif //GPUCONTEXT_H
+#endif // GPUCONTEXT_H
