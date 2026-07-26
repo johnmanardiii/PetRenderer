@@ -52,7 +52,6 @@ class VulkanEngine
     std::optional<PhysicalDeviceInfoWeCareAbout> physDeviceinfo;
     J3Alloc j3a;
 
-    VkSurfaceKHR surface;
     std::optional<VulkanSwapchainResources> swapchainResources;
 
     // random rendering stuff

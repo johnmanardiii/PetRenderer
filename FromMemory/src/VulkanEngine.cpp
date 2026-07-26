@@ -22,6 +22,9 @@ VulkanEngine::~VulkanEngine()
     // once we should close, we wait for the device to be idle:
     if (device != VK_NULL_HANDLE)
     {
+        // #JOHN maybe... make this a thing that on destruct waits idle and make it a member that way tis all in one
+        // place and maybe consider... moving it into a more explicitly managed struct, but we are locked in
+        // on this pattern for nwo.
         vkDeviceWaitIdle(device);
         pipelineObjects.reset();
 
@@ -33,12 +36,6 @@ VulkanEngine::~VulkanEngine()
         vkDestroyDevice(device, nullptr);
         device = VK_NULL_HANDLE;
     }
-
-    if (surface != VK_NULL_HANDLE)
-    {
-        vkDestroySurfaceKHR(gpuContext->Instance(), surface, nullptr);
-    }
-
 }
 
 bool VulkanEngine::init()
@@ -52,24 +49,11 @@ bool VulkanEngine::init()
 
     gpuContext = GpuContext::Create(*platform);
 
-    volkLoadInstanceOnly(gpuContext->Instance());
 
-    // Get a vulkan window surface from glfw
-    VkSurfaceKHR surface_handle;
-
-    if (!SDL_Vulkan_CreateSurface(platform->GetWindow(), gpuContext->Instance(), nullptr, &surface_handle))
-    {
-        fmt::printf("Failed to create vulkan surface\n");
-        return false;
-    }
-
-    // #JOHN doesn't seem like it follows the most awesome pattern but whatevs.
-    // really can't fail in this way... why optional?
-    surface = surface_handle;
 
     // gather a valid physical device
     VulkanPhysicalDeviceSelector selector;
-    physDeviceinfo = selector.selectPhysicalDevice(gpuContext->Instance(), surface);
+    physDeviceinfo = selector.selectPhysicalDevice(gpuContext->Instance(), gpuContext->Surface());
 
     if (!physDeviceinfo)
     {
@@ -97,7 +81,7 @@ bool VulkanEngine::init()
 
     // #JOHN - should these be based on some window properties? Feel like the whole resize should be based on window.
     swapchainResources.emplace(
-        device, physDeviceinfo->physicalDevice, surface,
+        device, physDeviceinfo->physicalDevice, gpuContext->Surface(),
         VkExtent2D{.width = static_cast<uint32_t>(width), .height = static_cast<uint32_t>(height)}, &j3a);
 
 

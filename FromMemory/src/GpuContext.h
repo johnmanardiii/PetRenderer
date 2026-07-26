@@ -22,11 +22,14 @@ public:
     GpuContext& operator=(GpuContext&& other) = default;
 
     [[nodiscard]] VkInstance Instance() const { return instance.get(); };
+    [[nodiscard]] VkSurfaceKHR Surface() const { return surface.get(); };
 
 private:
-    GpuContext(VkInstance instance);
+    GpuContext(VkInstance instance, VkSurfaceKHR surface);
 
     VkHandleRef<VkInstance> instance;
+    // surface may be rebuild on some platforms but not handled right now.
+    VkHandleRef<VkSurfaceKHR> surface;
 };
 
 
