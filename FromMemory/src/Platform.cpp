@@ -3,6 +3,8 @@
 //
 #include "fmt/printf.h"
 #include "Platform.h"
+#include <SDL3/SDL.h>
+#include <SDL3/SDL_vulkan.h>
 
 // #JOHN - should probably make this a 2d type.
 std::optional<Platform> Platform::Create(int width, int height)

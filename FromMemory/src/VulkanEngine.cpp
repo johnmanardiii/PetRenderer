@@ -4,7 +4,9 @@
 #include "VulkanEngine.h"
 
 #include "VulkanDebugUtil.h"
-#include "VulkanInstanceBuilder.h"
+
+#include "SDL3/SDL_timer.h"
+#include "SDL3/SDL_vulkan.h"
 #include "VulkanLogicalDeviceCreator.h"
 #include "VulkanPhysicalDeviceSelector.h"
 #include "VulkanSwapchainResources.h"
@@ -13,7 +15,6 @@
 #include "glm/trigonometric.hpp"
 
 #include <fmt/printf.h>
-#include <vector>
 #include <volk.h>
 
 VulkanEngine::~VulkanEngine()
@@ -33,15 +34,11 @@ VulkanEngine::~VulkanEngine()
         device = VK_NULL_HANDLE;
     }
 
-    if (instance != VK_NULL_HANDLE && surface != VK_NULL_HANDLE)
+    if (surface != VK_NULL_HANDLE)
     {
-        vkDestroySurfaceKHR(instance, surface, nullptr);
+        vkDestroySurfaceKHR(gpuContext->Instance(), surface, nullptr);
     }
 
-    // cleanup vulkan handle stuff (move this to RAII class engine) #JOHN
-    // (vulkan handles NULL handle for us)
-    vkDestroyInstance(instance, nullptr);
-    instance = VK_NULL_HANDLE;
 }
 
 bool VulkanEngine::init()
@@ -53,33 +50,14 @@ bool VulkanEngine::init()
     int height = 480;
     platform = Platform::Create(width, height);
 
-    std::vector<const char *> requiredExtensions = platform->GetRequiredExtensions();
-    requiredExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-    requiredExtensions.push_back(VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME);
-    // #JOHN need to do some querying before you can push this back... vkEnumerateInstanceExtensionProperties
-    //   https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/vkEnumerateInstanceExtensionProperties.html
-    // something something need to query the layers or something to enable the extensions in the actual list
-    // something about "implicitly enable layers / explitly enabled layers"
-    requiredExtensions.push_back(VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME);
+    gpuContext = GpuContext::Create(*platform);
 
-    instance = VulkanInstanceBuilder()
-                   .SetRequiredLayers({"VK_LAYER_KHRONOS_validation"})
-                   .SetRequiredExtensions(requiredExtensions)
-                   .EnableDebugMessengerForInstanceCreation()
-                   .GetInstance();
-
-    if (!instance)
-    {
-        fmt::printf("Failed to get vulkan instance. exiting");
-        return false;
-    }
-
-    volkLoadInstanceOnly(instance);
+    volkLoadInstanceOnly(gpuContext->Instance());
 
     // Get a vulkan window surface from glfw
     VkSurfaceKHR surface_handle;
 
-    if (!SDL_Vulkan_CreateSurface(platform->GetWindow(), instance, nullptr, &surface_handle))
+    if (!SDL_Vulkan_CreateSurface(platform->GetWindow(), gpuContext->Instance(), nullptr, &surface_handle))
     {
         fmt::printf("Failed to create vulkan surface\n");
         return false;
@@ -91,7 +69,7 @@ bool VulkanEngine::init()
 
     // gather a valid physical device
     VulkanPhysicalDeviceSelector selector;
-    physDeviceinfo = selector.selectPhysicalDevice(instance, surface);
+    physDeviceinfo = selector.selectPhysicalDevice(gpuContext->Instance(), surface);
 
     if (!physDeviceinfo)
     {

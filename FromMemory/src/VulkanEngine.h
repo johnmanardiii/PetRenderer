@@ -9,6 +9,7 @@
 #include "CreatePipeline.h"
 #include "DescriptorAllocator.h"
 #include "FrameInFlightStructures.h"
+#include "GpuContext.h"
 #include "J3Alloc.h"
 #include "Platform.h"
 #include "VulkanPhysicalDeviceSelector.h"
@@ -43,7 +44,8 @@ class VulkanEngine
     // This should be destructed last because it kinda owns vulkan. should have more guarantees on that #JOHN
     std::optional<Platform> platform;
 
-    VkInstance instance = VK_NULL_HANDLE;
+    std::optional<GpuContext> gpuContext;
+
     VkDevice device = VK_NULL_HANDLE;
     VkQueue oneQueueToRuleThemAll = VK_NULL_HANDLE; // #JOHN rename once we have a better idea for this
     std::optional<FrameInFlightStructures> frameInFlightStructures;
