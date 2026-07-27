@@ -25,25 +25,8 @@ public:
     Signal(const Signal &) = delete;
     Signal &operator=(const Signal &) = delete;
 
-    Signal(Signal && other) noexcept
-    {
-        m_map(std::move(other.m_map));
-        // #JOHN - I need to rewatch that cppcon talk about move constructors and how to write them for the example
-        // can't remember if I'm supposed to reset the primitive type values
-        // and i vaguely remember a convenience function for this...
-        m_iCurrentID = std::move(other.m_iCurrentID);
-    }
-    Signal &operator=(Signal && other) noexcept
-    {
-        if (this != &other)
-        {
-            // #JOHN - oh yeah you need to avoid the assignment to self... really need to watch that cpp con talk again
-            m_map = std::move(other.m_map);
-            m_iCurrentID = other.m_iCurrentID;
-        }
-
-        return *this;
-    }
+    Signal(Signal && other) noexcept = default;
+    Signal &operator=(Signal && other) noexcept = default;
 
     int connect(std::function<void(Args...)> const& slot)
     {

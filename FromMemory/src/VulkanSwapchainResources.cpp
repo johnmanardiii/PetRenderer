@@ -50,9 +50,6 @@ static VkSurfaceFormat2KHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFo
     // and then pick one of these depending on which is available
     // woah b8g8r8a8 srgb is wayyy more common... it is because that is the order windows represents things so
     // potentially one less swizzle: https://vulkan.gpuinfo.org/listsurfaceformats.php?platform=windows
-    // std::vector<VkSurfaceFormat
-    VkSurfaceFormat2KHR desiredFormat = formats[0];
-    // currently only supporting BGRA for simplicity
     std::vector<std::pair<VkFormat, VkColorSpaceKHR>> priorityFormats{
         {VK_FORMAT_B8G8R8A8_SRGB, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR}};
     // look for our real desired format if we can find it:
@@ -290,6 +287,7 @@ VulkanSwapchainResources::VulkanSwapchainResources(VkDevice device, VkPhysicalDe
       j3Alloc(j3Alloc)
 {
 }
+
 VulkanSwapchainResources::~VulkanSwapchainResources()
 {
     DestroySwapchainResources();
@@ -319,50 +317,14 @@ VkResult VulkanSwapchainResources::PresentImage(VkQueue presentQueue, VkSemaphor
         .pSwapchains = &swapchainInfo->swapchain,
         .pImageIndices = &imageIndex,
     };
-    VkResult presentResult = vkQueuePresentKHR(presentQueue, &presentInfo);
-
-    if (presentResult == VK_ERROR_OUT_OF_DATE_KHR || presentResult == VK_SUBOPTIMAL_KHR)
-    {
-        rebuildAtTopOfFrame = true; // problem for tomorrow : )
-        return VK_SUCCESS;
-    }
-    return presentResult;
+    return vkQueuePresentKHR(presentQueue, &presentInfo);
 }
 
 VkResult VulkanSwapchainResources::AcquireNextImage(VkSemaphore imageAcquiredSemaphore, uint32_t &imageIndex,
                                                     uint32_t timeout)
 {
-    if (rebuildAtTopOfFrame)
-    {
-        rebuildAtTopOfFrame = false;
-        if (!Recreate())
-        {
-            fmt::print("Failed to recreate swapchain.\n");
-            return VK_ERROR_UNKNOWN;
-        }
-    }
-
-    // first time I am not crashing the program on non-success lol
-    VkResult acquireResult = vkAcquireNextImageKHR(device, swapchainInfo->swapchain, timeout, imageAcquiredSemaphore,
-                                                   VK_NULL_HANDLE, &imageIndex);
-
-    // conditions to rebuild the swapchain:
-    // #JOHN in the future, this needs to report back to the engine the actual report code and it should handle "i need
-    // new surface pws..."
-    if (acquireResult == VK_SUBOPTIMAL_KHR)
-    {
-        // rebuild next frame semaphore already signaled though
-        rebuildAtTopOfFrame = true;
-        return VK_SUCCESS;
-    }
-    if (acquireResult == VK_ERROR_OUT_OF_DATE_KHR) // tehre is a "lost fullscreen exclusive" and idk what it does so I
-                                                   // won't ahdnle it here, just crash
-    {
-        rebuildAtTopOfFrame = true;
-    }
-
-    // leave it up to caller from here I did my best
-    return acquireResult;
+    return vkAcquireNextImageKHR(device, swapchainInfo->swapchain, timeout, imageAcquiredSemaphore,
+                                                       VK_NULL_HANDLE, &imageIndex);
 }
 
 void VulkanSwapchainResources::DestroySwapchainResources()

@@ -20,7 +20,7 @@
 VulkanEngine::~VulkanEngine()
 {
     // once we should close, we wait for the device to be idle:
-    if ( gpuContext && gpuContext->Device() != VK_NULL_HANDLE)
+    if (gpuContext && gpuContext->Device() != VK_NULL_HANDLE)
     {
         // #JOHN maybe... make this a thing that on destruct waits idle and make it a member that way tis all in one
         // place and maybe consider... moving it into a more explicitly managed struct, but we are locked in
@@ -242,11 +242,17 @@ void VulkanEngine::RenderAndPresentToSwapchain()
     // like other games.
     VkResult acquireResult =
         (swapchainResources->AcquireNextImage(frameStruct.imageAcquiredSemaphore, imageAcquiredIndex));
-
-    if (acquireResult == VK_ERROR_OUT_OF_DATE_KHR)
+    bool rebuildSwapchainImageAfterPresent = false;
+    if (acquireResult == VK_SUBOPTIMAL_KHR)
     {
+        rebuildSwapchainImageAfterPresent = true;
+    }
+    else if (acquireResult == VK_ERROR_OUT_OF_DATE_KHR)
+    {
+        HandleSwapchainOutOfDate();
         return;
     }
+
     vkchk(acquireResult);
     // once the image acquired semaphore goes off, we have the image in the pipeline
 
@@ -292,8 +298,6 @@ void VulkanEngine::RenderAndPresentToSwapchain()
     VkSemaphoreSubmitInfo semaphoreWaitInfo = {
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
         .semaphore = frameStruct.imageAcquiredSemaphore,
-        // make the transfer wait for this semaphore... its the first thing that happens to the swapchain image is that
-        // it gets transferred to
         .stageMask = VK_PIPELINE_STAGE_TRANSFER_BIT,
     };
 
@@ -303,7 +307,7 @@ void VulkanEngine::RenderAndPresentToSwapchain()
     VkSemaphoreSubmitInfo semaphoreSubmitInfo = {
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
         .semaphore = swapchainImageReadySemaphore,
-        .stageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT // #JOHN might be too much but whatever
+        .stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
     };
 
     // gonna use the V1 submit info since that seems more simple
@@ -321,6 +325,23 @@ void VulkanEngine::RenderAndPresentToSwapchain()
     };
     vkchk(vkQueueSubmit2(gpuContext->GraphicsPresentLogicalQueue(), 1, &submitInfo, frameStruct.queueFinishedFence));
 
-    vkchk(swapchainResources->PresentImage(gpuContext->GraphicsPresentLogicalQueue(), swapchainImageReadySemaphore,
-                                           imageAcquiredIndex));
+    VkResult presentResult = swapchainResources->PresentImage(gpuContext->GraphicsPresentLogicalQueue(), swapchainImageReadySemaphore,
+                                           imageAcquiredIndex);
+    if (presentResult == VK_ERROR_OUT_OF_DATE_KHR || presentResult == VK_SUBOPTIMAL_KHR)
+    {
+        rebuildSwapchainImageAfterPresent = true;
+    }
+    if (rebuildSwapchainImageAfterPresent)
+    {
+        HandleSwapchainOutOfDate();
+    }
+}
+
+void VulkanEngine::HandleSwapchainOutOfDate()
+{
+    if (!swapchainResources->Recreate())
+    {
+        fmt::printf("Failed to recreate swapchain");
+        std::abort();
+    }
 }

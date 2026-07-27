@@ -67,13 +67,13 @@ class VulkanSwapchainResources
 
     Signal<> onSwapchainCreated;
 
+    bool Recreate();
+
 private:
     FunctionalQueue deletionQueue;
-    bool Recreate();
+
     void DestroySwapchainResources();
     bool CreateSwapchainResources();
-
-    bool rebuildAtTopOfFrame = false;
 
     VkDevice device;
     VkPhysicalDevice physicalDevice;
@@ -86,9 +86,6 @@ private:
     VkExtent2D fallbackExtentSize;
     J3Alloc* j3Alloc;   // #JOHN maybe we should make this a shared ptr? instead of a raw pointer.
 
-    // #JOHN - stuff that isn't quite "the swapchain" but needs to be rebuilt on that lifetime so I am putting it here
-    // for now even though my OOP body is screaming at me to decouple this
-    // 7/19/2026 john - this actually doesn't bother me too much, should revisit eventually though
     std::optional<OffscreenRenderImageInfo> offscreenRenderImageInfo;
 };
 

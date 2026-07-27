@@ -40,6 +40,7 @@ class VulkanEngine
     void RenderToOffscreenImage(VkCommandBuffer commandBuffer);
     void BlitOffscreenImageToSwapchainImage(VkCommandBuffer commandBuffer, VkImage acquiredImage);
     void RenderAndPresentToSwapchain();
+    void HandleSwapchainOutOfDate();
 
     // This should be destructed last because it kinda owns vulkan. should have more guarantees on that #JOHN
     std::optional<Platform> platform;
