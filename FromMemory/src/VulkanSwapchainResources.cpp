@@ -281,11 +281,10 @@ std::vector<VkImageView> CreateSwapchainImageViews(VkDevice device, const Swapch
 } // namespace VulkanCreateSwapchain
 
 VulkanSwapchainResources::VulkanSwapchainResources(VkDevice device, VkPhysicalDevice physicalDevice,
-                                                   VkSurfaceKHR surface, VkExtent2D fallbackExtentSize,
-                                                   J3Alloc *j3Alloc)
-    : device(device), physicalDevice(physicalDevice), surface(surface), fallbackExtentSize(fallbackExtentSize),
-      j3Alloc(j3Alloc)
+                                                   VkSurfaceKHR surface, VkExtent2D fallbackExtentSize)
+    : device(device), physicalDevice(physicalDevice), surface(surface), fallbackExtentSize(fallbackExtentSize)
 {
+    CreateSwapchainResources();
 }
 
 VulkanSwapchainResources::~VulkanSwapchainResources()
@@ -301,12 +300,7 @@ bool VulkanSwapchainResources::Recreate()
     return CreateSwapchainResources();
 }
 
-void VulkanSwapchainResources::Initialize()
-{
-    // #JOHN should I have some kind of bool saying "is initialized"? I don't love the way this works...
-    // but it allows for things to register w/ initialization after construction...
-    CreateSwapchainResources();
-}
+// #JOHN this function is shallow and is more confusing than just straight up calling the vulkan stuff.
 VkResult VulkanSwapchainResources::PresentImage(VkQueue presentQueue, VkSemaphore waitSemaphore, uint32_t &imageIndex)
 {
     VkPresentInfoKHR presentInfo = {
@@ -314,7 +308,7 @@ VkResult VulkanSwapchainResources::PresentImage(VkQueue presentQueue, VkSemaphor
         .waitSemaphoreCount = 1,
         .pWaitSemaphores = &waitSemaphore,
         .swapchainCount = 1,
-        .pSwapchains = &swapchainInfo->swapchain,
+        .pSwapchains = &swapchainInfo.swapchain,
         .pImageIndices = &imageIndex,
     };
     return vkQueuePresentKHR(presentQueue, &presentInfo);
@@ -323,7 +317,7 @@ VkResult VulkanSwapchainResources::PresentImage(VkQueue presentQueue, VkSemaphor
 VkResult VulkanSwapchainResources::AcquireNextImage(VkSemaphore imageAcquiredSemaphore, uint32_t &imageIndex,
                                                     uint32_t timeout)
 {
-    return vkAcquireNextImageKHR(device, swapchainInfo->swapchain, timeout, imageAcquiredSemaphore,
+    return vkAcquireNextImageKHR(device, swapchainInfo.swapchain, timeout, imageAcquiredSemaphore,
                                                        VK_NULL_HANDLE, &imageIndex);
 }
 
@@ -347,22 +341,21 @@ bool VulkanSwapchainResources::CreateSwapchainResources()
 {
     // #JOHN - this shouldn't... be able to fail I think? Need to audit it but this is another optional that
     // doesn't quite seem right... like it is depended on in an "error" case.
-    swapchainInfo = VulkanCreateSwapchain::CreateSwapchain(device, physicalDevice, surface, fallbackExtentSize);
+    std::optional<SwapchainInfo> result = VulkanCreateSwapchain::CreateSwapchain(device, physicalDevice, surface, fallbackExtentSize);
 
-    if (!swapchainInfo)
+    if (!result)
     {
         fmt::printf("Failed to create swapchain.\n");
         return false;
     }
 
+    swapchainInfo = *result;
+
     deletionQueue.Register([this]() {
-        if (swapchainInfo)
-        {
-            vkDestroySwapchainKHR(device, swapchainInfo->swapchain, nullptr);
-        }
+        vkDestroySwapchainKHR(device, swapchainInfo.swapchain, nullptr);
     });
 
-    swapchainImageViews = VulkanCreateSwapchain::CreateSwapchainImageViews(device, *swapchainInfo);
+    swapchainImageViews = VulkanCreateSwapchain::CreateSwapchainImageViews(device, swapchainInfo);
 
     deletionQueue.Register([this]() {
         for (VkImageView swapchainImageView : swapchainImageViews)
@@ -396,23 +389,6 @@ bool VulkanSwapchainResources::CreateSwapchainResources()
 
         swapchainImageReadyToPresentSemaphores.clear();
     });
-
-    assert(!offscreenRenderImageInfo);
-
-    // #JOHN - for here, we need some kind of "on swapchain... deleted? recreated? same honestly for the descriptor
-    // it should be listening to not just recreated but each "destroy" / "create" individually I think...
-    // it is wrong to group them together here to some extent.
-    offscreenRenderImageInfo.emplace(createOffscreenRenderImageInfo(device, swapchainInfo->swapchainExtent, j3Alloc));
-
-    deletionQueue.Register([this]() {
-        // #JOHN - is there a way to make this not an optional value? I don't like modifying the "this" parameters.
-        if (offscreenRenderImageInfo)
-        {
-            DestroyOffscreenRenderImageInfo(device, *offscreenRenderImageInfo);
-            offscreenRenderImageInfo.reset();
-        }
-    });
-
 
     onSwapchainCreated.emit();
     return true;

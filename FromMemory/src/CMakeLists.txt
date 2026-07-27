@@ -7,7 +7,7 @@ target_sources(PetRenderer PRIVATE
         VulkanSwapchainResources.cpp
         FrameInFlightStructures.cpp
         J3Alloc.cpp
-        CreateOffscreenRenderImage.cpp
+        OffscreenRenderImage.cpp
         DescriptorAllocator.cpp
         ShaderLoader.cpp
         CreatePipeline.cpp

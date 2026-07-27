@@ -30,4 +30,7 @@ OffscreenRenderImageInfo createOffscreenRenderImageInfo(VkDevice device, VkExten
 
 void DestroyOffscreenRenderImageInfo(VkDevice device, OffscreenRenderImageInfo &offscreenRenderImageInfo);
 
+void UpdateOffscreenRenderImageDescriptorSet(VkDevice device, OffscreenRenderImageInfo &offscreenRenderImageInfo,
+                                             VkDescriptorSet descriptorSet);
+
 #endif // CREATEOFFSCREENRENDERIMAGE_H

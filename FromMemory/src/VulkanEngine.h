@@ -53,6 +53,9 @@ class VulkanEngine
 
     std::optional<VulkanSwapchainResources> swapchainResources;
 
+    // #JOHN - this should not be an optional, just need to convert out of swapchain for now.
+    std::optional<OffscreenRenderImageInfo> offscreenRenderImageInfo;
+
     // random rendering stuff
     DescriptorInformation descriptorInfo;
     std::optional<PipelineObjects> pipelineObjects;

@@ -26,6 +26,13 @@ VulkanEngine::~VulkanEngine()
         // place and maybe consider... moving it into a more explicitly managed struct, but we are locked in
         // on this pattern for nwo.
         vkDeviceWaitIdle(gpuContext->Device());
+
+        if (offscreenRenderImageInfo)
+        {
+            DestroyOffscreenRenderImageInfo(gpuContext->Device(), *offscreenRenderImageInfo);
+            offscreenRenderImageInfo.reset();
+        }
+
         pipelineObjects.reset();
 
         DestroyDescriptorInformation(gpuContext->Device(), descriptorInfo);
@@ -51,12 +58,14 @@ bool VulkanEngine::init()
     if (!gpuContext)
         return false;
 
+    // #JOHN - not a fan of this "initialize" freakin thing man... maybe just put it in gpu context
     j3a.Initialize(gpuContext->PhysicalDevice(), gpuContext->Device());
+
     // #JOHN - should these be based on some window properties? Feel like the whole resize should be based on window.
     // #JOHN - this should probably take the context itself and not all dis
     swapchainResources.emplace(
         gpuContext->Device(), gpuContext->PhysicalDevice(), gpuContext->Surface(),
-        VkExtent2D{.width = static_cast<uint32_t>(width), .height = static_cast<uint32_t>(height)}, &j3a);
+        VkExtent2D{.width = static_cast<uint32_t>(width), .height = static_cast<uint32_t>(height)});
 
     // #JOHN this doesn't belong directly in the engine, but rather whatever represents our "draw passes" and this goes
     // into the "compute shader draws a picture with 16x16 lines" logic
@@ -66,8 +75,12 @@ bool VulkanEngine::init()
 
     // #JOHN - hidden dependency on the "pipeline objects" and descriptor set stuff.
     // #JOHN - kinda gross ordering depdendency right here.
-    RegisterOnSwapchainCreatedCallbacks();
-    swapchainResources->Initialize();
+    offscreenRenderImageInfo.emplace(
+        createOffscreenRenderImageInfo(gpuContext->Device(), swapchainResources->CurrentSwapchainExtent(), &j3a));
+
+    // #JOHN - manually do this for now, just because things are messy, don't submit until a design has been worked out
+    // for this
+    UpdateOffscreenRenderImageDescriptorSet(gpuContext->Device(), *offscreenRenderImageInfo, descriptorInfo.descriptorSet);
 
     frameInFlightStructures =
         FrameInFlightStructures::Create(gpuContext->Device(), gpuContext->GraphicsPresentQueueIndex(), 3);
@@ -85,32 +98,8 @@ void VulkanEngine::Iterate()
     elapsedTime = SDL_GetTicksNS() / 1000000000.0;
 }
 
-void VulkanEngine::RegisterOnSwapchainCreatedCallbacks()
-{
-    if (swapchainResources)
-    {
-        swapchainResources->onSwapchainCreated.connect([this]() {
-            std::optional<OffscreenRenderImageInfo> offscreenRenderImageInfo =
-                swapchainResources->GetOffscreenRenderImageInfo();
-            assert(offscreenRenderImageInfo.has_value());
-            const VkDescriptorImageInfo imageInfo = {.imageView = offscreenRenderImageInfo->offscreenImageView,
-                                                     .imageLayout = VK_IMAGE_LAYOUT_GENERAL};
-            VkWriteDescriptorSet writeDescriptorSet = {.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-                                                       .dstSet = descriptorInfo.descriptorSet,
-                                                       .dstBinding = 0,
-                                                       .dstArrayElement = 0,
-                                                       .descriptorCount = 1,
-                                                       .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-                                                       .pImageInfo = &imageInfo};
-            vkUpdateDescriptorSets(gpuContext->Device(), 1, &writeDescriptorSet, 0, nullptr);
-        });
-    }
-}
-
 void VulkanEngine::RenderToOffscreenImage(VkCommandBuffer commandBuffer)
 {
-    std::optional<OffscreenRenderImageInfo> offscreenRenderImageInfo =
-        swapchainResources->GetOffscreenRenderImageInfo();
     if (!offscreenRenderImageInfo)
     {
         return;
@@ -158,8 +147,6 @@ void VulkanEngine::BlitOffscreenImageToSwapchainImage(VkCommandBuffer commandBuf
     {
         return;
     }
-    std::optional<OffscreenRenderImageInfo> offscreenRenderImageInfo =
-        swapchainResources->GetOffscreenRenderImageInfo();
 
     if (!offscreenRenderImageInfo)
     {
@@ -254,7 +241,6 @@ void VulkanEngine::RenderAndPresentToSwapchain()
     }
 
     vkchk(acquireResult);
-    // once the image acquired semaphore goes off, we have the image in the pipeline
 
     // reset the fence, valid
     vkResetFences(gpuContext->Device(), 1, &frameStruct.queueFinishedFence);
@@ -325,8 +311,8 @@ void VulkanEngine::RenderAndPresentToSwapchain()
     };
     vkchk(vkQueueSubmit2(gpuContext->GraphicsPresentLogicalQueue(), 1, &submitInfo, frameStruct.queueFinishedFence));
 
-    VkResult presentResult = swapchainResources->PresentImage(gpuContext->GraphicsPresentLogicalQueue(), swapchainImageReadySemaphore,
-                                           imageAcquiredIndex);
+    VkResult presentResult = swapchainResources->PresentImage(gpuContext->GraphicsPresentLogicalQueue(),
+                                                              swapchainImageReadySemaphore, imageAcquiredIndex);
     if (presentResult == VK_ERROR_OUT_OF_DATE_KHR || presentResult == VK_SUBOPTIMAL_KHR)
     {
         rebuildSwapchainImageAfterPresent = true;
@@ -344,4 +330,5 @@ void VulkanEngine::HandleSwapchainOutOfDate()
         fmt::printf("Failed to recreate swapchain");
         std::abort();
     }
+    UpdateOffscreenRenderImageDescriptorSet(gpuContext->Device(), *offscreenRenderImageInfo, descriptorInfo.descriptorSet);
 }

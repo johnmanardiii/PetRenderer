@@ -2,7 +2,7 @@
 // Created by johnm on 6/7/2026.
 //
 
-#include "CreateOffscreenRenderImage.h"
+#include "OffscreenRenderImage.h"
 
 #include "VulkanDebugUtil.h"
 #include "VulkanUtil.h"
@@ -100,4 +100,20 @@ OffscreenRenderImageInfo createOffscreenRenderImageInfo(VkDevice device, VkExten
     DebugSetName(device, VK_OBJECT_TYPE_IMAGE, offscreenRenderImageInfo.offscreenImage, "Offscreen Render Image");
 
     return offscreenRenderImageInfo;
+}
+
+
+void UpdateOffscreenRenderImageDescriptorSet(VkDevice device, OffscreenRenderImageInfo &offscreenRenderImageInfo,
+                                                    VkDescriptorSet descriptorSet)
+{
+    const VkDescriptorImageInfo imageInfo = {.imageView = offscreenRenderImageInfo.offscreenImageView,
+                                             .imageLayout = VK_IMAGE_LAYOUT_GENERAL};
+    VkWriteDescriptorSet writeDescriptorSet = {.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                                               .dstSet = descriptorSet,
+                                               .dstBinding = 0,
+                                               .dstArrayElement = 0,
+                                               .descriptorCount = 1,
+                                               .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+                                               .pImageInfo = &imageInfo};
+    vkUpdateDescriptorSets(device, 1, &writeDescriptorSet, 0, nullptr);
 }
