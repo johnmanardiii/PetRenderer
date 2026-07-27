@@ -46,7 +46,6 @@ class VulkanEngine
 
     std::optional<GpuContext> gpuContext;
 
-    VkDevice device = VK_NULL_HANDLE;
     VkQueue oneQueueToRuleThemAll = VK_NULL_HANDLE; // #JOHN rename once we have a better idea for this
     std::optional<FrameInFlightStructures> frameInFlightStructures;
     J3Alloc j3a;

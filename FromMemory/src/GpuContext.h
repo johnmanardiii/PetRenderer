@@ -34,14 +34,20 @@ class GpuContext
         return selectedPhysicalDeviceInfo.graphicsPresentQueueFamilyIndex;
     }
 
+    [[nodiscard]] VkDevice Device() const
+    {
+        return device.get();
+    }
+
   private:
     GpuContext(VkInstance instance, VkSurfaceKHR surface, PhysicalDeviceInfo selectedPhysicalDeviceInfo,
-               ScopedFunctionalQueue &&deletionQueue);
+               VkDevice device, ScopedFunctionalQueue &&deletionQueue);
 
     VkHandleRef<VkInstance> instance;
     // surface may be rebuild on some platforms but not handled right now.
     VkHandleRef<VkSurfaceKHR> surface;
     PhysicalDeviceInfo selectedPhysicalDeviceInfo;
+    VkHandleRef<VkDevice> device;
 
     ScopedFunctionalQueue deletionQueue;
 };

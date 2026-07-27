@@ -20,21 +20,18 @@
 VulkanEngine::~VulkanEngine()
 {
     // once we should close, we wait for the device to be idle:
-    if (device != VK_NULL_HANDLE)
+    if (gpuContext->Device() != VK_NULL_HANDLE)
     {
         // #JOHN maybe... make this a thing that on destruct waits idle and make it a member that way tis all in one
         // place and maybe consider... moving it into a more explicitly managed struct, but we are locked in
         // on this pattern for nwo.
-        vkDeviceWaitIdle(device);
+        vkDeviceWaitIdle(gpuContext->Device());
         pipelineObjects.reset();
 
-        DestroyDescriptorInformation(device, descriptorInfo);
+        DestroyDescriptorInformation(gpuContext->Device(), descriptorInfo);
 
         frameInFlightStructures.reset(); // not sure if this is the right semantics but it works
         swapchainResources.reset();
-
-        vkDestroyDevice(device, nullptr);
-        device = VK_NULL_HANDLE;
     }
 }
 
@@ -52,34 +49,29 @@ bool VulkanEngine::init()
     if (!gpuContext) return false;
 
     // create a logical device from the physical one
-    device = CreateLogicalDevice(gpuContext->PhysicalDevice(), gpuContext->GraphicsPresentQueue());
-    if (!device)
-    {
-        fmt::printf("Failed to create logical device.\n");
-        return false;
-    }
 
-    volkLoadDevice(device);
 
-    j3a.Initialize(gpuContext->PhysicalDevice(), device);
+
+
+    j3a.Initialize(gpuContext->PhysicalDevice(), gpuContext->Device());
 
     // assign our queue created from the device
-    vkGetDeviceQueue(device, gpuContext->GraphicsPresentQueue(), 0, &oneQueueToRuleThemAll);
+    vkGetDeviceQueue(gpuContext->Device(), gpuContext->GraphicsPresentQueue(), 0, &oneQueueToRuleThemAll);
 
     // Name this one queue
-    DebugSetName(device, VK_OBJECT_TYPE_QUEUE, oneQueueToRuleThemAll, "One Graphics Queue I am using for everything");
+    DebugSetName(gpuContext->Device(), VK_OBJECT_TYPE_QUEUE, oneQueueToRuleThemAll, "One Graphics Queue I am using for everything");
 
     // #JOHN - should these be based on some window properties? Feel like the whole resize should be based on window.
     // #JOHN - this should probably take the context itself and not all dis
     swapchainResources.emplace(
-        device, gpuContext->PhysicalDevice(), gpuContext->Surface(),
+        gpuContext->Device(), gpuContext->PhysicalDevice(), gpuContext->Surface(),
         VkExtent2D{.width = static_cast<uint32_t>(width), .height = static_cast<uint32_t>(height)}, &j3a);
 
     // #JOHN this doesn't belong directly in the engine, but rather whatever represents our "draw passes" and this goes
     // into the "compute shader draws a picture with 16x16 lines" logic
-    AllocateDescriptorInfo(device, descriptorInfo);
+    AllocateDescriptorInfo(gpuContext->Device(), descriptorInfo);
 
-    pipelineObjects.emplace(device, descriptorInfo.descriptorSetLayout);
+    pipelineObjects.emplace(gpuContext->Device(), descriptorInfo.descriptorSetLayout);
 
     // #JOHN - hidden dependency on the "pipeline objects" and descriptor set stuff.
     // #JOHN - kinda gross ordering depdendency right here.
@@ -87,7 +79,7 @@ bool VulkanEngine::init()
     swapchainResources->Initialize();
 
     frameInFlightStructures =
-        FrameInFlightStructures::Create(device, gpuContext->GraphicsPresentQueue(), 3);
+        FrameInFlightStructures::Create(gpuContext->Device(), gpuContext->GraphicsPresentQueue(), 3);
 
     return true;
 }
@@ -119,7 +111,7 @@ void VulkanEngine::RegisterOnSwapchainCreatedCallbacks()
                                                        .descriptorCount = 1,
                                                        .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
                                                        .pImageInfo = &imageInfo};
-            vkUpdateDescriptorSets(device, 1, &writeDescriptorSet, 0, nullptr);
+            vkUpdateDescriptorSets(gpuContext->Device(), 1, &writeDescriptorSet, 0, nullptr);
         });
     }
 }
@@ -251,7 +243,7 @@ void VulkanEngine::RenderAndPresentToSwapchain()
     PerFrameInFlightStructure &frameStruct = frameInFlightStructures->getPerFrameInFlightStructure(currentFrame);
 
     // wait on "this frame in flight" to be signaled
-    vkWaitForFences(device, 1, &frameStruct.queueFinishedFence, VK_TRUE, UINT64_MAX);
+    vkWaitForFences(gpuContext->Device(), 1, &frameStruct.queueFinishedFence, VK_TRUE, UINT64_MAX);
 
     uint32_t imageAcquiredIndex = 0;
     // #JOHN this may need to tell the external system of an update... so that the engine itself can rebuild whatever
@@ -268,7 +260,7 @@ void VulkanEngine::RenderAndPresentToSwapchain()
     // once the image acquired semaphore goes off, we have the image in the pipeline
 
     // reset the fence, valid
-    vkResetFences(device, 1, &frameStruct.queueFinishedFence);
+    vkResetFences(gpuContext->Device(), 1, &frameStruct.queueFinishedFence);
 
     // reset the command buffer associated with this frame
     vkResetCommandBuffer(frameStruct.commandBuffer, 0);

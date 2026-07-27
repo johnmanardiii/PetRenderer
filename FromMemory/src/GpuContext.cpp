@@ -7,6 +7,7 @@
 #include "SDL3/SDL_vulkan.h"
 #include "ScopedFunctionalQueue.h"
 #include "VulkanInstanceBuilder.h"
+#include "VulkanLogicalDeviceCreator.h"
 #include "fmt/printf.h"
 #include "volk.h"
 
@@ -43,9 +44,7 @@ std::optional<GpuContext> GpuContext::Create(const Platform &platform)
         return std::nullopt;
     }
 
-    deletionQueue.Register([instance, surface] {
-        vkDestroySurfaceKHR(instance, surface, nullptr);
-    });
+    deletionQueue.Register([instance, surface] { vkDestroySurfaceKHR(instance, surface, nullptr); });
 
     // gather a valid physical device
     VulkanPhysicalDeviceSelector selector;
@@ -57,12 +56,25 @@ std::optional<GpuContext> GpuContext::Create(const Platform &platform)
         return std::nullopt;
     }
 
-    return GpuContext(instance, surface, *physDeviceinfo, std::move(deletionQueue));
+    // logical device creation
+    VkDevice device =
+        CreateLogicalDevice(physDeviceinfo->physicalDevice, physDeviceinfo->graphicsPresentQueueFamilyIndex);
+    if (!device)
+    {
+        fmt::printf("Failed to create logical device.\n");
+        return std::nullopt;
+    }
+
+    deletionQueue.Register([device] { vkDestroyDevice(device, nullptr); });
+
+    volkLoadDevice(device);
+
+    return GpuContext(instance, surface, *physDeviceinfo, device, std::move(deletionQueue));
 }
 
 GpuContext::GpuContext(VkInstance instance, VkSurfaceKHR surface, PhysicalDeviceInfo selectedPhysicalDeviceInfo,
-                       ScopedFunctionalQueue &&deletionQueue)
-    : instance(instance), surface(surface), selectedPhysicalDeviceInfo(selectedPhysicalDeviceInfo),
+                       VkDevice device, ScopedFunctionalQueue &&deletionQueue)
+    : instance(instance), surface(surface), selectedPhysicalDeviceInfo(selectedPhysicalDeviceInfo), device(device),
       deletionQueue(std::move(deletionQueue))
 {
 }
