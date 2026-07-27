@@ -1,68 +1,62 @@
 //
 // Created by johnm on 7/25/2026.
 //
-#include "fmt/printf.h"
 #include "Platform.h"
+#include "fmt/printf.h"
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
 
 // #JOHN - should probably make this a 2d type.
 std::optional<Platform> Platform::Create(int width, int height)
 {
+    ScopedFunctionalQueue deletionQueue;
     if (!SDL_Init(SDL_INIT_VIDEO))
     {
         fmt::printf("Failed to initialize GLFW\n");
         return std::nullopt;
     }
 
-    if (!SDL_Vulkan_LoadLibrary(nullptr))
+    deletionQueue.Register([]{SDL_Quit();});
+
+        if (!SDL_Vulkan_LoadLibrary(nullptr))
     {
-        SDL_Quit();
         fmt::printf("Failed to initialize SDL_Vulkan_LoadLibrary: %s\n", SDL_GetError());
         return std::nullopt;
     }
+
+    deletionQueue.Register([]{SDL_Vulkan_UnloadLibrary();});
 
     // #JOHN - can this fail? if so crash because we need a window I think (might be a dumb idea)
     SDL_Window *window = SDL_CreateWindow("Pet Renderer", width, height, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
     if (!window)
     {
         fmt::printf("Failed to create window: %s\n", SDL_GetError());
-        SDL_Vulkan_UnloadLibrary();
-        SDL_Quit();
+        return std::nullopt;
     }
-    return Platform(window);
+
+    deletionQueue.Register([window]{SDL_DestroyWindow(window);});
+
+    return Platform(window, std::move(deletionQueue));
 }
 
-Platform::~Platform()
-{
-    // currently tying the window the SDL lifetime, maybe undesirable but fine for now where
-    // window == application
-    if (bOwningInstance)
-    {
-        // we have guarantees that window is valid, vulkan loaded, sdl initialized from the create func
-        SDL_DestroyWindow(window);
-
-        SDL_Vulkan_UnloadLibrary();
-
-        SDL_Quit();
-    }
-}
-
-Platform::Platform(Platform && other) noexcept : window(std::exchange(other.window, nullptr)), bOwningInstance(std::exchange(other.bOwningInstance, false))
+Platform::Platform(Platform &&other) noexcept
+    : window(std::exchange(other.window, nullptr)), bOwningInstance(std::exchange(other.bOwningInstance, false)),
+      deletionQueue(std::move(other.deletionQueue))
 {
 }
 
-Platform &Platform::operator=(Platform && other) noexcept
+Platform &Platform::operator=(Platform &&other) noexcept
 {
     if (this != &other)
     {
         window = std::exchange(other.window, nullptr);
         bOwningInstance = std::exchange(other.bOwningInstance, false);
+        deletionQueue = std::move(other.deletionQueue);
     }
     return *this;
 }
 
-std::vector<const char *> Platform::GetRequiredExtensions() const
+std::vector<const char *> Platform::GetRequiredExtensions()
 {
     uint32_t count;
 
@@ -73,4 +67,9 @@ std::vector<const char *> Platform::GetRequiredExtensions() const
         requiredExtensions.push_back(extensions[i]);
     }
     return requiredExtensions;
+}
+
+Platform::Platform(SDL_Window *win, ScopedFunctionalQueue &&deletionQueue)
+    : window(win), deletionQueue(std::move(deletionQueue))
+{
 }

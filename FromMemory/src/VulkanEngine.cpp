@@ -20,7 +20,7 @@
 VulkanEngine::~VulkanEngine()
 {
     // once we should close, we wait for the device to be idle:
-    if (gpuContext->Device() != VK_NULL_HANDLE)
+    if ( gpuContext && gpuContext->Device() != VK_NULL_HANDLE)
     {
         // #JOHN maybe... make this a thing that on destruct waits idle and make it a member that way tis all in one
         // place and maybe consider... moving it into a more explicitly managed struct, but we are locked in
@@ -42,6 +42,7 @@ bool VulkanEngine::init()
     // #JOHN - temp code b4 we remove this awful optional pattern
     int width = 640;
     int height = 480;
+
     platform = Platform::Create(width, height);
     if (!platform)
         return false;
