@@ -6,6 +6,7 @@
 
 #include "SDL3/SDL_vulkan.h"
 #include "ScopedFunctionalQueue.h"
+#include "VulkanDebugUtil.h"
 #include "VulkanInstanceBuilder.h"
 #include "VulkanLogicalDeviceCreator.h"
 #include "fmt/printf.h"
@@ -69,12 +70,20 @@ std::optional<GpuContext> GpuContext::Create(const Platform &platform)
 
     volkLoadDevice(device);
 
-    return GpuContext(instance, surface, *physDeviceinfo, device, std::move(deletionQueue));
+    // assign our queue created from the device
+    VkQueue graphicsPresentQueue;
+    vkGetDeviceQueue(device, physDeviceinfo->graphicsPresentQueueFamilyIndex, 0, &graphicsPresentQueue);
+
+    // Name this one queue
+    DebugSetName(device, VK_OBJECT_TYPE_QUEUE, graphicsPresentQueue,
+                 "One Graphics / Present Queue I am using for everything");
+
+    return GpuContext(instance, surface, *physDeviceinfo, device, graphicsPresentQueue, std::move(deletionQueue));
 }
 
 GpuContext::GpuContext(VkInstance instance, VkSurfaceKHR surface, PhysicalDeviceInfo selectedPhysicalDeviceInfo,
-                       VkDevice device, ScopedFunctionalQueue &&deletionQueue)
+                       VkDevice device, VkQueue graphicsPresentQueue, ScopedFunctionalQueue &&deletionQueue)
     : instance(instance), surface(surface), selectedPhysicalDeviceInfo(selectedPhysicalDeviceInfo), device(device),
-      deletionQueue(std::move(deletionQueue))
+      graphicsPresentQueue(graphicsPresentQueue), deletionQueue(std::move(deletionQueue))
 {
 }

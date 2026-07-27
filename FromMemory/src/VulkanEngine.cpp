@@ -43,24 +43,14 @@ bool VulkanEngine::init()
     int width = 640;
     int height = 480;
     platform = Platform::Create(width, height);
-    if (!platform) return false;
+    if (!platform)
+        return false;
 
     gpuContext = GpuContext::Create(*platform);
-    if (!gpuContext) return false;
-
-    // create a logical device from the physical one
-
-
-
+    if (!gpuContext)
+        return false;
 
     j3a.Initialize(gpuContext->PhysicalDevice(), gpuContext->Device());
-
-    // assign our queue created from the device
-    vkGetDeviceQueue(gpuContext->Device(), gpuContext->GraphicsPresentQueue(), 0, &oneQueueToRuleThemAll);
-
-    // Name this one queue
-    DebugSetName(gpuContext->Device(), VK_OBJECT_TYPE_QUEUE, oneQueueToRuleThemAll, "One Graphics Queue I am using for everything");
-
     // #JOHN - should these be based on some window properties? Feel like the whole resize should be based on window.
     // #JOHN - this should probably take the context itself and not all dis
     swapchainResources.emplace(
@@ -79,7 +69,7 @@ bool VulkanEngine::init()
     swapchainResources->Initialize();
 
     frameInFlightStructures =
-        FrameInFlightStructures::Create(gpuContext->Device(), gpuContext->GraphicsPresentQueue(), 3);
+        FrameInFlightStructures::Create(gpuContext->Device(), gpuContext->GraphicsPresentQueueIndex(), 3);
 
     return true;
 }
@@ -328,7 +318,8 @@ void VulkanEngine::RenderAndPresentToSwapchain()
         .signalSemaphoreInfoCount = 1,
         .pSignalSemaphoreInfos = &semaphoreSubmitInfo,
     };
-    vkchk(vkQueueSubmit2(oneQueueToRuleThemAll, 1, &submitInfo, frameStruct.queueFinishedFence));
+    vkchk(vkQueueSubmit2(gpuContext->GraphicsPresentLogicalQueue(), 1, &submitInfo, frameStruct.queueFinishedFence));
 
-    vkchk(swapchainResources->PresentImage(oneQueueToRuleThemAll, swapchainImageReadySemaphore, imageAcquiredIndex));
+    vkchk(swapchainResources->PresentImage(gpuContext->GraphicsPresentLogicalQueue(), swapchainImageReadySemaphore,
+                                           imageAcquiredIndex));
 }
