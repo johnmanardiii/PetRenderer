@@ -69,5 +69,5 @@ vcpkg_installed/
 Testing/
 .cache/
 .idea
-FromMemory/.idea
+FromMemory/.idea/
 ActualVKGuide/notes/docs/

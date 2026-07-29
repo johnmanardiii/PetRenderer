@@ -4,6 +4,14 @@
   code.
 * The sole purpose of this project is learning.
 
+# Dependencies:
+If running on Linux, please install the depedencies for SDL3: https://wiki.libsdl.org/SDL3/README-linux
+
+Ensure that the Vulkan SDK is installed on your computer: https://vulkan.lunarg.com/
+(if on Linux I found this useful: https://vulkan.lunarg.com/doc/sdk/1.4.357.0/linux/getting_started.html, make sure you follow the 
+steps to add the needed things to your env on linux, I had to manually add the env
+var to the cmake config since clion wasn't picking up on it.)
+
 ## 4/26/2026
 
 * decided to go with creating my swapchain images in sRGB since that made the most sense to me for what would be least

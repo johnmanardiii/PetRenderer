@@ -3,17 +3,9 @@
 //
 #include "VulkanEngine.h"
 
-#include "VulkanDebugUtil.h"
-
 #include "SDL3/SDL_timer.h"
-#include "SDL3/SDL_vulkan.h"
-#include "VulkanLogicalDeviceCreator.h"
-#include "VulkanPhysicalDeviceSelector.h"
 #include "VulkanSwapchainResources.h"
 #include "VulkanUtil.h"
-
-#include "glm/trigonometric.hpp"
-
 #include <fmt/printf.h>
 #include <volk.h>
 
