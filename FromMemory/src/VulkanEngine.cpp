@@ -90,6 +90,19 @@ void VulkanEngine::Iterate()
     elapsedTime = SDL_GetTicksNS() / 1000000000.0;
 }
 
+void VulkanEngine::OnWindowSizeChanged()
+{
+    if (platform)
+    {
+        int width, height;
+        // there is window size, and window size in pixels... for us we are just going to use the pixel size for now for the
+        // renderer
+        SDL_GetWindowSizeInPixels(platform->GetWindow(), &width, &height);
+
+        swapchainResources->SetDefaultExtent({static_cast<uint32_t>(width), static_cast<uint32_t>(height)});
+    }
+}
+
 void VulkanEngine::RenderToOffscreenImage(VkCommandBuffer commandBuffer)
 {
     if (!offscreenRenderImageInfo)
@@ -216,23 +229,10 @@ void VulkanEngine::RenderAndPresentToSwapchain()
     vkWaitForFences(gpuContext->Device(), 1, &frameStruct.queueFinishedFence, VK_TRUE, UINT64_MAX);
 
     uint32_t imageAcquiredIndex = 0;
-    // #JOHN this may need to tell the external system of an update... so that the engine itself can rebuild whatever
-    // images it needs. maybe I'll have an internal rendering resolution and not resize but instead go for "settings"
-    // like other games.
-    VkResult acquireResult =
-        (swapchainResources->AcquireNextImage(frameStruct.imageAcquiredSemaphore, imageAcquiredIndex));
-    bool rebuildSwapchainImageAfterPresent = false;
-    if (acquireResult == VK_SUBOPTIMAL_KHR)
+    if (!swapchainResources->AcquireNextImage(frameStruct.imageAcquiredSemaphore, imageAcquiredIndex))
     {
-        rebuildSwapchainImageAfterPresent = true;
-    }
-    else if (acquireResult == VK_ERROR_OUT_OF_DATE_KHR)
-    {
-        HandleSwapchainOutOfDate();
         return;
     }
-
-    vkchk(acquireResult);
 
     // reset the fence, valid
     vkResetFences(gpuContext->Device(), 1, &frameStruct.queueFinishedFence);
@@ -303,24 +303,12 @@ void VulkanEngine::RenderAndPresentToSwapchain()
     };
     vkchk(vkQueueSubmit2(gpuContext->GraphicsPresentLogicalQueue(), 1, &submitInfo, frameStruct.queueFinishedFence));
 
-    VkResult presentResult = swapchainResources->PresentImage(gpuContext->GraphicsPresentLogicalQueue(),
+    swapchainResources->PresentImage(gpuContext->GraphicsPresentLogicalQueue(),
                                                               swapchainImageReadySemaphore, imageAcquiredIndex);
-    if (presentResult == VK_ERROR_OUT_OF_DATE_KHR || presentResult == VK_SUBOPTIMAL_KHR)
-    {
-        rebuildSwapchainImageAfterPresent = true;
-    }
-    if (rebuildSwapchainImageAfterPresent)
-    {
-        HandleSwapchainOutOfDate();
-    }
 }
 
 void VulkanEngine::HandleSwapchainOutOfDate()
 {
-    if (!swapchainResources->Recreate())
-    {
-        fmt::printf("Failed to recreate swapchain");
-        std::abort();
-    }
+    // #JOHN - this actually needs to rebuild the image...
     UpdateOffscreenRenderImageDescriptorSet(gpuContext->Device(), *offscreenRenderImageInfo, descriptorInfo.descriptorSet);
 }

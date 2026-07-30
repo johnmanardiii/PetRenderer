@@ -301,7 +301,7 @@ bool VulkanSwapchainResources::Recreate()
 }
 
 // #JOHN this function is shallow and is more confusing than just straight up calling the vulkan stuff.
-VkResult VulkanSwapchainResources::PresentImage(VkQueue presentQueue, VkSemaphore waitSemaphore, uint32_t &imageIndex)
+void VulkanSwapchainResources::PresentImage(VkQueue presentQueue, VkSemaphore waitSemaphore, uint32_t &imageIndex)
 {
     VkPresentInfoKHR presentInfo = {
         .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
@@ -311,14 +311,40 @@ VkResult VulkanSwapchainResources::PresentImage(VkQueue presentQueue, VkSemaphor
         .pSwapchains = &swapchainInfo.swapchain,
         .pImageIndices = &imageIndex,
     };
-    return vkQueuePresentKHR(presentQueue, &presentInfo);
+    VkResult result = vkQueuePresentKHR(presentQueue, &presentInfo);
+    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
+    {
+        bNeedsRebuild = true;
+    }
 }
 
-VkResult VulkanSwapchainResources::AcquireNextImage(VkSemaphore imageAcquiredSemaphore, uint32_t &imageIndex,
+bool VulkanSwapchainResources::AcquireNextImage(VkSemaphore imageAcquiredSemaphore, uint32_t &imageIndex,
                                                     uint32_t timeout)
 {
-    return vkAcquireNextImageKHR(device, swapchainInfo.swapchain, timeout, imageAcquiredSemaphore,
+    if (bNeedsRebuild)
+    {
+        if (!Recreate())
+        {
+            fmt::printf("Failed to recreate swapchain");
+            std::abort();
+        }
+        bNeedsRebuild = false;
+    }
+
+    VkResult result = vkAcquireNextImageKHR(device, swapchainInfo.swapchain, timeout, imageAcquiredSemaphore,
                                                        VK_NULL_HANDLE, &imageIndex);
+
+    if (result == VK_SUBOPTIMAL_KHR)
+    {
+        // image acquired, but needs rebuild
+        bNeedsRebuild = true;
+    }
+    else if (result == VK_ERROR_OUT_OF_DATE_KHR)
+    {
+        bNeedsRebuild = true;
+        return false;
+    }
+    return true;
 }
 
 void VulkanSwapchainResources::DestroySwapchainResources()
@@ -390,6 +416,5 @@ bool VulkanSwapchainResources::CreateSwapchainResources()
         swapchainImageReadyToPresentSemaphores.clear();
     });
 
-    onSwapchainCreated.emit();
     return true;
 }

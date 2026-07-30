@@ -34,6 +34,7 @@ class VulkanEngine
     VulkanEngine &operator=(VulkanEngine &&) = delete;
 
     void Iterate();
+    void OnWindowSizeChanged();
 
   private:
     void RegisterOnSwapchainCreatedCallbacks();
