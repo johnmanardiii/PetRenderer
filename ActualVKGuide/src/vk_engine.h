@@ -49,6 +49,8 @@ public:
 	//run main loop
 	void run();
 
+	void immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function);
+
 	VkInstance _instance;	// vulkan library handle
 	VkDebugUtilsMessengerEXT _debug_messenger;	// vulkan debug output handle
 	VkPhysicalDevice _chosenGPU;	// GPU chosen as default device
@@ -83,6 +85,11 @@ public:
 	VkPipeline _gradientPipeline;
 	VkPipelineLayout _gradientPipelineLayout;
 
+	// immediate resources
+	VkFence _immFence;
+	VkCommandBuffer _immCommandBuffer;
+	VkCommandPool _immCommandPool;
+
 private:
 
 	void create_swapchain(uint32_t width, uint32_t height);
@@ -99,4 +106,6 @@ private:
 	void init_background_pipelines();
 
 	void draw_background(VkCommandBuffer cmd);
+
+	void init_imgui();
 };
