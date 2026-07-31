@@ -80,7 +80,10 @@ std::optional<SwapchainInfo> CreateSwapchain(VkDevice device, VkPhysicalDevice p
     std::vector<VkPresentModeKHR> presentModes(presentModesCount);
     vkchk(vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModesCount, presentModes.data()));
 
-    VkPresentModeKHR desiredPresentMode = VK_PRESENT_MODE_FIFO_KHR;
+    // VkPresentModeKHR desiredPresentMode = VK_PRESENT_MODE_FIFO_KHR;
+    // #JOHN - this should be controllable from something and then be able to be changed at runtime I think
+    // based on what is queried to be available.
+    VkPresentModeKHR desiredPresentMode = VK_PRESENT_MODE_MAILBOX_KHR;
     std::optional<VkPresentModeKHR> selectedPresentMode;
 
     for (auto &presentMode : presentModes)

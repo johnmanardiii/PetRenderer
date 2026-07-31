@@ -9,6 +9,14 @@
 
 #include <volk.h>
 
+/*
+ *  #JOHN - in the future, replace this whole file. it is more of a learning excercise in how to allocate memory
+ *  manually from vulkan... it is very inflexible and prone to errors and the API just isn't right...
+ *
+ *  Also for this to be 100 percent right, we would need to have the ability to maintain multiple offscreen render targets
+ *  on resize since some could be in use on outdated swapchains.
+ */
+
 // #JOHN - eventually this could be abstracted into whatever image but for now its offscreen image
 struct OffscreenRenderImageInfo
 {
