@@ -59,6 +59,16 @@ public:
         bNeedsRebuild = true;
     }
 
+    VkExtent2D GetExtent() const
+    {
+        // john - not sure if this should be fallback or the actual one...
+        if (swapchainInfo)
+        {
+            return swapchainInfo->swapchainExtent;
+        }
+        return fallbackExtentSize;
+    }
+
 private:
     bool Recreate();
     void DestroySwapchainResources();

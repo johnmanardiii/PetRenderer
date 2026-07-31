@@ -246,6 +246,12 @@ void VulkanEngine::RenderAndPresentToSwapchain()
         return;
     }
 
+    if (acquiredImageInfo->extent.width != offscreenRenderImageInfo->extent.width ||
+        acquiredImageInfo->extent.height != offscreenRenderImageInfo->extent.height)
+    {
+        ResizeOffscreenRenderTarget();
+    }
+
     // reset the fence, valid
     vkResetFences(gpuContext->Device(), 1, &frameStruct.queueFinishedFence);
 
@@ -313,9 +319,24 @@ void VulkanEngine::RenderAndPresentToSwapchain()
                                      acquiredImageInfo->imageReadyToPresentSemaphore, acquiredImageInfo->imageIndex);
 }
 
-void VulkanEngine::HandleSwapchainOutOfDate()
+void VulkanEngine::ResizeOffscreenRenderTarget()
 {
-    // #JOHN - this actually needs to rebuild the image...
-    UpdateOffscreenRenderImageDescriptorSet(gpuContext->Device(), *offscreenRenderImageInfo,
-                                            descriptorInfo.descriptorSet);
+    // recreate the offscreen image to be the same size as the swapchain...
+    // if the image size is 0 in any dimension, just delete it and set it to nullopt for now
+    // #JOHN - the logic here is messed up, keep going for now.
+    if (offscreenRenderImageInfo)
+    {
+        DestroyOffscreenRenderImageInfo(gpuContext->Device(), *offscreenRenderImageInfo);
+        offscreenRenderImageInfo = std::nullopt;
+    }
+    if (swapchainResources->GetExtent().width != 0 && swapchainResources->GetExtent().height != 0)
+    {
+        offscreenRenderImageInfo = createOffscreenRenderImageInfo(gpuContext->Device(), swapchainResources->GetExtent(), &j3a);
+    }
+    if (offscreenRenderImageInfo)
+    {
+        // #JOHN - this actually needs to rebuild the image...
+        UpdateOffscreenRenderImageDescriptorSet(gpuContext->Device(), *offscreenRenderImageInfo,
+                                                descriptorInfo.descriptorSet);
+    }
 }
