@@ -67,12 +67,15 @@ bool VulkanEngine::init()
 
     // #JOHN - hidden dependency on the "pipeline objects" and descriptor set stuff.
     // #JOHN - kinda gross ordering depdendency right here.
+    VkExtent2D initialOffscreenRenderImage = {.width = static_cast<uint32_t>(width),
+                                              .height = static_cast<uint32_t>(height)};
     offscreenRenderImageInfo.emplace(
-        createOffscreenRenderImageInfo(gpuContext->Device(), swapchainResources->CurrentSwapchainExtent(), &j3a));
+        createOffscreenRenderImageInfo(gpuContext->Device(), initialOffscreenRenderImage, &j3a));
 
     // #JOHN - manually do this for now, just because things are messy, don't submit until a design has been worked out
     // for this
-    UpdateOffscreenRenderImageDescriptorSet(gpuContext->Device(), *offscreenRenderImageInfo, descriptorInfo.descriptorSet);
+    UpdateOffscreenRenderImageDescriptorSet(gpuContext->Device(), *offscreenRenderImageInfo,
+                                            descriptorInfo.descriptorSet);
 
     frameInFlightStructures =
         FrameInFlightStructures::Create(gpuContext->Device(), gpuContext->GraphicsPresentQueueIndex(), 3);
@@ -92,14 +95,21 @@ void VulkanEngine::Iterate()
 
 void VulkanEngine::OnWindowSizeChanged()
 {
+    // #JOHN - move this logic to platform somehow
     if (platform)
     {
         int width, height;
         // there is window size, and window size in pixels... for us we are just going to use the pixel size for now for the
         // renderer
-        SDL_GetWindowSizeInPixels(platform->GetWindow(), &width, &height);
-
-        swapchainResources->SetDefaultExtent({static_cast<uint32_t>(width), static_cast<uint32_t>(height)});
+        if (SDL_GetWindowSizeInPixels(platform->GetWindow(), &width, &height))
+        {
+            swapchainResources->SetDefaultExtent({static_cast<uint32_t>(width), static_cast<uint32_t>(height)});
+        }
+        else
+        {
+            fmt::printf("Failed to get window size: %s\n", SDL_GetError());
+            std::abort();
+        }
     }
 }
 
@@ -130,7 +140,8 @@ void VulkanEngine::RenderToOffscreenImage(VkCommandBuffer commandBuffer)
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipelineObjects->layout, 0, 1,
                             &descriptorInfo.descriptorSet, 0, nullptr);
 
-    auto [width, height] = swapchainResources->CurrentSwapchainExtent();
+    // #JOHN - this should be.... the size of the offscreen render target actually like the image itself...
+    auto [width, height] = offscreenRenderImageInfo->extent;
     vkCmdDispatch(commandBuffer, ceil(width / 16.0), ceil(height / 16.0), 1);
 
     // after the offscreen image has been written to, convert it to be transferred over to the swapchain image
@@ -146,7 +157,8 @@ void VulkanEngine::RenderToOffscreenImage(VkCommandBuffer commandBuffer)
     });
 }
 
-void VulkanEngine::BlitOffscreenImageToSwapchainImage(VkCommandBuffer commandBuffer, VkImage acquiredImage)
+void VulkanEngine::BlitOffscreenImageToSwapchainImage(VkCommandBuffer commandBuffer,
+                                                      AcquiredSwapchainImageInfo &acquiredSwapchainInfo)
 {
     if (!swapchainResources)
     {
@@ -168,7 +180,7 @@ void VulkanEngine::BlitOffscreenImageToSwapchainImage(VkCommandBuffer commandBuf
         .dstAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
         .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
         .newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-        .image = acquiredImage,
+        .image = acquiredSwapchainInfo.image,
     });
 
     {
@@ -188,11 +200,10 @@ void VulkanEngine::BlitOffscreenImageToSwapchainImage(VkCommandBuffer commandBuf
                          .y = static_cast<int32_t>(offscreenRenderImageInfo->extent.height),
                          .z = 1};
 
-        VkExtent2D swapchainExtent = swapchainResources->CurrentSwapchainExtent();
         VkOffset3D dstOffsets[2];
         dstOffsets[0] = {.x = 0, .y = 0, .z = 0};
-        dstOffsets[1] = {.x = static_cast<int32_t>(swapchainExtent.width),
-                         .y = static_cast<int32_t>(swapchainExtent.height),
+        dstOffsets[1] = {.x = static_cast<int32_t>(acquiredSwapchainInfo.extent.width),
+                         .y = static_cast<int32_t>(acquiredSwapchainInfo.extent.height),
                          .z = 1};
 
         VkImageBlit2 offscreenToSwapchainBlit = {
@@ -209,7 +220,7 @@ void VulkanEngine::BlitOffscreenImageToSwapchainImage(VkCommandBuffer commandBuf
             .sType = VK_STRUCTURE_TYPE_BLIT_IMAGE_INFO_2,
             .srcImage = offscreenRenderImageInfo->offscreenImage,
             .srcImageLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-            .dstImage = acquiredImage,
+            .dstImage = acquiredSwapchainInfo.image,
             .dstImageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             .regionCount = 1,
             .pRegions = &offscreenToSwapchainBlit,
@@ -228,8 +239,9 @@ void VulkanEngine::RenderAndPresentToSwapchain()
     // wait on "this frame in flight" to be signaled
     vkWaitForFences(gpuContext->Device(), 1, &frameStruct.queueFinishedFence, VK_TRUE, UINT64_MAX);
 
-    uint32_t imageAcquiredIndex = 0;
-    if (!swapchainResources->AcquireNextImage(frameStruct.imageAcquiredSemaphore, imageAcquiredIndex))
+    std::optional<AcquiredSwapchainImageInfo> acquiredImageInfo = swapchainResources->AcquireNextImage(
+        frameStruct.imageAcquiredSemaphore);
+    if (!acquiredImageInfo)
     {
         return;
     }
@@ -248,10 +260,7 @@ void VulkanEngine::RenderAndPresentToSwapchain()
 
     RenderToOffscreenImage(frameStruct.commandBuffer);
 
-    // transfer swapchain image to blit transfer dst
-    VkImage acquiredImage = swapchainResources->GetImage(imageAcquiredIndex);
-
-    BlitOffscreenImageToSwapchainImage(frameStruct.commandBuffer, acquiredImage);
+    BlitOffscreenImageToSwapchainImage(frameStruct.commandBuffer, *acquiredImageInfo);
 
     // transition swapchain image from being blit to present
     TransitionVkImageFormat({
@@ -262,7 +271,7 @@ void VulkanEngine::RenderAndPresentToSwapchain()
         .dstAccessMask = 0,
         .oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
         .newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-        .image = acquiredImage,
+        .image = acquiredImageInfo->image,
     });
 
     vkEndCommandBuffer(frameStruct.commandBuffer);
@@ -279,12 +288,9 @@ void VulkanEngine::RenderAndPresentToSwapchain()
         .stageMask = VK_PIPELINE_STAGE_TRANSFER_BIT,
     };
 
-    VkSemaphore swapchainImageReadySemaphore =
-        swapchainResources->GetSwapchainImageReadyToPresentSemaphore(imageAcquiredIndex);
-
     VkSemaphoreSubmitInfo semaphoreSubmitInfo = {
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
-        .semaphore = swapchainImageReadySemaphore,
+        .semaphore = acquiredImageInfo->imageReadyToPresentSemaphore,
         .stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
     };
 
@@ -304,11 +310,12 @@ void VulkanEngine::RenderAndPresentToSwapchain()
     vkchk(vkQueueSubmit2(gpuContext->GraphicsPresentLogicalQueue(), 1, &submitInfo, frameStruct.queueFinishedFence));
 
     swapchainResources->PresentImage(gpuContext->GraphicsPresentLogicalQueue(),
-                                                              swapchainImageReadySemaphore, imageAcquiredIndex);
+                                     acquiredImageInfo->imageReadyToPresentSemaphore, acquiredImageInfo->imageIndex);
 }
 
 void VulkanEngine::HandleSwapchainOutOfDate()
 {
     // #JOHN - this actually needs to rebuild the image...
-    UpdateOffscreenRenderImageDescriptorSet(gpuContext->Device(), *offscreenRenderImageInfo, descriptorInfo.descriptorSet);
+    UpdateOffscreenRenderImageDescriptorSet(gpuContext->Device(), *offscreenRenderImageInfo,
+                                            descriptorInfo.descriptorSet);
 }

@@ -27,9 +27,18 @@ struct SwapchainInfo
     VkExtent2D swapchainExtent;
 };
 
+struct AcquiredSwapchainImageInfo
+{
+    VkImage image;
+    VkImageView imageView;
+    uint32_t imageIndex;
+    VkExtent2D extent;
+    VkSemaphore imageReadyToPresentSemaphore;
+};
+
 class VulkanSwapchainResources
 {
-  public:
+public:
     VulkanSwapchainResources(VkDevice device, VkPhysicalDevice physicalDevice, VkSurfaceKHR surface,
                              VkExtent2D fallbackExtentSize);
     ~VulkanSwapchainResources();
@@ -41,26 +50,12 @@ class VulkanSwapchainResources
     // #JOHN lose out on a fence here but don't really mind
     void PresentImage(VkQueue queue, VkSemaphore waitSemaphore, uint32_t &imageIndex);
 
-    bool AcquireNextImage(VkSemaphore imageAcquiredSemaphore, uint32_t &imageIndex, uint32_t timeout = 1000000000);
+    std::optional<AcquiredSwapchainImageInfo> AcquireNextImage(VkSemaphore imageAcquiredSemaphore,
+                                                               uint32_t timeout = 1000000000);
 
-    VkImage GetImage(uint32_t imageIndex)
+    void SetDefaultExtent(const VkExtent2D extent)
     {
-        return swapchainInfo.swapchainImages[imageIndex];
-    }
-
-    VkSemaphore GetSwapchainImageReadyToPresentSemaphore(uint32_t imageIndex) const
-    {
-        return swapchainImageReadyToPresentSemaphores[imageIndex];
-    }
-
-    [[nodiscard]] VkExtent2D CurrentSwapchainExtent() const
-    {
-        return swapchainInfo.swapchainExtent;
-    }
-
-    void SetDefaultExtent(VkExtent2D extent)
-    {
-        swapchainInfo.swapchainExtent = extent;
+        fallbackExtentSize = extent;
         bNeedsRebuild = true;
     }
 
@@ -78,7 +73,7 @@ private:
     VkPhysicalDevice physicalDevice;
     VkSurfaceKHR surface;
 
-    SwapchainInfo swapchainInfo;
+    std::optional<SwapchainInfo> swapchainInfo;
     std::vector<VkSemaphore> swapchainImageReadyToPresentSemaphores;
     std::vector<VkImageView> swapchainImageViews;
 

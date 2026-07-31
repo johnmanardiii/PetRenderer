@@ -39,7 +39,7 @@ class VulkanEngine
   private:
     void RegisterOnSwapchainCreatedCallbacks();
     void RenderToOffscreenImage(VkCommandBuffer commandBuffer);
-    void BlitOffscreenImageToSwapchainImage(VkCommandBuffer commandBuffer, VkImage acquiredImage);
+    void BlitOffscreenImageToSwapchainImage(VkCommandBuffer commandBuffer, AcquiredSwapchainImageInfo &acquiredSwapchainInfo);
     void RenderAndPresentToSwapchain();
     void HandleSwapchainOutOfDate();
 

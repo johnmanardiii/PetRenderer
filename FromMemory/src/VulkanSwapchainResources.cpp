@@ -148,9 +148,6 @@ std::optional<SwapchainInfo> CreateSwapchain(VkDevice device, VkPhysicalDevice p
     }
     else
     {
-        // #JOHN absolutely NO idea if GLFW needs to change if this is something other than what we passed...
-        // (initial GLFW surface outside actual surface bounds or somethign).
-        // we have to do some funny business to figure out what the swapchain should be...
         swapChainExtent.width =
             std::clamp(fallbackExtentSize.width, surfaceCapabilities.surfaceCapabilities.minImageExtent.width,
                        surfaceCapabilities.surfaceCapabilities.maxImageExtent.width);
@@ -158,8 +155,6 @@ std::optional<SwapchainInfo> CreateSwapchain(VkDevice device, VkPhysicalDevice p
             std::clamp(fallbackExtentSize.height, surfaceCapabilities.surfaceCapabilities.minImageExtent.height,
                        surfaceCapabilities.surfaceCapabilities.maxImageExtent.height);
     }
-
-    // PrintSupportedUsageFlags(surfaceCapabilities.surfaceCapabilities.supportedUsageFlags);
 
     const std::vector<VkImageUsageFlags> requiredUsageFlags = {
         VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
@@ -190,12 +185,21 @@ std::optional<SwapchainInfo> CreateSwapchain(VkDevice device, VkPhysicalDevice p
         (surfaceCapabilities.surfaceCapabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR) == 0)
     {
         fmt::printf("Engine currently only supports identity pretransform and will handle rotation later if needed");
+        std::abort();
         return std::nullopt;
     }
 
     if (!(surfaceCapabilities.surfaceCapabilities.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR))
     {
         fmt::print("Composite alpha opaque is not supported... what are we doing here\n");
+        std::abort();
+        return std::nullopt;
+    }
+
+    if (swapChainExtent.width == 0 || swapChainExtent.height == 0)
+    {
+        // early return here, valid but also shouldn't create the swapchain during this:
+        // non-fatal error
         return std::nullopt;
     }
 
@@ -294,8 +298,7 @@ VulkanSwapchainResources::~VulkanSwapchainResources()
 
 bool VulkanSwapchainResources::Recreate()
 {
-    // #JOHN need to figure out what can go wrong or right here and if I want it to auto call the create / destroy
-    // associated with ctor / dtor
+    vkDeviceWaitIdle(device);
     DestroySwapchainResources();
     return CreateSwapchainResources();
 }
@@ -308,7 +311,7 @@ void VulkanSwapchainResources::PresentImage(VkQueue presentQueue, VkSemaphore wa
         .waitSemaphoreCount = 1,
         .pWaitSemaphores = &waitSemaphore,
         .swapchainCount = 1,
-        .pSwapchains = &swapchainInfo.swapchain,
+        .pSwapchains = &swapchainInfo->swapchain,
         .pImageIndices = &imageIndex,
     };
     VkResult result = vkQueuePresentKHR(presentQueue, &presentInfo);
@@ -318,7 +321,7 @@ void VulkanSwapchainResources::PresentImage(VkQueue presentQueue, VkSemaphore wa
     }
 }
 
-bool VulkanSwapchainResources::AcquireNextImage(VkSemaphore imageAcquiredSemaphore, uint32_t &imageIndex,
+std::optional<AcquiredSwapchainImageInfo> VulkanSwapchainResources::AcquireNextImage(VkSemaphore imageAcquiredSemaphore,
                                                     uint32_t timeout)
 {
     if (bNeedsRebuild)
@@ -331,20 +334,35 @@ bool VulkanSwapchainResources::AcquireNextImage(VkSemaphore imageAcquiredSemapho
         bNeedsRebuild = false;
     }
 
-    VkResult result = vkAcquireNextImageKHR(device, swapchainInfo.swapchain, timeout, imageAcquiredSemaphore,
+    // if swapchain is invalid, early return w/ nullopt:
+    if (!swapchainInfo)
+    {
+        return std::nullopt;
+    }
+
+    uint32_t imageIndex;
+    VkResult result = vkAcquireNextImageKHR(device, swapchainInfo->swapchain, timeout, imageAcquiredSemaphore,
                                                        VK_NULL_HANDLE, &imageIndex);
 
+    if (result == VK_ERROR_OUT_OF_DATE_KHR)
+    {
+        bNeedsRebuild = true;
+        return std::nullopt;
+    }
+
+    AcquiredSwapchainImageInfo acquiredImageInfo = {
+        .image = swapchainInfo->swapchainImages[imageIndex],
+        .imageView = swapchainImageViews[imageIndex],
+        .imageIndex = imageIndex,
+        .extent = swapchainInfo->swapchainExtent,
+        .imageReadyToPresentSemaphore = swapchainImageReadyToPresentSemaphores[imageIndex],
+    };
     if (result == VK_SUBOPTIMAL_KHR)
     {
         // image acquired, but needs rebuild
         bNeedsRebuild = true;
     }
-    else if (result == VK_ERROR_OUT_OF_DATE_KHR)
-    {
-        bNeedsRebuild = true;
-        return false;
-    }
-    return true;
+    return acquiredImageInfo;
 }
 
 void VulkanSwapchainResources::DestroySwapchainResources()
@@ -365,56 +383,49 @@ void VulkanSwapchainResources::DestroySwapchainResources()
 
 bool VulkanSwapchainResources::CreateSwapchainResources()
 {
-    // #JOHN - this shouldn't... be able to fail I think? Need to audit it but this is another optional that
-    // doesn't quite seem right... like it is depended on in an "error" case.
-    std::optional<SwapchainInfo> result = VulkanCreateSwapchain::CreateSwapchain(device, physicalDevice, surface, fallbackExtentSize);
+    swapchainInfo = VulkanCreateSwapchain::CreateSwapchain(device, physicalDevice, surface, fallbackExtentSize);
 
-    if (!result)
+    if (swapchainInfo)
     {
-        fmt::printf("Failed to create swapchain.\n");
-        return false;
-    }
+        // #JOHN - maybe this should be bundled with the swapchain info instead of here
+        deletionQueue.Register([this]() {
+            vkDestroySwapchainKHR(device, swapchainInfo->swapchain, nullptr);
+        });
 
-    swapchainInfo = *result;
+        swapchainImageViews = VulkanCreateSwapchain::CreateSwapchainImageViews(device, *swapchainInfo);
 
-    deletionQueue.Register([this]() {
-        vkDestroySwapchainKHR(device, swapchainInfo.swapchain, nullptr);
-    });
+        deletionQueue.Register([this]() {
+            for (VkImageView swapchainImageView : swapchainImageViews)
+            {
+                vkDestroyImageView(device, swapchainImageView, nullptr);
+            }
+            swapchainImageViews.clear();
+        });
 
-    swapchainImageViews = VulkanCreateSwapchain::CreateSwapchainImageViews(device, swapchainInfo);
+        VkSemaphoreCreateInfo semaphoreCreateInfo = {
+            .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+        };
 
-    deletionQueue.Register([this]() {
-        for (VkImageView swapchainImageView : swapchainImageViews)
+        for (int i = 0; i < swapchainImageViews.size(); i++)
         {
-            vkDestroyImageView(device, swapchainImageView, nullptr);
-        }
-        swapchainImageViews.clear();
-    });
+            VkSemaphore semaphore;
+            vkchk(vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &semaphore));
 
-    VkSemaphoreCreateInfo semaphoreCreateInfo = {
-        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
-    };
+            // name the object as what it is:
+            std::string semaphoreName = fmt::format("Image Available Semaphore {}", i);
+            DebugSetName(device, VK_OBJECT_TYPE_SEMAPHORE, semaphore, semaphoreName.c_str());
 
-    for (int i = 0; i < swapchainImageViews.size(); i++)
-    {
-        VkSemaphore semaphore;
-        vkchk(vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &semaphore));
-
-        // name the object as what it is:
-        std::string semaphoreName = fmt::format("Image Available Semaphore {}", i);
-        DebugSetName(device, VK_OBJECT_TYPE_SEMAPHORE, semaphore, semaphoreName.c_str());
-
-        swapchainImageReadyToPresentSemaphores.emplace_back(semaphore);
-    }
-
-    deletionQueue.Register([this]() {
-        for (VkSemaphore semaphore : swapchainImageReadyToPresentSemaphores)
-        {
-            vkDestroySemaphore(device, semaphore, nullptr);
+            swapchainImageReadyToPresentSemaphores.emplace_back(semaphore);
         }
 
-        swapchainImageReadyToPresentSemaphores.clear();
-    });
+        deletionQueue.Register([this]() {
+            for (VkSemaphore semaphore : swapchainImageReadyToPresentSemaphores)
+            {
+                vkDestroySemaphore(device, semaphore, nullptr);
+            }
 
+            swapchainImageReadyToPresentSemaphores.clear();
+        });
+    }
     return true;
 }
