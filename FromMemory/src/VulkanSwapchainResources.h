@@ -59,15 +59,13 @@ public:
         bNeedsRebuild = true;
     }
 
-    bool Recreate();
-
 private:
-    bool bNeedsRebuild = false;
-
-    FunctionalQueue deletionQueue;
-
+    bool Recreate();
     void DestroySwapchainResources();
     bool CreateSwapchainResources();
+
+    bool bNeedsRebuild = false;
+    FunctionalQueue deletionQueue;
 
     VkDevice device;
     VkPhysicalDevice physicalDevice;
