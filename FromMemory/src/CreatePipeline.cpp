@@ -8,6 +8,12 @@
 
 #include <assert.h>
 
+/*
+ *  #JOHN - should rework this next time we have something like this to make it more flexible...
+ *  I really don't think that this should be doing all this in the constructor since
+ *  it is managing resources.
+ */
+
 PipelineObjects::PipelineObjects(VkDevice device, VkDescriptorSetLayout descriptorSetLayout) : device(device)
 {
     // #JOHN - crazzzyyyy how we hardcoding the shader but yolo

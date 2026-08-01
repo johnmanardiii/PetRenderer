@@ -105,7 +105,9 @@ private:
 	void init_pipelines();
 	void init_background_pipelines();
 
+	void init_imgui();
+
 	void draw_background(VkCommandBuffer cmd);
 
-	void init_imgui();
+	void draw_imgui(VkCommandBuffer cmd, VkImageView targetImageView);
 };

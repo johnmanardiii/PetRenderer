@@ -79,7 +79,7 @@ public:
     VkHandleRef& operator=(VkHandleRef&& other) noexcept
     {
         // assert that our handle isn't null because... you don't really want to move over these resources imo
-        if (handle == VK_NULL_HANDLE)
+        if (handle != VK_NULL_HANDLE)
         {
             fmt::printf("Moving handle ref over existing handle ref without clearing");
         }

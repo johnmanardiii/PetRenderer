@@ -11,8 +11,8 @@
 #include "FrameInFlightStructures.h"
 #include "GpuContext.h"
 #include "J3Alloc.h"
+#include "OffscreenRenderImage.h"
 #include "Platform.h"
-#include "VulkanPhysicalDeviceSelector.h"
 
 #include "VulkanSwapchainResources.h"
 
@@ -37,7 +37,6 @@ class VulkanEngine
     void OnWindowSizeChanged();
 
   private:
-    void RegisterOnSwapchainCreatedCallbacks();
     void RenderToOffscreenImage(VkCommandBuffer commandBuffer);
     void BlitOffscreenImageToSwapchainImage(VkCommandBuffer commandBuffer, AcquiredSwapchainImageInfo &acquiredSwapchainInfo);
     void RenderAndPresentToSwapchain();

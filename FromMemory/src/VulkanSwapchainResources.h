@@ -6,9 +6,6 @@
 #define VULKANCREATESWAPCHAIN_H
 
 #include "FunctionalQueue.h"
-#include "OffscreenRenderImage.h"
-
-#include "Signal.h"
 #include <SDL3/SDL_video.h>
 #include <optional>
 #include <vector>

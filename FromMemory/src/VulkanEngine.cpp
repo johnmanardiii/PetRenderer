@@ -3,6 +3,7 @@
 //
 #include "VulkanEngine.h"
 
+#include "OffscreenRenderImage.h"
 #include "SDL3/SDL_timer.h"
 #include "VulkanSwapchainResources.h"
 #include "VulkanUtil.h"
@@ -324,6 +325,11 @@ void VulkanEngine::ResizeOffscreenRenderTarget()
     // recreate the offscreen image to be the same size as the swapchain...
     // if the image size is 0 in any dimension, just delete it and set it to nullopt for now
     // #JOHN - the logic here is messed up, keep going for now.
+
+    // #JOHN - this is a per-swapchain resource, so the only reason this works at the moment is because the swapchain
+    // currently waits on idle before doing anything, which means that old resources aren't in use and can be destroyed
+    // before creation. The real pattern for these swapchain resources you want is more like:
+    // swapchain resize -> create new ones -> mark old ones as retired -> top of frame where no longer in use delete
     if (offscreenRenderImageInfo)
     {
         DestroyOffscreenRenderImageInfo(gpuContext->Device(), *offscreenRenderImageInfo);
