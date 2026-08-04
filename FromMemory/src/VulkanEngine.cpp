@@ -1,6 +1,12 @@
 //
 // Created by johnm on 4/1/2026.
 //
+// #JOHN - for now engine will be the one that defines the mem allocator but eventually this should probably be somewhere else
+// #JOHN - this include order is touchy... should maybe be outside of here.
+#include <volk.h>
+#define VMA_IMPLEMENTATION
+#include "vk_mem_alloc.h"
+
 #include "VulkanEngine.h"
 
 #include "OffscreenRenderImage.h"
@@ -8,7 +14,9 @@
 #include "VulkanSwapchainResources.h"
 #include "VulkanUtil.h"
 #include <fmt/printf.h>
-#include <volk.h>
+
+
+
 
 VulkanEngine::~VulkanEngine()
 {
@@ -32,6 +40,8 @@ VulkanEngine::~VulkanEngine()
 
         frameInFlightStructures.reset(); // not sure if this is the right semantics but it works
         swapchainResources.reset();
+
+        vmaDestroyAllocator(vmaAllocator);
     }
 }
 
@@ -47,12 +57,27 @@ bool VulkanEngine::init()
     if (!platform)
         return false;
 
+    // gpu context loads the volk instance / device functions... should be more explicit but whatever
     gpuContext = GpuContext::Create(*platform);
     if (!gpuContext)
         return false;
 
-    // #JOHN - not a fan of this "initialize" freakin thing man... maybe just put it in gpu context
-    j3a.Initialize(gpuContext->PhysicalDevice(), gpuContext->Device());
+
+
+    VmaAllocatorCreateInfo allocatorCreateInfo = {};
+    allocatorCreateInfo.flags = VMA_ALLOCATOR_CREATE_EXT_MEMORY_BUDGET_BIT;
+    allocatorCreateInfo.vulkanApiVersion = VK_API_VERSION_1_3; // #JOHN - this should be specified in a single place
+    allocatorCreateInfo.physicalDevice = gpuContext->PhysicalDevice();
+    allocatorCreateInfo.device = gpuContext->Device();
+    allocatorCreateInfo.instance = gpuContext->Instance();
+
+    VmaVulkanFunctions vulkanFunctions;
+    vkchk(vmaImportVulkanFunctionsFromVolk(&allocatorCreateInfo, &vulkanFunctions));
+    allocatorCreateInfo.pVulkanFunctions = &vulkanFunctions;
+
+    vkchk(vmaCreateAllocator(&allocatorCreateInfo, &vmaAllocator));
+
+    // allocatorCreateInfo.pVulkanFunctions = &vulkanFunctions;
 
     // #JOHN - should these be based on some window properties? Feel like the whole resize should be based on window.
     // #JOHN - this should probably take the context itself and not all dis
@@ -337,7 +362,8 @@ void VulkanEngine::ResizeOffscreenRenderTarget()
     }
     if (swapchainResources->GetExtent().width != 0 && swapchainResources->GetExtent().height != 0)
     {
-        offscreenRenderImageInfo = createOffscreenRenderImageInfo(gpuContext->Device(), swapchainResources->GetExtent(), &j3a);
+        offscreenRenderImageInfo = createOffscreenRenderImageInfo(gpuContext->Device(), swapchainResources->GetExtent(),
+                                                                  &j3a);
     }
     if (offscreenRenderImageInfo)
     {

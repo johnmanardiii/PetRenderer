@@ -5,7 +5,7 @@
 #ifndef CREATEOFFSCREENRENDERIMAGE_H
 #define CREATEOFFSCREENRENDERIMAGE_H
 
-#include "J3Alloc.h"
+#include "vk_mem_alloc.h"
 
 #include <volk.h>
 
@@ -33,8 +33,9 @@ struct OffscreenRenderImageInfo
 // #JOHN this used to be a RAII class but then I was getting annoyed at the move / copy behavior by default and realized
 // i didn't need it and that if I didn't need it, I might as well use free funcitons. I can see though how if I wanted
 // to construct that it could maybe be useful./
+// oh woah big fan of how this is pass around by value... hole mole
 OffscreenRenderImageInfo createOffscreenRenderImageInfo(VkDevice device, VkExtent2D swapchainExtent,
-                                                        J3Alloc *allocator);
+                                                        VmaAllocator allocator);
 
 void DestroyOffscreenRenderImageInfo(VkDevice device, OffscreenRenderImageInfo &offscreenRenderImageInfo);
 

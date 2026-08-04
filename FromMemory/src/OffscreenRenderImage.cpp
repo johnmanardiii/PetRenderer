@@ -6,6 +6,7 @@
 
 #include "VulkanDebugUtil.h"
 #include "VulkanUtil.h"
+#include "vk_mem_alloc.h"
 
 void DestroyOffscreenRenderImageInfo(VkDevice device, OffscreenRenderImageInfo &offscreenRenderImageInfo)
 {
@@ -16,7 +17,7 @@ void DestroyOffscreenRenderImageInfo(VkDevice device, OffscreenRenderImageInfo &
     vkFreeMemory(device, offscreenRenderImageInfo.memory, nullptr);
 }
 
-OffscreenRenderImageInfo createOffscreenRenderImageInfo(VkDevice device, VkExtent2D swapchainExtent, J3Alloc *allocator)
+OffscreenRenderImageInfo createOffscreenRenderImageInfo(VkDevice device, VkExtent2D swapchainExtent, VmaAllocator allocator)
 {
     OffscreenRenderImageInfo offscreenRenderImageInfo;
     offscreenRenderImageInfo.device = device;

@@ -10,14 +10,13 @@
 #include "DescriptorAllocator.h"
 #include "FrameInFlightStructures.h"
 #include "GpuContext.h"
-#include "J3Alloc.h"
 #include "OffscreenRenderImage.h"
 #include "Platform.h"
 
 #include "VulkanSwapchainResources.h"
 
-#include <chrono>
 #include <optional>
+#include "vk_mem_alloc.h"
 
 class VulkanEngine
 {
@@ -49,7 +48,7 @@ class VulkanEngine
 
     std::optional<FrameInFlightStructures> frameInFlightStructures;
 
-    J3Alloc j3a;
+    VmaAllocator vmaAllocator;
 
     std::optional<VulkanSwapchainResources> swapchainResources;
 
