@@ -30,7 +30,7 @@ VulkanEngine::~VulkanEngine()
 
         if (offscreenRenderImageInfo)
         {
-            DestroyOffscreenRenderImageInfo(gpuContext->Device(), *offscreenRenderImageInfo);
+            DestroyOffscreenRenderImageInfo(gpuContext->Device(), *offscreenRenderImageInfo, vmaAllocator);
             offscreenRenderImageInfo.reset();
         }
 
@@ -96,7 +96,7 @@ bool VulkanEngine::init()
     VkExtent2D initialOffscreenRenderImage = {.width = static_cast<uint32_t>(width),
                                               .height = static_cast<uint32_t>(height)};
     offscreenRenderImageInfo.emplace(
-        createOffscreenRenderImageInfo(gpuContext->Device(), initialOffscreenRenderImage, &j3a));
+        createOffscreenRenderImageInfo(gpuContext->Device(), initialOffscreenRenderImage, vmaAllocator));
 
     // #JOHN - manually do this for now, just because things are messy, don't submit until a design has been worked out
     // for this
@@ -357,13 +357,13 @@ void VulkanEngine::ResizeOffscreenRenderTarget()
     // swapchain resize -> create new ones -> mark old ones as retired -> top of frame where no longer in use delete
     if (offscreenRenderImageInfo)
     {
-        DestroyOffscreenRenderImageInfo(gpuContext->Device(), *offscreenRenderImageInfo);
+        DestroyOffscreenRenderImageInfo(gpuContext->Device(), *offscreenRenderImageInfo, vmaAllocator);
         offscreenRenderImageInfo = std::nullopt;
     }
     if (swapchainResources->GetExtent().width != 0 && swapchainResources->GetExtent().height != 0)
     {
         offscreenRenderImageInfo = createOffscreenRenderImageInfo(gpuContext->Device(), swapchainResources->GetExtent(),
-                                                                  &j3a);
+                                                                  vmaAllocator);
     }
     if (offscreenRenderImageInfo)
     {

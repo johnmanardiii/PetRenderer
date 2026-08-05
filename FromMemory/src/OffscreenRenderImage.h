@@ -24,10 +24,7 @@ struct OffscreenRenderImageInfo
     VkImageView offscreenImageView = VK_NULL_HANDLE;
     VkImage offscreenImage = VK_NULL_HANDLE;
 
-    // lowkey, this memory being tied to it is how I am doing now but I'll probably want to untie it later #JOHN
-    VkDeviceMemory memory = VK_NULL_HANDLE; // one memory alloc per image (bad but ok for now)
-
-    VkDevice device;
+    VmaAllocation allocation = VK_NULL_HANDLE;
 };
 
 // #JOHN this used to be a RAII class but then I was getting annoyed at the move / copy behavior by default and realized
@@ -37,7 +34,7 @@ struct OffscreenRenderImageInfo
 OffscreenRenderImageInfo createOffscreenRenderImageInfo(VkDevice device, VkExtent2D swapchainExtent,
                                                         VmaAllocator allocator);
 
-void DestroyOffscreenRenderImageInfo(VkDevice device, OffscreenRenderImageInfo &offscreenRenderImageInfo);
+void DestroyOffscreenRenderImageInfo(VkDevice device, OffscreenRenderImageInfo &offscreenRenderImageInfo, VmaAllocator allocator);
 
 void UpdateOffscreenRenderImageDescriptorSet(VkDevice device, OffscreenRenderImageInfo &offscreenRenderImageInfo,
                                              VkDescriptorSet descriptorSet);

@@ -8,77 +8,46 @@
 #include "VulkanUtil.h"
 #include "vk_mem_alloc.h"
 
-void DestroyOffscreenRenderImageInfo(VkDevice device, OffscreenRenderImageInfo &offscreenRenderImageInfo)
+void DestroyOffscreenRenderImageInfo(VkDevice device, OffscreenRenderImageInfo &offscreenRenderImageInfo,
+                                     VmaAllocator allocator)
 {
     vkDestroyImageView(device, offscreenRenderImageInfo.offscreenImageView, nullptr);
 
-    vkDestroyImage(device, offscreenRenderImageInfo.offscreenImage, nullptr);
-
-    vkFreeMemory(device, offscreenRenderImageInfo.memory, nullptr);
+    vmaDestroyImage(allocator, offscreenRenderImageInfo.offscreenImage, offscreenRenderImageInfo.allocation);
 }
 
-OffscreenRenderImageInfo createOffscreenRenderImageInfo(VkDevice device, VkExtent2D swapchainExtent, VmaAllocator allocator)
+OffscreenRenderImageInfo createOffscreenRenderImageInfo(VkDevice device, VkExtent2D swapchainExtent,
+                                                        VmaAllocator allocator)
 {
     OffscreenRenderImageInfo offscreenRenderImageInfo;
-    offscreenRenderImageInfo.device = device;
+
     offscreenRenderImageInfo.extent = swapchainExtent;
 
-    // Create the image struct based on the params
-    VkImageCreateInfo imageCreateInfo = {.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
-    imageCreateInfo.flags = 0;
-    // these... should probably be passed in... and honestly should the
-    imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
-    imageCreateInfo.format = VK_FORMAT_R16G16B16A16_SFLOAT;
-    imageCreateInfo.extent = VkExtent3D{swapchainExtent.width, swapchainExtent.height, 1};
-    imageCreateInfo.mipLevels = 1;
-    imageCreateInfo.arrayLayers = 1;
-    // #JOHN need to look into MSAA more. However for now... just going to make an image :)
-    // RTR 5.4 Antialiasing
-    // read https://docs.vulkan.org/spec/latest/chapters/primsrast.html#primsrast-multisampling
-    // https://docs.vulkan.org/tutorial/latest/10_Multisampling.html
-    // https://docs.vulkan.org/samples/latest/samples/performance/msaa/README.html
-    // https://therealmjp.github.io/posts/msaa-overview/
-    // https://www.rastergrid.com/blog/gpu-tech/2021/10/multisampling-primer/
-    // https://learn.microsoft.com/en-us/windows/win32/direct3d11/d3d10-graphics-programming-guide-rasterizer-stage-rules
-    imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-    // render image is on GPU and never leaves... trapped there muahaha
-    imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-    // #JOHN don't forget to come back and add whatever we need to write to from a compute shader
-    imageCreateInfo.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
-    imageCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    imageCreateInfo.queueFamilyIndexCount = 0;
-    // queue family not needed since we are doing exclusive
+    VkImageCreateInfo imgCreateInfo = {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
+    imgCreateInfo.imageType = VK_IMAGE_TYPE_2D;
+    imgCreateInfo.extent.width = swapchainExtent.width;
+    imgCreateInfo.extent.height = swapchainExtent.height;
+    imgCreateInfo.extent.depth = 1;
+    imgCreateInfo.mipLevels = 1;
+    imgCreateInfo.arrayLayers = 1;
+    imgCreateInfo.format = VK_FORMAT_R16G16B16A16_SFLOAT;
+    imgCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+    imgCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    imgCreateInfo.usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
+                          VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    imgCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+    imgCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    imgCreateInfo.queueFamilyIndexCount = 0;
 
-    vkchk(vkCreateImage(device, &imageCreateInfo, nullptr, &offscreenRenderImageInfo.offscreenImage));
+    VmaAllocationCreateInfo vmaAllocationCreateInfo{};
+    vmaAllocationCreateInfo.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
+    vmaAllocationCreateInfo.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
+    vmaAllocationCreateInfo.priority = 1.0f;
+    // NOT DOING any funny pool business yet
 
-    VkImageMemoryRequirementsInfo2 memoryRequirementsInfo = {
-        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_REQUIREMENTS_INFO_2, .image = offscreenRenderImageInfo.offscreenImage};
-    VkMemoryRequirements2 memoryRequirements{
-        .sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2,
-    };
-    vkGetImageMemoryRequirements2(device, &memoryRequirementsInfo, &memoryRequirements);
+    vkchk(vmaCreateImage(allocator, &imgCreateInfo, &vmaAllocationCreateInfo, &offscreenRenderImageInfo.offscreenImage,
+                         &offscreenRenderImageInfo.allocation, nullptr));
 
-    VkMemoryAllocateInfo memoryAllocateInfo = {
-        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-        .allocationSize = memoryRequirements.memoryRequirements.size,
-        .memoryTypeIndex = allocator->FindMemoryType(memoryRequirements.memoryRequirements.memoryTypeBits,
-                                                     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)};
-    // #JOHN for now, going to do a 1 allocation per resource horrible method. though it does give me alignment for free
-    // I think it will start on 0
-
-    vkchk(vkAllocateMemory(device, &memoryAllocateInfo, nullptr, &offscreenRenderImageInfo.memory));
-
-    // ok now we have the memory so we bind it:
-    vkchk(vkBindImageMemory(device, offscreenRenderImageInfo.offscreenImage, offscreenRenderImageInfo.memory, 0));
-
-    // create the image view #JOHN guhhhh I am not tracking the teardown intermediate VkImage, VKImageview, memory
-    // things I need to to have this be correct and "rebuildable". I think for now, I'll work on just making everything
-    // "work" and then I'll tie it's creation / deletion into an object of some sort, and then I'll make it rebuilt
-    // alongside the swapchain in some pattern I can use throughout this project. And then I'll add it into the render
-    // pipeline as the thing that actually gets layout -> transfer (clear color) -> layout -> blit to swapchain image ->
-    // do the rest of the swapchain stuff as normal from that point on I think once swapchain image has colors.
-
-    // #JOHN todo: need to go back and give these offscreen values a name in debug
     VkImageSubresourceRange subresourceRange = {
         .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
         .baseMipLevel = 0,
@@ -105,7 +74,7 @@ OffscreenRenderImageInfo createOffscreenRenderImageInfo(VkDevice device, VkExten
 
 
 void UpdateOffscreenRenderImageDescriptorSet(VkDevice device, OffscreenRenderImageInfo &offscreenRenderImageInfo,
-                                                    VkDescriptorSet descriptorSet)
+                                             VkDescriptorSet descriptorSet)
 {
     const VkDescriptorImageInfo imageInfo = {.imageView = offscreenRenderImageInfo.offscreenImageView,
                                              .imageLayout = VK_IMAGE_LAYOUT_GENERAL};
