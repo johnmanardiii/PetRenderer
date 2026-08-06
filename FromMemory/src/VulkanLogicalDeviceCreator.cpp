@@ -59,10 +59,20 @@ VkDevice CreateLogicalDevice(VkPhysicalDevice physDevice, uint32_t queueFamilyIn
     createInfo.ppEnabledExtensionNames = deviceExtensions.data();
     createInfo.enabledExtensionCount = deviceExtensions.size();
 
+    // allows for timeline semaphores
+    VkPhysicalDeviceVulkan12Features vk12features = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
+        .timelineSemaphore = VK_TRUE
+    };
+
     VkPhysicalDeviceSynchronization2Features sync2Enabled = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES,
+        .pNext = &vk12features,
         .synchronization2 = VK_TRUE
     };
+
+
+
     createInfo.pNext = &sync2Enabled;
 
     // physical device features? gotta query this later
