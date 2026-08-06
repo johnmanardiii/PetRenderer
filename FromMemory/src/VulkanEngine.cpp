@@ -13,9 +13,9 @@
 #include "SDL3/SDL_timer.h"
 #include "VulkanSwapchainResources.h"
 #include "VulkanUtil.h"
+
+#include <array>
 #include <fmt/printf.h>
-
-
 
 
 VulkanEngine::~VulkanEngine()
@@ -62,8 +62,6 @@ bool VulkanEngine::init()
     if (!gpuContext)
         return false;
 
-
-
     VmaAllocatorCreateInfo allocatorCreateInfo = {};
     allocatorCreateInfo.flags = VMA_ALLOCATOR_CREATE_EXT_MEMORY_BUDGET_BIT;
     allocatorCreateInfo.vulkanApiVersion = VK_API_VERSION_1_3; // #JOHN - this should be specified in a single place
@@ -105,6 +103,21 @@ bool VulkanEngine::init()
 
     frameInFlightStructures =
         FrameInFlightStructures::Create(gpuContext->Device(), gpuContext->GraphicsPresentQueueIndex(), 3);
+
+    VkSemaphoreTypeCreateInfo globalTimelineSemaphoreTypeCreateInfo =
+    {
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO,
+        .semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE,
+        .initialValue = nextSubmitValue
+    };
+    VkSemaphoreCreateInfo globalTimelineSemaphoreCreateInfo =
+    {
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+        .pNext = &globalTimelineSemaphoreTypeCreateInfo,
+        .flags = 0,
+    };
+    vkchk(vkCreateSemaphore(gpuContext->Device(), &globalTimelineSemaphoreCreateInfo, nullptr,
+                            &globalTimelineSemaphore));
 
     return true;
 }
@@ -320,10 +333,21 @@ void VulkanEngine::RenderAndPresentToSwapchain()
         .stageMask = VK_PIPELINE_STAGE_TRANSFER_BIT,
     };
 
-    VkSemaphoreSubmitInfo semaphoreSubmitInfo = {
-        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
-        .semaphore = acquiredImageInfo->imageReadyToPresentSemaphore,
-        .stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
+
+
+    const uint64_t frameComplete = ++nextSubmitValue;
+    const std::array signalInfos{
+        VkSemaphoreSubmitInfo {
+            .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+            .semaphore = acquiredImageInfo->imageReadyToPresentSemaphore,
+            .stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
+        },
+        VkSemaphoreSubmitInfo {
+            .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+                    .semaphore = globalTimelineSemaphore,
+                    .value = frameComplete,
+                    .stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
+        }
     };
 
     // gonna use the V1 submit info since that seems more simple
@@ -336,8 +360,8 @@ void VulkanEngine::RenderAndPresentToSwapchain()
         .commandBufferInfoCount = 1,
         .pCommandBufferInfos = &cmdSubmitInfo,
         // when this is signaled, then the image is presentable to a swapchain and in the right format
-        .signalSemaphoreInfoCount = 1,
-        .pSignalSemaphoreInfos = &semaphoreSubmitInfo,
+        .signalSemaphoreInfoCount = static_cast<uint32_t>(signalInfos.size()),
+        .pSignalSemaphoreInfos = signalInfos.data(),
     };
     vkchk(vkQueueSubmit2(gpuContext->GraphicsPresentLogicalQueue(), 1, &submitInfo, frameStruct.queueFinishedFence));
 

@@ -59,6 +59,9 @@ class VulkanEngine
     DescriptorInformation descriptorInfo;
     std::optional<PipelineObjects> pipelineObjects;
 
+    VkSemaphore globalTimelineSemaphore = VK_NULL_HANDLE;    // used to track what submissions on the gpu are done
+    uint64_t nextSubmitValue = 0;
+
     uint32_t currentFrame = 0; // always incrementing, doesn't loop around w/ modulo
     float elapsedTime = 0.0f;
 
