@@ -10,6 +10,7 @@
 #include "VulkanEngine.h"
 
 #include "OffscreenRenderImage.h"
+#include "VulkanDebugUtil.h"
 #include "SDL3/SDL_timer.h"
 #include "VulkanSwapchainResources.h"
 #include "VulkanUtil.h"
@@ -40,6 +41,8 @@ VulkanEngine::~VulkanEngine()
 
         frameInFlightStructures.reset(); // not sure if this is the right semantics but it works
         swapchainResources.reset();
+
+        vkDestroySemaphore(gpuContext->Device(), globalTimelineSemaphore, nullptr);
 
         vmaDestroyAllocator(vmaAllocator);
     }
@@ -108,7 +111,7 @@ bool VulkanEngine::init()
     {
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO,
         .semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE,
-        .initialValue = nextSubmitValue
+        .initialValue = 0   // starts at 0 so that 1 can mean that the first one is done
     };
     VkSemaphoreCreateInfo globalTimelineSemaphoreCreateInfo =
     {
@@ -118,6 +121,8 @@ bool VulkanEngine::init()
     };
     vkchk(vkCreateSemaphore(gpuContext->Device(), &globalTimelineSemaphoreCreateInfo, nullptr,
                             &globalTimelineSemaphore));
+
+    DebugSetName(gpuContext->Device(), VK_OBJECT_TYPE_SEMAPHORE, globalTimelineSemaphore, "Global Timeline Semaphore");
 
     return true;
 }
@@ -275,8 +280,22 @@ void VulkanEngine::RenderAndPresentToSwapchain()
     // Get this frame's sync primitives and command buffer and stuff:
     PerFrameInFlightStructure &frameStruct = frameInFlightStructures->getPerFrameInFlightStructure(currentFrame);
 
-    // wait on "this frame in flight" to be signaled
-    vkWaitForFences(gpuContext->Device(), 1, &frameStruct.queueFinishedFence, VK_TRUE, UINT64_MAX);
+    // ensure that the gpu is done up until the frame we are trying to access:
+    // so it waits until it "hits" a given value... so == at least
+    if (frameStruct.frameSubmitted != 0)
+    {
+        // 0 means uninitialized... only "valid" value we should use for an unsigned int. Otherwise don't wait nothing submitted for this frame of work
+        VkSemaphoreWaitInfo waitInfo = {
+            .sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO,
+            .semaphoreCount = 1,
+            .pSemaphores = &globalTimelineSemaphore,
+            .pValues = &frameStruct.frameSubmitted  // #JOHN this isn't submitted yet... needs to be uhhh
+        };
+        vkchk(vkWaitSemaphores(gpuContext->Device(), &waitInfo, 1000000000));
+    }
+
+    // set framestruct to this frame
+    frameStruct.frameSubmitted = nextSubmitValue;
 
     std::optional<AcquiredSwapchainImageInfo> acquiredImageInfo = swapchainResources->AcquireNextImage(
         frameStruct.imageAcquiredSemaphore);
@@ -290,9 +309,6 @@ void VulkanEngine::RenderAndPresentToSwapchain()
     {
         ResizeOffscreenRenderTarget();
     }
-
-    // reset the fence, valid
-    vkResetFences(gpuContext->Device(), 1, &frameStruct.queueFinishedFence);
 
     // reset the command buffer associated with this frame
     vkResetCommandBuffer(frameStruct.commandBuffer, 0);
@@ -333,20 +349,19 @@ void VulkanEngine::RenderAndPresentToSwapchain()
         .stageMask = VK_PIPELINE_STAGE_TRANSFER_BIT,
     };
 
+    const uint64_t frameComplete = nextSubmitValue++;
 
-
-    const uint64_t frameComplete = ++nextSubmitValue;
     const std::array signalInfos{
-        VkSemaphoreSubmitInfo {
+        VkSemaphoreSubmitInfo{
             .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
             .semaphore = acquiredImageInfo->imageReadyToPresentSemaphore,
             .stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
         },
-        VkSemaphoreSubmitInfo {
+        VkSemaphoreSubmitInfo{
             .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
-                    .semaphore = globalTimelineSemaphore,
-                    .value = frameComplete,
-                    .stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
+            .semaphore = globalTimelineSemaphore,
+            .value = frameComplete,
+            .stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
         }
     };
 
@@ -363,7 +378,7 @@ void VulkanEngine::RenderAndPresentToSwapchain()
         .signalSemaphoreInfoCount = static_cast<uint32_t>(signalInfos.size()),
         .pSignalSemaphoreInfos = signalInfos.data(),
     };
-    vkchk(vkQueueSubmit2(gpuContext->GraphicsPresentLogicalQueue(), 1, &submitInfo, frameStruct.queueFinishedFence));
+    vkchk(vkQueueSubmit2(gpuContext->GraphicsPresentLogicalQueue(), 1, &submitInfo, VK_NULL_HANDLE));
 
     swapchainResources->PresentImage(gpuContext->GraphicsPresentLogicalQueue(),
                                      acquiredImageInfo->imageReadyToPresentSemaphore, acquiredImageInfo->imageIndex);

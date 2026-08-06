@@ -57,12 +57,10 @@ FrameInFlightStructures FrameInFlightStructures::Create(VkDevice device, uint32_
         PerFrameInFlightStructure perFrame;
 
         vkchk(vkAllocateCommandBuffers(device, &commandBufferAllocateInfo, &perFrame.commandBuffer));
-        vkchk(vkCreateFence(device, &fenceCreateInfo, nullptr, &perFrame.queueFinishedFence));
         vkchk(vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &perFrame.imageAcquiredSemaphore));
 
         // name all of these per-frame in flight structures for debug purposes.
         DebugSetName(device, VK_OBJECT_TYPE_COMMAND_BUFFER, perFrame.commandBuffer, fmt::format("FrameInFlight {} CommandBuffer", i).c_str());
-        DebugSetName(device, VK_OBJECT_TYPE_FENCE, perFrame.queueFinishedFence, fmt::format("FrameInFlight {} Finished Fence", i).c_str());
         DebugSetName(device, VK_OBJECT_TYPE_SEMAPHORE, perFrame.imageAcquiredSemaphore, fmt::format("FrameInFlight {} Image Acquired Semaphore", i).c_str());
 
         frameInFlightStructures.emplace_back(perFrame);
@@ -76,7 +74,6 @@ FrameInFlightStructures::~FrameInFlightStructures()
     // destroy semaphores and all that
     for (PerFrameInFlightStructure& structure : frameInFlightStructures)
     {
-        vkDestroyFence(device.get(), structure.queueFinishedFence, nullptr);
         vkDestroySemaphore(device.get(), structure.imageAcquiredSemaphore, nullptr);
     }
 

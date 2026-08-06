@@ -17,8 +17,9 @@
 struct PerFrameInFlightStructure
 {
     VkCommandBuffer commandBuffer = VK_NULL_HANDLE;
-    VkFence queueFinishedFence = VK_NULL_HANDLE;
     VkSemaphore imageAcquiredSemaphore = VK_NULL_HANDLE;
+
+    uint64_t frameSubmitted = 0;
 };
 
 /*
