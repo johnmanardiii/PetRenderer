@@ -15,7 +15,7 @@ target_sources(PetRenderer PRIVATE
         GpuContext.cpp
 )
 
-target_include_directories(PetRenderer PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(PetRenderer PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/imgui ${CMAKE_CURRENT_SOURCE_DIR}/imgui/backends)
 
 target_compile_definitions(PetRenderer PRIVATE VK_NO_PROTOTYPES)
 
