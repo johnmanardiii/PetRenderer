@@ -64,8 +64,6 @@ class VulkanEngine
 
     uint32_t currentFrame = 0; // always incrementing, doesn't loop around w/ modulo
     float elapsedTime = 0.0f;
-
-
 };
 
 #endif // VULKAN_ENGINE_H

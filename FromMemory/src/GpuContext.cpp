@@ -7,7 +7,7 @@
 #include "SDL3/SDL_vulkan.h"
 #include "ScopedFunctionalQueue.h"
 #include "VulkanDebugUtil.h"
-#include "VulkanInstanceBuilder.h"
+#include "VulkanInit.h"
 #include "VulkanLogicalDeviceCreator.h"
 #include "fmt/printf.h"
 #include "volk.h"
@@ -19,11 +19,12 @@ std::optional<GpuContext> GpuContext::Create(const Platform &platform)
     requiredExtensions.push_back(VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME);
     requiredExtensions.push_back(VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME);
 
-    VkInstance instance = VulkanInstanceBuilder()
-                              .SetRequiredLayers({"VK_LAYER_KHRONOS_validation"})
-                              .SetRequiredExtensions(requiredExtensions)
-                              .EnableDebugMessengerForInstanceCreation()
-                              .GetInstance();
+    // VkInstance instance = VulkanInstanceBuilder()
+    //                           .SetRequiredLayers({"VK_LAYER_KHRONOS_validation"})
+    //                           .SetRequiredExtensions(requiredExtensions)
+    //                           .EnableDebugMessengerForInstanceCreation()
+    //                           .GetInstance();
+    VkInstance instance = CreateInstance({"VK_LAYER_KHRONOS_validation"}, requiredExtensions);
 
     if (!instance)
     {

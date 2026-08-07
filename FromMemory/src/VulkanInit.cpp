@@ -1,7 +1,8 @@
 //
-// Created by johnm on 3/31/2026.
+// Created by johnm on 8/7/2026.
 //
-#include "VulkanInstanceBuilder.h"
+
+#include "VulkanInit.h"
 #include "VulkanUtil.h"
 #include "fmt/printf.h"
 
@@ -15,7 +16,9 @@ VKAPI_ATTR VkBool32 VKAPI_CALL DebugCreateInstanceCallback(VkDebugUtilsMessageSe
     return VK_FALSE;
 }
 
-VkInstance VulkanInstanceBuilder::GetInstance()
+
+VkInstance CreateInstance(std::vector<std::string> requiredLayers,
+    const std::vector<const char *> &requiredExtensions)
 {
     // #JOHN break out all of this instance stuff into a class / funciton in
     // a different file where you can just pass a "release" bool.
@@ -33,7 +36,7 @@ VkInstance VulkanInstanceBuilder::GetInstance()
     // but I really shouldn't care because it is so small.
     for (VkLayerProperties& layerInfo : availableLayers)
     {
-        for (const std::string& layerName : RequiredLayers)
+        for (const std::string& layerName : requiredLayers)
         {
             if (layerInfo.layerName == layerName)
             {
@@ -42,7 +45,7 @@ VkInstance VulkanInstanceBuilder::GetInstance()
         }
     }
 
-    if (presentDesiredLayers.size() != RequiredLayers.size())
+    if (presentDesiredLayers.size() != requiredLayers.size())
     {
         fmt::printf("Failed to retrieve present desired layers.\n");
         return VK_NULL_HANDLE;
@@ -69,12 +72,12 @@ VkInstance VulkanInstanceBuilder::GetInstance()
     }
 
     // de-duplicate required extensions
-    std::ranges::sort(RequiredLayers);
-    auto last = std::ranges::unique(RequiredLayers).begin();
-    RequiredLayers.erase(last, RequiredLayers.end());
+    std::sort(requiredLayers.begin(), requiredLayers.end());
+    auto ret = std::ranges::unique(requiredLayers);
+    requiredLayers.erase(ret.begin(), ret.end());
 
     // return early if not all extensions in the required extensions are present
-    for (const auto& extensionName : RequiredExtensions)
+    for (const auto& extensionName : requiredExtensions)
     {
         bool bFound = false;
         for (const auto& extensionInfo : availableExtensions)
@@ -106,6 +109,7 @@ VkInstance VulkanInstanceBuilder::GetInstance()
 
     VkDebugUtilsMessengerCreateInfoEXT debugcallbackCreateInfo = {};
 
+    bool bEnableDebugMessengerForInstanceCreation = true;
     if (bEnableDebugMessengerForInstanceCreation)
     {
         debugcallbackCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
@@ -127,6 +131,7 @@ VkInstance VulkanInstanceBuilder::GetInstance()
         .enabledValidationFeatureCount = 1,
         .pEnabledValidationFeatures = &enables
     };
+
     const bool bUseSyncValidation = true;
     if (bUseSyncValidation)
     {
@@ -142,8 +147,8 @@ VkInstance VulkanInstanceBuilder::GetInstance()
         .pApplicationInfo = &applicationInfo,
         .enabledLayerCount = static_cast<uint32_t>(presentDesiredLayers.size()),
         .ppEnabledLayerNames = presentDesiredLayers.data(),
-        .enabledExtensionCount = static_cast<uint32_t>(RequiredExtensions.size()),
-        .ppEnabledExtensionNames = RequiredExtensions.data(),
+        .enabledExtensionCount = static_cast<uint32_t>(requiredExtensions.size()),
+        .ppEnabledExtensionNames = requiredExtensions.data(),
     };
 
     VkInstance instance = VK_NULL_HANDLE;

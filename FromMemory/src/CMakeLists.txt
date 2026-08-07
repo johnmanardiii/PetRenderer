@@ -1,6 +1,5 @@
 target_sources(PetRenderer PRIVATE
         main.cpp
-        VulkanInstanceBuilder.cpp
         VulkanEngine.cpp
         VulkanPhysicalDeviceSelector.cpp
         VulkanLogicalDeviceCreator.cpp
@@ -13,6 +12,7 @@ target_sources(PetRenderer PRIVATE
         VulkanUtil.cpp
         Platform.cpp
         GpuContext.cpp
+        VulkanInit.cpp
 )
 
 target_include_directories(PetRenderer PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/imgui ${CMAKE_CURRENT_SOURCE_DIR}/imgui/backends)
