@@ -8,7 +8,6 @@
 #include "ScopedFunctionalQueue.h"
 #include "VulkanDebugUtil.h"
 #include "VulkanInit.h"
-#include "VulkanLogicalDeviceCreator.h"
 #include "fmt/printf.h"
 #include "volk.h"
 

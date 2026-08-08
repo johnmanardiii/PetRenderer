@@ -22,4 +22,6 @@ VkInstance CreateInstance(const std::vector<std::string> RequiredLayers,
 
 std::optional<PhysicalDeviceInfo> selectPhysicalDevice(VkInstance instance, VkSurfaceKHR surface);
 
+VkDevice CreateLogicalDevice(VkPhysicalDevice physDevice, uint32_t queueFamilyIndex);
+
 #endif //VULKANINIT_H
