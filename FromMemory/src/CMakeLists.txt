@@ -1,7 +1,6 @@
 target_sources(PetRenderer PRIVATE
         main.cpp
         VulkanEngine.cpp
-        VulkanPhysicalDeviceSelector.cpp
         VulkanLogicalDeviceCreator.cpp
         VulkanSwapchainResources.cpp
         FrameInFlightStructures.cpp

@@ -49,8 +49,7 @@ std::optional<GpuContext> GpuContext::Create(const Platform &platform)
     deletionQueue.Register([instance, surface] { vkDestroySurfaceKHR(instance, surface, nullptr); });
 
     // gather a valid physical device
-    VulkanPhysicalDeviceSelector selector;
-    std::optional<PhysicalDeviceInfo> physDeviceinfo = selector.selectPhysicalDevice(instance, surface);
+    std::optional<PhysicalDeviceInfo> physDeviceinfo = selectPhysicalDevice(instance, surface);
 
     if (!physDeviceinfo)
     {

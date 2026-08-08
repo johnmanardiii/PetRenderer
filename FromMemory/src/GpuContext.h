@@ -7,9 +7,8 @@
 
 #include "Platform.h"
 #include "ScopedFunctionalQueue.h"
-#include "VulkanPhysicalDeviceSelector.h"
 #include "VulkanUtil.h"
-
+#include "VulkanInit.h"
 #include <optional>
 
 class GpuContext

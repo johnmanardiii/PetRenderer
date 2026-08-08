@@ -18,7 +18,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL DebugCreateInstanceCallback(VkDebugUtilsMessageSe
 
 
 VkInstance CreateInstance(std::vector<std::string> requiredLayers,
-    const std::vector<const char *> &requiredExtensions)
+                          const std::vector<const char *> &requiredExtensions)
 {
     // #JOHN break out all of this instance stuff into a class / funciton in
     // a different file where you can just pass a "release" bool.
@@ -34,9 +34,9 @@ VkInstance CreateInstance(std::vector<std::string> requiredLayers,
     std::vector<const char *> presentDesiredLayers;
     // this double loop is pissing me off and #JOHN I want it to be "set-like"
     // but I really shouldn't care because it is so small.
-    for (VkLayerProperties& layerInfo : availableLayers)
+    for (VkLayerProperties &layerInfo : availableLayers)
     {
-        for (const std::string& layerName : requiredLayers)
+        for (const std::string &layerName : requiredLayers)
         {
             if (layerInfo.layerName == layerName)
             {
@@ -60,7 +60,7 @@ VkInstance CreateInstance(std::vector<std::string> requiredLayers,
 
     // retrieve all extensions from the found and enabled layers and add them to available extensions
     std::vector<VkExtensionProperties> layerExtensions;
-    for (const char* layer : presentDesiredLayers)
+    for (const char *layer : presentDesiredLayers)
     {
         uint32_t propertyCount = 0;
         vkchk(vkEnumerateInstanceExtensionProperties(layer, &propertyCount, nullptr));
@@ -77,10 +77,10 @@ VkInstance CreateInstance(std::vector<std::string> requiredLayers,
     requiredLayers.erase(ret.begin(), ret.end());
 
     // return early if not all extensions in the required extensions are present
-    for (const auto& extensionName : requiredExtensions)
+    for (const auto &extensionName : requiredExtensions)
     {
         bool bFound = false;
-        for (const auto& extensionInfo : availableExtensions)
+        for (const auto &extensionInfo : availableExtensions)
         {
             if (strcmp(extensionInfo.extensionName, extensionName) == 0)
             {
@@ -102,7 +102,7 @@ VkInstance CreateInstance(std::vector<std::string> requiredLayers,
                                          .applicationVersion = VK_MAKE_VERSION(1, 0, 0),
                                          .pEngineName = "Pet Renderer",
                                          .engineVersion = VK_MAKE_VERSION(1, 0, 0),
-        // #JOHN you really need to pass this explicitly to the builder when we get more time
+                                         // #JOHN you really need to pass this explicitly to the builder when we get more time
                                          .apiVersion = VK_MAKE_VERSION(1, 3, 0)}; // #JOHN need to fill this out
 
     const void *pNext = nullptr;
@@ -139,7 +139,6 @@ VkInstance CreateInstance(std::vector<std::string> requiredLayers,
         pNext = &validationFeatures;
     }
 
-
     // create the vulkan instance and try to make validation layers enabled
     VkInstanceCreateInfo info = {
         .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
@@ -155,4 +154,87 @@ VkInstance CreateInstance(std::vector<std::string> requiredLayers,
     // #JOHN should I use a custom alloc or nah
     vkchk(vkCreateInstance(&info, NULL, &instance));
     return instance;
+}
+
+static bool HasSwapChainExtension(VkPhysicalDevice device)
+{
+    // enumerate the physical device extensions enabled (gut is telling me this should really be shared when
+    // creating the logical device but whatevs
+    uint32_t extensionCount = 0;
+    vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
+    std::vector<VkExtensionProperties> extensions(extensionCount);
+    vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, extensions.data());
+
+    return std::ranges::find_if(extensions, [](const VkExtensionProperties &extension) {
+        return strcmp(extension.extensionName, "VK_KHR_swapchain") == 0;
+    }) != extensions.end();
+}
+
+std::optional<PhysicalDeviceInfo> selectPhysicalDevice(VkInstance instance, VkSurfaceKHR surface)
+{
+    std::optional<PhysicalDeviceInfo> info;
+
+    // get the number of devices
+    uint32_t physicalDeviceCount = 0;
+    vkchk(vkEnumeratePhysicalDevices(instance, &physicalDeviceCount, nullptr));
+    std::vector<VkPhysicalDevice> physicalDevices(physicalDeviceCount);
+
+    vkchk(vkEnumeratePhysicalDevices(instance, &physicalDeviceCount, physicalDevices.data()));
+
+    // we now have all physical devices to iterate over.
+    // for each physical device, get it's properties
+    VkPhysicalDeviceProperties2 physicalDeviceProperties{.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2};
+
+    for (uint32_t physicalDeviceIndex = 0; physicalDeviceIndex < physicalDeviceCount; physicalDeviceIndex++)
+    {
+        VkPhysicalDevice device = physicalDevices[physicalDeviceIndex];
+        vkGetPhysicalDeviceProperties2(device, &physicalDeviceProperties);
+
+        // ensure that the physical device works with the swapchain extension, if not return early
+        // #JOHN this could very well be some "shared guarantee" between physical and logical and honestly
+        // the entire program itself if it ends up being more than just the swapchain extension
+        if (!HasSwapChainExtension(device))
+        {
+            continue;
+        }
+
+        // get the number of queue family properties
+        uint32_t queueFamilyPropertyCount = 0;
+
+        vkGetPhysicalDeviceQueueFamilyProperties2(device, &queueFamilyPropertyCount, nullptr);
+        std::vector<VkQueueFamilyProperties2> queueFamilyProperties(queueFamilyPropertyCount);
+
+        for (uint32_t queueFamilyPropertyIndex = 0; queueFamilyPropertyIndex < queueFamilyPropertyCount;
+             queueFamilyPropertyIndex++)
+        {
+            queueFamilyProperties[queueFamilyPropertyIndex].sType = VK_STRUCTURE_TYPE_QUEUE_FAMILY_PROPERTIES_2;
+        }
+
+        vkGetPhysicalDeviceQueueFamilyProperties2(device, &queueFamilyPropertyCount, queueFamilyProperties.data());
+
+        // iterate over the queue family properties, looking for a device that has a queue family that supports
+        // both graphics and presentation, then return that physical device if we have found it.
+        // this is like a super simplified version of checking what our GPU can do but I just want to get to rendering
+        for (uint32_t queueFamilyIndex = 0; queueFamilyIndex < queueFamilyPropertyCount; queueFamilyIndex++)
+        {
+            // check whether the queue family supports "presentation" first
+            VkBool32 presentSupport = false;
+            vkchk(vkGetPhysicalDeviceSurfaceSupportKHR(device, queueFamilyIndex, surface, &presentSupport));
+            if (presentSupport)
+            {
+                // check whether this queue also supports graphics operations
+                if (queueFamilyProperties[queueFamilyIndex].queueFamilyProperties.queueFlags & VK_QUEUE_GRAPHICS_BIT)
+                {
+                    // this device is good enough for me:
+                    fmt::printf("Found device %s with a queue that supports graphics and presentation, good enough"
+                                " for me.\n",
+                                physicalDeviceProperties.properties.deviceName);
+                    info = {.physicalDevice = device, .graphicsPresentQueueFamilyIndex = queueFamilyIndex};
+                    return info;
+                }
+            }
+        }
+    }
+
+    return info;
 }
