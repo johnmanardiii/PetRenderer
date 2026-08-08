@@ -26,3 +26,5 @@ FetchContent_Declare(
         GIT_SHALLOW 1
 )
 FetchContent_MakeAvailable(volk)
+
+include(imgui.cmake)

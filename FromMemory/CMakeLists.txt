@@ -5,7 +5,7 @@ project(PetRenderer
         LANGUAGES CXX
 )
 
-# turn off exceptions https://learn.microsoft.com/en-us/cpp/build/reference/eh-exception-handling-model?view=msvc-170
+# (should probably do this for other platforms) turn off exceptions https://learn.microsoft.com/en-us/cpp/build/reference/eh-exception-handling-model?view=msvc-170
 if (MSVC)
     string(REPLACE "/EHsc" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
     add_compile_options(
@@ -19,10 +19,8 @@ set(CMAKE_CXX_STANDARD 23)
 
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-add_subdirectory(third_party)
-
-#JOHN - clion puts it here when i make a new file... but maybe I want it in the Src cmakelists? in a different typa
-# statement than in the add excutable?
 add_executable(PetRenderer)
+
+add_subdirectory(third_party)
 
 add_subdirectory(src)
