@@ -111,6 +111,7 @@ VkPipeline PipelineBuilder::build_pipeline(VkDevice device)
 	VkPipelineDynamicStateCreateInfo dynamicInfo = { .sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO };
 	dynamicInfo.pDynamicStates = &state[0];
 	dynamicInfo.dynamicStateCount = 2; // corresponding to the above
+	pipelineInfo.pDynamicState = &dynamicInfo;
 
 	// call create function
 	VkPipeline newPipeline;
@@ -162,4 +163,40 @@ void PipelineBuilder::set_multisampling_none()
 	// alpha to coverage? what that mean
 	_multisampling.alphaToCoverageEnable = VK_FALSE;
 	_multisampling.alphaToOneEnable = VK_FALSE;
+}
+
+void PipelineBuilder::disable_blending()
+{
+	// default write mask
+	_colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+	// no blending
+	_colorBlendAttachment.blendEnable = VK_FALSE;
+}
+
+
+void PipelineBuilder::set_color_attachment_format(VkFormat format)
+{
+	_colorAttachmentFormat = format;
+	// connect to render info structure
+	_renderInfo.colorAttachmentCount = 1;
+	_renderInfo.pColorAttachmentFormats = &_colorAttachmentFormat;
+}
+
+
+void PipelineBuilder::set_depth_format(VkFormat format)
+{
+	_renderInfo.depthAttachmentFormat = format;
+}
+
+void PipelineBuilder::disable_depthtest()
+{
+	_depthStencil.depthTestEnable = VK_FALSE;
+	_depthStencil.depthWriteEnable = VK_FALSE;
+	_depthStencil.depthCompareOp = VK_COMPARE_OP_NEVER;
+	_depthStencil.depthBoundsTestEnable = VK_FALSE;
+	_depthStencil.stencilTestEnable = VK_FALSE;
+	_depthStencil.front = {};
+	_depthStencil.back = {};
+	_depthStencil.minDepthBounds = 0.f;
+	_depthStencil.maxDepthBounds = 1.f;
 }
