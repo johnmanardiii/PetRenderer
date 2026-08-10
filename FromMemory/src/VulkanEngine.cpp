@@ -287,9 +287,6 @@ void VulkanEngine::RenderAndPresentToSwapchain()
         vkchk(vkWaitSemaphores(gpuContext->Device(), &waitInfo, 1000000000));
     }
 
-    // set framestruct to this frame
-    frameStruct.frameSubmitted = nextSubmitValue;
-
     std::optional<AcquiredSwapchainImageInfo> acquiredImageInfo = swapchainResources->AcquireNextImage(
         frameStruct.imageAcquiredSemaphore);
     if (!acquiredImageInfo)
@@ -343,6 +340,7 @@ void VulkanEngine::RenderAndPresentToSwapchain()
     };
 
     const uint64_t frameComplete = nextSubmitValue++;
+    frameStruct.frameSubmitted = frameComplete; // ngl this is a littttle confusing with how I did the indexing.
 
     const std::array signalInfos{
         VkSemaphoreSubmitInfo{
