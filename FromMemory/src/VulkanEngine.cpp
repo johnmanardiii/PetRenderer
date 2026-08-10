@@ -39,7 +39,7 @@ VulkanEngine::~VulkanEngine()
 
         DestroyDescriptorInformation(gpuContext->Device(), descriptorInfo);
 
-        frameInFlightStructures.reset(); // not sure if this is the right semantics but it works
+        deletionQueue.Flush();
         swapchainResources.reset();
 
         vkDestroySemaphore(gpuContext->Device(), globalTimelineSemaphore, nullptr);
@@ -104,9 +104,10 @@ bool VulkanEngine::init()
     UpdateOffscreenRenderImageDescriptorSet(gpuContext->Device(), *offscreenRenderImageInfo,
                                             descriptorInfo.descriptorSet);
 
-    frameInFlightStructures =
-        FrameInFlightStructures::Create(gpuContext->Device(), gpuContext->GraphicsPresentQueueIndex(), 3);
-
+    frameInFlightStructures = CreateFrameInFlightStructures(gpuContext->Device(), gpuContext->GraphicsPresentQueueIndex(), 3);
+    deletionQueue.Register([this] {
+        DestroyFrameInFlightStructures(gpuContext->Device(), *frameInFlightStructures);
+    });
     VkSemaphoreTypeCreateInfo globalTimelineSemaphoreTypeCreateInfo =
     {
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO,
@@ -278,7 +279,8 @@ void VulkanEngine::BlitOffscreenImageToSwapchainImage(VkCommandBuffer commandBuf
 void VulkanEngine::RenderAndPresentToSwapchain()
 {
     // Get this frame's sync primitives and command buffer and stuff:
-    PerFrameInFlightStructure &frameStruct = frameInFlightStructures->getPerFrameInFlightStructure(currentFrame);
+    // #JOHN this really needs to not be an optional... also maybe it should have it's own deletion queue?
+    PerFrameInFlightStructure &frameStruct = GetFrameInFlightStructure(*frameInFlightStructures, currentFrame);
 
     // ensure that the gpu is done up until the frame we are trying to access:
     // so it waits until it "hits" a given value... so == at least

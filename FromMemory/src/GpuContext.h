@@ -18,11 +18,11 @@ class GpuContext
 
     [[nodiscard]] VkInstance Instance() const
     {
-        return instance.get();
+        return instance;
     };
     [[nodiscard]] VkSurfaceKHR Surface() const
     {
-        return surface.get();
+        return surface;
     };
     [[nodiscard]] VkPhysicalDevice PhysicalDevice() const
     {
@@ -35,24 +35,24 @@ class GpuContext
 
     [[nodiscard]] VkDevice Device() const
     {
-        return device.get();
+        return device;
     }
 
     [[nodiscard]] VkQueue GraphicsPresentLogicalQueue() const
     {
-        return graphicsPresentQueue.get();
+        return graphicsPresentQueue;
     }
 
   private:
     GpuContext(VkInstance instance, VkSurfaceKHR surface, PhysicalDeviceInfo selectedPhysicalDeviceInfo,
                VkDevice device, VkQueue graphicsPresentQueue, ScopedFunctionalQueue &&deletionQueue);
 
-    VkHandleRef<VkInstance> instance;
+    VkInstance instance = VK_NULL_HANDLE;
     // surface may be rebuild on some platforms but not handled right now.
-    VkHandleRef<VkSurfaceKHR> surface;
+    VkSurfaceKHR surface = VK_NULL_HANDLE;
     PhysicalDeviceInfo selectedPhysicalDeviceInfo;
-    VkHandleRef<VkDevice> device;
-    VkHandleRef<VkQueue> graphicsPresentQueue;
+    VkDevice device = VK_NULL_HANDLE;
+    VkQueue graphicsPresentQueue = VK_NULL_HANDLE;
 
     ScopedFunctionalQueue deletionQueue;
 };

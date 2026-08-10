@@ -5,6 +5,7 @@
 #ifndef VULKANCOMMANDBUFFERCREATOR_H
 #define VULKANCOMMANDBUFFERCREATOR_H
 
+#include "ScopedFunctionalQueue.h"
 #include "VulkanUtil.h"
 
 #include <optional>
@@ -22,37 +23,18 @@ struct PerFrameInFlightStructure
     uint64_t frameSubmitted = 0;
 };
 
-/*
- * #JOHN not sure why i grouped all of this into like, one file and class but I felt like "command pool" and
- * command buffer were related enough to store them on the same thing.
- */
-class FrameInFlightStructures
+struct FrameInFlightStructures
 {
-public:
-    static FrameInFlightStructures Create(VkDevice device, uint32_t queueFamilyIndex, uint32_t framesInFlight);
-
-    // turn this into something that calls a shared private "#JOHN destruct vars I pass to you relating to me"
-    ~FrameInFlightStructures();
-
-    FrameInFlightStructures(FrameInFlightStructures&&) = default;
-    FrameInFlightStructures& operator=(FrameInFlightStructures&&) = default;
-
-    FrameInFlightStructures(const FrameInFlightStructures&) = delete;
-    FrameInFlightStructures& operator=(const FrameInFlightStructures&) = delete;
-
-    PerFrameInFlightStructure& getPerFrameInFlightStructure(const uint32_t frame)
-    {
-        return frameInFlightStructures[frame % frameInFlightStructures.size()];
-    }
-
-private:
-    FrameInFlightStructures(VkDevice device, VkCommandPool cmdPool, std::vector<PerFrameInFlightStructure> frameInFlightStructure);
-
-    VkHandleRef<VkDevice> device;
-    VkHandleRef<VkCommandPool> commandPool;
-
-    std::vector<PerFrameInFlightStructure> frameInFlightStructures;
+    VkCommandPool commandPool = VK_NULL_HANDLE;
+    std::vector<PerFrameInFlightStructure> perFrameInFlightStructures;
 };
+
+// #JOHN - not sure how I feel about bundling this scoped queue with the creation but yolo
+FrameInFlightStructures CreateFrameInFlightStructures(VkDevice device, uint32_t queueFamilyIndex, uint32_t framesInFlight);
+
+void DestroyFrameInFlightStructures(VkDevice device, FrameInFlightStructures& structures);
+
+PerFrameInFlightStructure& GetFrameInFlightStructure(FrameInFlightStructures& structures, int currentFrameCount);
 
 
 #endif //VULKANCOMMANDBUFFERCREATOR_H

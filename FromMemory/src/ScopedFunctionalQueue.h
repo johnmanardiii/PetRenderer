@@ -29,6 +29,10 @@ public:
     {
         queue.Register(std::move(function));
     }
+    void Flush()
+    {
+        queue.Flush();
+    }
 private:
     FunctionalQueue queue;
 };

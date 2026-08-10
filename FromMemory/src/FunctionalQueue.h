@@ -28,6 +28,7 @@ class FunctionalQueue
         if (!queue.empty())
         {
             fmt::printf("FunctionalQueue destroyed without flush.\n");
+            assert(false);
         }
     }
     FunctionalQueue(const FunctionalQueue &) = delete;
