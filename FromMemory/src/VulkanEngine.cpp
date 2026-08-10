@@ -35,8 +35,6 @@ VulkanEngine::~VulkanEngine()
             offscreenRenderImageInfo.reset();
         }
 
-        pipelineObjects.reset();
-
         DestroyDescriptorInformation(gpuContext->Device(), descriptorInfo);
 
         deletionQueue.Flush();
@@ -90,7 +88,10 @@ bool VulkanEngine::init()
     // into the "compute shader draws a picture with 16x16 lines" logic
     AllocateDescriptorInfo(gpuContext->Device(), descriptorInfo);
 
-    pipelineObjects.emplace(gpuContext->Device(), descriptorInfo.descriptorSetLayout);
+    pipelineObjects = CreatePipelineObjects(gpuContext->Device(), descriptorInfo.descriptorSetLayout);
+    deletionQueue.Register([this] {
+       DestroyPipelineObjects(gpuContext->Device(), *pipelineObjects);
+    });
 
     // #JOHN - hidden dependency on the "pipeline objects" and descriptor set stuff.
     // #JOHN - kinda gross ordering depdendency right here.

@@ -6,21 +6,16 @@
 #define CREATEPIPELINE_H
 
 #include <volk.h>
-// #JOHN - super temp just get it working version
+
 struct PipelineObjects
 {
     VkPipelineLayout layout = VK_NULL_HANDLE;
     VkPipeline pipeline = VK_NULL_HANDLE;
 
     VkDevice device = VK_NULL_HANDLE;
-
-    PipelineObjects(VkDevice device, VkDescriptorSetLayout descriptorSetLayout);
-    ~PipelineObjects();
-
-    PipelineObjects(const PipelineObjects&) = delete;
-    PipelineObjects& operator=(const PipelineObjects&) = delete;
-    PipelineObjects(PipelineObjects&&) = delete;
-    PipelineObjects& operator=(PipelineObjects&&) = delete;
 };
+
+PipelineObjects CreatePipelineObjects(VkDevice device, VkDescriptorSetLayout descriptorSetLayout);
+void DestroyPipelineObjects(VkDevice device, PipelineObjects& pipelineObjects);
 
 #endif //CREATEPIPELINE_H

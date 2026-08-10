@@ -8,14 +8,10 @@
 
 #include <assert.h>
 
-/*
- *  #JOHN - should rework this next time we have something like this to make it more flexible...
- *  I really don't think that this should be doing all this in the constructor since
- *  it is managing resources.
- */
-
-PipelineObjects::PipelineObjects(VkDevice device, VkDescriptorSetLayout descriptorSetLayout) : device(device)
+PipelineObjects CreatePipelineObjects(VkDevice device, VkDescriptorSetLayout descriptorSetLayout)
 {
+    PipelineObjects pipelineObjects;
+
     // #JOHN - crazzzyyyy how we hardcoding the shader but yolo
     VkShaderModule shaderModule = VK_NULL_HANDLE;
     // Uhhh the working directory shall be ...
@@ -39,22 +35,24 @@ PipelineObjects::PipelineObjects(VkDevice device, VkDescriptorSetLayout descript
     pipelineLayoutCreateInfo.setLayoutCount = 1;
     pipelineLayoutCreateInfo.pSetLayouts = &descriptorSetLayout; // #JOHN this isn't needed after the create call
 
-    vkchk(vkCreatePipelineLayout(device, &pipelineLayoutCreateInfo, nullptr, &layout));
+    vkchk(vkCreatePipelineLayout(device, &pipelineLayoutCreateInfo, nullptr, &pipelineObjects.layout));
 
     VkComputePipelineCreateInfo createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
     createInfo.stage = shaderStageCreateInfo;
-    createInfo.layout = layout;
+    createInfo.layout = pipelineObjects.layout;
 
     // #JOHN doooon't care about pipeline caches yet...
-    vkchk(vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &createInfo, nullptr, &pipeline));
+    vkchk(vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &createInfo, nullptr, &pipelineObjects.pipeline));
 
     // we have created the pipeline, OK to destroy shader module
     vkDestroyShaderModule(device, shaderModule, nullptr);
+
+    return pipelineObjects;
 }
 
-PipelineObjects::~PipelineObjects()
+void DestroyPipelineObjects(VkDevice device, PipelineObjects &pipelineObjects)
 {
-    vkDestroyPipeline(device, pipeline, nullptr);
-    vkDestroyPipelineLayout(device, layout, nullptr);
+    vkDestroyPipeline(device, pipelineObjects.pipeline, nullptr);
+    vkDestroyPipelineLayout(device, pipelineObjects.layout, nullptr);
 }
