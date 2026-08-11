@@ -11,6 +11,8 @@
 #include "fmt/printf.h"
 #include "volk.h"
 
+static_assert(std::is_move_constructible<GpuContext>());
+
 std::optional<GpuContext> GpuContext::Create(const Platform &platform)
 {
     std::vector<const char *> requiredExtensions = platform.GetRequiredExtensions();
