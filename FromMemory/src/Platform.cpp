@@ -6,6 +6,8 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
 
+static_assert(std::is_move_constructible<Platform>());
+
 // #JOHN - should probably make this a 2d type.
 std::optional<Platform> Platform::Create(int width, int height)
 {
@@ -18,7 +20,7 @@ std::optional<Platform> Platform::Create(int width, int height)
 
     deletionQueue.Register([]{SDL_Quit();});
 
-        if (!SDL_Vulkan_LoadLibrary(nullptr))
+    if (!SDL_Vulkan_LoadLibrary(nullptr))
     {
         fmt::printf("Failed to initialize SDL_Vulkan_LoadLibrary: %s\n", SDL_GetError());
         return std::nullopt;
@@ -40,7 +42,7 @@ std::optional<Platform> Platform::Create(int width, int height)
 }
 
 Platform::Platform(Platform &&other) noexcept
-    : window(std::exchange(other.window, nullptr)), bOwningInstance(std::exchange(other.bOwningInstance, false)),
+    : window(std::exchange(other.window, nullptr)),
       deletionQueue(std::move(other.deletionQueue))
 {
 }
@@ -50,13 +52,17 @@ Platform &Platform::operator=(Platform &&other) noexcept
     if (this != &other)
     {
         window = std::exchange(other.window, nullptr);
-        bOwningInstance = std::exchange(other.bOwningInstance, false);
         deletionQueue = std::move(other.deletionQueue);
     }
     return *this;
 }
 
-std::vector<const char *> Platform::GetRequiredExtensions()
+Platform::Platform(SDL_Window *win, ScopedFunctionalQueue &&deletionQueue)
+    : window(win), deletionQueue(std::move(deletionQueue))
+{
+}
+
+std::vector<const char *> GetRequiredExtensions()
 {
     uint32_t count;
 
@@ -67,9 +73,4 @@ std::vector<const char *> Platform::GetRequiredExtensions()
         requiredExtensions.push_back(extensions[i]);
     }
     return requiredExtensions;
-}
-
-Platform::Platform(SDL_Window *win, ScopedFunctionalQueue &&deletionQueue)
-    : window(win), deletionQueue(std::move(deletionQueue))
-{
 }

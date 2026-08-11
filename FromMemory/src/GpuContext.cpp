@@ -15,7 +15,7 @@ static_assert(std::is_move_constructible<GpuContext>());
 
 std::optional<GpuContext> GpuContext::Create(const Platform &platform)
 {
-    std::vector<const char *> requiredExtensions = platform.GetRequiredExtensions();
+    std::vector<const char *> requiredExtensions = GetRequiredExtensions();
     requiredExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
     requiredExtensions.push_back(VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME);
     requiredExtensions.push_back(VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME);
@@ -41,7 +41,7 @@ std::optional<GpuContext> GpuContext::Create(const Platform &platform)
 
     VkSurfaceKHR surface;
 
-    if (!SDL_Vulkan_CreateSurface(platform.GetWindow(), instance, nullptr, &surface))
+    if (!SDL_Vulkan_CreateSurface(platform.window, instance, nullptr, &surface))
     {
         fmt::printf("Failed to create vulkan surface\n");
         return std::nullopt;

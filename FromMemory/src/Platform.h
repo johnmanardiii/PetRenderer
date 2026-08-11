@@ -10,6 +10,8 @@
 #include <optional>
 #include <vector>
 
+std::vector<const char *> GetRequiredExtensions();
+
 /*
  *  Handles loading volk and SDL, and then can be used to  know the surface properties when
  */
@@ -26,18 +28,11 @@ class Platform
     Platform(Platform && other) noexcept;
     Platform &operator=(Platform && other) noexcept;
 
-    [[nodiscard]] static std::vector<const char *> GetRequiredExtensions();
-
-    [[nodiscard]] SDL_Window *GetWindow() const
-    {
-        return window;
-    }
+    SDL_Window *window = nullptr;
 
   private:
     Platform(SDL_Window *win, ScopedFunctionalQueue &&deletionQueue);
-    SDL_Window *window = nullptr;
-    bool loadedVulkan = false;
-    bool bOwningInstance = true;
+
     ScopedFunctionalQueue deletionQueue;
 };
 

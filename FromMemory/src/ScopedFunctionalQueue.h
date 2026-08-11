@@ -20,8 +20,11 @@ public:
     {
         queue.Flush();
     }
+
+    // there can only be one owner of these queues since it owns the callbacks
     ScopedFunctionalQueue(const ScopedFunctionalQueue& other) = delete;
     ScopedFunctionalQueue& operator=(const ScopedFunctionalQueue& other) = delete;
+
     ScopedFunctionalQueue(ScopedFunctionalQueue&& other) = default;
     ScopedFunctionalQueue& operator=(ScopedFunctionalQueue&& other) = default;
 

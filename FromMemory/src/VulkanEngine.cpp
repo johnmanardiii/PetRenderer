@@ -148,7 +148,7 @@ void VulkanEngine::OnWindowSizeChanged()
         int width, height;
         // there is window size, and window size in pixels... for us we are just going to use the pixel size for now for the
         // renderer
-        if (SDL_GetWindowSizeInPixels(platform->GetWindow(), &width, &height))
+        if (SDL_GetWindowSizeInPixels(platform->window, &width, &height))
         {
             swapchainResources->SetDefaultExtent({static_cast<uint32_t>(width), static_cast<uint32_t>(height)});
         }
