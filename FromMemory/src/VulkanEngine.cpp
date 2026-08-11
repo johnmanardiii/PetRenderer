@@ -19,6 +19,16 @@
 #include <fmt/printf.h>
 
 
+std::unique_ptr<VulkanEngine> VulkanEngine::Create()
+{
+    return std::make_unique<VulkanEngine>();
+}
+
+VulkanEngine::VulkanEngine()
+{
+
+}
+
 VulkanEngine::~VulkanEngine()
 {
     // once we should close, we wait for the device to be idle:
@@ -30,20 +40,15 @@ VulkanEngine::~VulkanEngine()
         vkDeviceWaitIdle(gpuContext->device);
 
         deletionQueue.Flush();
-
-        swapchainResources.reset();
-
-        vkDestroySemaphore(gpuContext->device, globalTimelineSemaphore, nullptr);
-
-        vmaDestroyAllocator(vmaAllocator);
     }
 }
 
+
+
 bool VulkanEngine::init()
 {
-    volkInitialize();
+    vkchk(volkInitialize());
 
-    // #JOHN - temp code b4 we remove this awful optional pattern
     int width = 640;
     int height = 480;
 
@@ -52,7 +57,7 @@ bool VulkanEngine::init()
         return false;
 
     // gpu context loads the volk instance / device functions... should be more explicit but whatever
-    gpuContext = GpuContext::Create(*platform);
+    gpuContext = CreateGpuContext(*platform, deletionQueue);
     if (!gpuContext)
         return false;
 
@@ -69,6 +74,10 @@ bool VulkanEngine::init()
 
     vkchk(vmaCreateAllocator(&allocatorCreateInfo, &vmaAllocator));
 
+    deletionQueue.Register([this] {
+       vmaDestroyAllocator(vmaAllocator);
+    });
+
     // allocatorCreateInfo.pVulkanFunctions = &vulkanFunctions;
 
     // #JOHN - should these be based on some window properties? Feel like the whole resize should be based on window.
@@ -76,6 +85,10 @@ bool VulkanEngine::init()
     swapchainResources.emplace(
         gpuContext->device, gpuContext->selectedPhysicalDeviceInfo.physicalDevice, gpuContext->surface,
         VkExtent2D{.width = static_cast<uint32_t>(width), .height = static_cast<uint32_t>(height)});
+
+    deletionQueue.Register([this] {
+       swapchainResources.reset();
+    });
 
     // #JOHN this doesn't belong directly in the engine, but rather whatever represents our "draw passes" and this goes
     // into the "compute shader draws a picture with 16x16 lines" logic
@@ -110,6 +123,7 @@ bool VulkanEngine::init()
     deletionQueue.Register([this] {
         DestroyFrameInFlightStructures(gpuContext->device, *frameInFlightStructures);
     });
+
     VkSemaphoreTypeCreateInfo globalTimelineSemaphoreTypeCreateInfo =
     {
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO,
@@ -126,6 +140,10 @@ bool VulkanEngine::init()
                             &globalTimelineSemaphore));
 
     DebugSetName(gpuContext->device, VK_OBJECT_TYPE_SEMAPHORE, globalTimelineSemaphore, "Global Timeline Semaphore");
+
+    deletionQueue.Register([this] {
+        vkDestroySemaphore(gpuContext->device, globalTimelineSemaphore, nullptr);
+    });
 
     return true;
 }

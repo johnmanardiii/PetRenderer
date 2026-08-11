@@ -21,7 +21,8 @@
 class VulkanEngine
 {
   public:
-    VulkanEngine() = default;
+    // #JOHN - maybe initialize with the width / height
+    static std::unique_ptr<VulkanEngine> Create();
     ~VulkanEngine();
 
     bool init();
@@ -35,7 +36,11 @@ class VulkanEngine
     void Iterate();
     void OnWindowSizeChanged();
 
+    // #JOHN move to private once done with create
+    VulkanEngine();
   private:
+
+
     void RenderToOffscreenImage(VkCommandBuffer commandBuffer);
     void BlitOffscreenImageToSwapchainImage(VkCommandBuffer commandBuffer, AcquiredSwapchainImageInfo &acquiredSwapchainInfo);
     void RenderAndPresentToSwapchain();

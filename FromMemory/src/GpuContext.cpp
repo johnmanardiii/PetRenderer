@@ -13,7 +13,7 @@
 
 static_assert(std::is_move_constructible<GpuContext>());
 
-std::optional<GpuContext> GpuContext::Create(const Platform &platform)
+std::optional<GpuContext> CreateGpuContext(const Platform &platform, FunctionalQueue& deletionQueue)
 {
     std::vector<const char *> requiredExtensions = GetRequiredExtensions();
     requiredExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
@@ -36,8 +36,7 @@ std::optional<GpuContext> GpuContext::Create(const Platform &platform)
     // load instance functions
     volkLoadInstanceOnly(instance);
 
-    ScopedFunctionalQueue deletionQueue;
-    deletionQueue.Register([instance]() { vkDestroyInstance(instance, nullptr); });
+    deletionQueue.Register([instance] { vkDestroyInstance(instance, nullptr); });
 
     VkSurfaceKHR surface;
 
@@ -79,12 +78,5 @@ std::optional<GpuContext> GpuContext::Create(const Platform &platform)
     DebugSetName(device, VK_OBJECT_TYPE_QUEUE, graphicsPresentQueue,
                  "One Graphics / Present Queue I am using for everything");
 
-    return GpuContext(instance, surface, *physDeviceinfo, device, graphicsPresentQueue, std::move(deletionQueue));
-}
-
-GpuContext::GpuContext(VkInstance instance, VkSurfaceKHR surface, PhysicalDeviceInfo selectedPhysicalDeviceInfo,
-                       VkDevice device, VkQueue graphicsPresentQueue, ScopedFunctionalQueue &&deletionQueue)
-    : instance(instance), surface(surface), selectedPhysicalDeviceInfo(selectedPhysicalDeviceInfo), device(device),
-      graphicsPresentQueue(graphicsPresentQueue), deletionQueue(std::move(deletionQueue))
-{
+    return GpuContext(instance, surface, *physDeviceinfo, device, graphicsPresentQueue);
 }
