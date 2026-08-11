@@ -9,9 +9,8 @@
 static_assert(std::is_move_constructible<Platform>());
 
 // #JOHN - should probably make this a 2d type.
-std::optional<Platform> Platform::Create(int width, int height)
+std::optional<Platform> CreatePlatform(int width, int height, FunctionalQueue& deletionQueue)
 {
-    ScopedFunctionalQueue deletionQueue;
     if (!SDL_Init(SDL_INIT_VIDEO))
     {
         fmt::printf("Failed to initialize GLFW\n");
@@ -38,28 +37,8 @@ std::optional<Platform> Platform::Create(int width, int height)
 
     deletionQueue.Register([window]{SDL_DestroyWindow(window);});
 
-    return Platform(window, std::move(deletionQueue));
-}
-
-Platform::Platform(Platform &&other) noexcept
-    : window(std::exchange(other.window, nullptr)),
-      deletionQueue(std::move(other.deletionQueue))
-{
-}
-
-Platform &Platform::operator=(Platform &&other) noexcept
-{
-    if (this != &other)
-    {
-        window = std::exchange(other.window, nullptr);
-        deletionQueue = std::move(other.deletionQueue);
-    }
-    return *this;
-}
-
-Platform::Platform(SDL_Window *win, ScopedFunctionalQueue &&deletionQueue)
-    : window(win), deletionQueue(std::move(deletionQueue))
-{
+    Platform platform {.window = window};
+    return platform;
 }
 
 std::vector<const char *> GetRequiredExtensions()

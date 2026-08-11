@@ -10,30 +10,21 @@
 #include <optional>
 #include <vector>
 
-std::vector<const char *> GetRequiredExtensions();
+
 
 /*
  *  Handles loading volk and SDL, and then can be used to  know the surface properties when
  */
-class Platform
+
+// #JOHN - wow holy moly un-classifying this made me realize how little it is doing
+struct Platform
 {
-  public:
-    static std::optional<Platform> Create(int width, int height);
-
-    // for now just delete the move / copy constructors, though we may eventually want the move
-    Platform(const Platform &) = delete;
-    Platform &operator=(const Platform &) = delete;
-
-    // these would probably need some "owns sdl and should quit on destruction var
-    Platform(Platform && other) noexcept;
-    Platform &operator=(Platform && other) noexcept;
-
     SDL_Window *window = nullptr;
-
-  private:
-    Platform(SDL_Window *win, ScopedFunctionalQueue &&deletionQueue);
-
-    ScopedFunctionalQueue deletionQueue;
 };
+
+// #JOHN - platform is a vague, weird name that doesn't capture this work.
+std::optional<Platform> CreatePlatform(int width, int height, FunctionalQueue& deletionQueue);
+
+std::vector<const char *> GetRequiredExtensions();
 
 #endif // PLATFORM_H

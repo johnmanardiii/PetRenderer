@@ -52,9 +52,9 @@ bool VulkanEngine::init()
     int width = 640;
     int height = 480;
 
-    platform = Platform::Create(width, height);
+    platform = CreatePlatform(width, height, deletionQueue);
     if (!platform)
-        return false;
+        return false;   // #JOHN I think this needs some "clear the deletion queue please"
 
     // gpu context loads the volk instance / device functions... should be more explicit but whatever
     gpuContext = CreateGpuContext(*platform, deletionQueue);
@@ -78,10 +78,7 @@ bool VulkanEngine::init()
        vmaDestroyAllocator(vmaAllocator);
     });
 
-    // allocatorCreateInfo.pVulkanFunctions = &vulkanFunctions;
-
-    // #JOHN - should these be based on some window properties? Feel like the whole resize should be based on window.
-    // #JOHN - this should probably take the context itself and not all dis
+    // #JOHN - can this just take the gpu context?
     swapchainResources.emplace(
         gpuContext->device, gpuContext->selectedPhysicalDeviceInfo.physicalDevice, gpuContext->surface,
         VkExtent2D{.width = static_cast<uint32_t>(width), .height = static_cast<uint32_t>(height)});
@@ -99,8 +96,7 @@ bool VulkanEngine::init()
        DestroyPipelineObjects(gpuContext->device, *pipelineObjects);
     });
 
-    // #JOHN - hidden dependency on the "pipeline objects" and descriptor set stuff.
-    // #JOHN - kinda gross ordering depdendency right here.
+
     VkExtent2D initialOffscreenRenderImage = {.width = static_cast<uint32_t>(width),
                                               .height = static_cast<uint32_t>(height)};
 
