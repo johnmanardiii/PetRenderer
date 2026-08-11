@@ -296,13 +296,13 @@ VulkanSwapchainResources::VulkanSwapchainResources(VkDevice device, VkPhysicalDe
 
 VulkanSwapchainResources::~VulkanSwapchainResources()
 {
-    DestroySwapchainResources();
+    ReleaseSwapchainResources();
 }
 
 bool VulkanSwapchainResources::Recreate()
 {
     vkDeviceWaitIdle(device);
-    DestroySwapchainResources();
+    ReleaseSwapchainResources();
     return CreateSwapchainResources();
 }
 
@@ -368,7 +368,7 @@ std::optional<AcquiredSwapchainImageInfo> VulkanSwapchainResources::AcquireNextI
     return acquiredImageInfo;
 }
 
-void VulkanSwapchainResources::DestroySwapchainResources()
+void VulkanSwapchainResources::ReleaseSwapchainResources()
 {
     if (device == VK_NULL_HANDLE)
     {

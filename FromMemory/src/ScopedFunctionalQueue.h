@@ -36,6 +36,12 @@ public:
     {
         queue.Flush();
     }
+
+    FunctionalQueue& GetFunctionalQueueRef()
+    {
+        return queue;
+    }
+
 private:
     FunctionalQueue queue;
 };

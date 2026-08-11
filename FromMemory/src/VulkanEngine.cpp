@@ -19,12 +19,57 @@
 #include <fmt/printf.h>
 
 
-std::unique_ptr<VulkanEngine> VulkanEngine::Create()
+VulkanEngine* VulkanEngine::Create()
 {
-    return std::make_unique<VulkanEngine>();
+    ScopedFunctionalQueue deletionQueue;
+    vkchk(volkInitialize());
+
+    int width = 640;
+    int height = 480;
+
+    std::optional<Platform> platform = CreatePlatform(width, height, deletionQueue.GetFunctionalQueueRef());
+    if (!platform)
+    {
+        return nullptr;
+    }
+
+    // gpu context loads the volk instance / device functions... should be more explicit but whatever
+    std::optional<GpuContext> gpuContext = CreateGpuContext(*platform, deletionQueue.GetFunctionalQueueRef());
+    if (!gpuContext)
+    {
+        return nullptr;
+    }
+
+    VmaAllocatorCreateInfo allocatorCreateInfo = {};
+    allocatorCreateInfo.flags = VMA_ALLOCATOR_CREATE_EXT_MEMORY_BUDGET_BIT;
+    allocatorCreateInfo.vulkanApiVersion = VK_API_VERSION_1_3; // #JOHN - this should be specified in a single place
+    allocatorCreateInfo.physicalDevice = gpuContext->selectedPhysicalDeviceInfo.physicalDevice;
+    allocatorCreateInfo.device = gpuContext->device;
+    allocatorCreateInfo.instance = gpuContext->instance;
+
+    VmaVulkanFunctions vulkanFunctions;
+    vkchk(vmaImportVulkanFunctionsFromVolk(&allocatorCreateInfo, &vulkanFunctions));
+    allocatorCreateInfo.pVulkanFunctions = &vulkanFunctions;
+
+    VmaAllocator vmaAllocator;
+    vkchk(vmaCreateAllocator(&allocatorCreateInfo, &vmaAllocator));
+
+    deletionQueue.Register([vmaAllocator] {
+        vmaDestroyAllocator(vmaAllocator);
+    });
+
+    // #JOHN - for this one maybe I should actually make the allocation an explicit callback.
+    // i kind of like it for this one... going to resume this when I get back
+    // VulkanSwapchainResources swapchainResources = VulkanSwapchainResources;
+
+    return new VulkanEngine(*platform, *gpuContext, vmaAllocator, std::move(deletionQueue));
 }
 
-VulkanEngine::VulkanEngine()
+VulkanEngine::VulkanEngine(Platform platform, GpuContext gpuContext, VmaAllocator vmaAllocator,
+                           ScopedFunctionalQueue &&deletionQueue) : platform(platform), gpuContext(gpuContext),
+                                                                    vmaAllocator(vmaAllocator),
+                                                                    deletionQueue(std::move(deletionQueue))
+
 {
 
 }
@@ -44,47 +89,17 @@ VulkanEngine::~VulkanEngine()
 }
 
 
-
 bool VulkanEngine::init()
 {
-    vkchk(volkInitialize());
-
     int width = 640;
     int height = 480;
-
-    platform = CreatePlatform(width, height, deletionQueue);
-    if (!platform)
-        return false;   // #JOHN I think this needs some "clear the deletion queue please"
-
-    // gpu context loads the volk instance / device functions... should be more explicit but whatever
-    gpuContext = CreateGpuContext(*platform, deletionQueue);
-    if (!gpuContext)
-        return false;
-
-    VmaAllocatorCreateInfo allocatorCreateInfo = {};
-    allocatorCreateInfo.flags = VMA_ALLOCATOR_CREATE_EXT_MEMORY_BUDGET_BIT;
-    allocatorCreateInfo.vulkanApiVersion = VK_API_VERSION_1_3; // #JOHN - this should be specified in a single place
-    allocatorCreateInfo.physicalDevice = gpuContext->selectedPhysicalDeviceInfo.physicalDevice;
-    allocatorCreateInfo.device = gpuContext->device;
-    allocatorCreateInfo.instance = gpuContext->instance;
-
-    VmaVulkanFunctions vulkanFunctions;
-    vkchk(vmaImportVulkanFunctionsFromVolk(&allocatorCreateInfo, &vulkanFunctions));
-    allocatorCreateInfo.pVulkanFunctions = &vulkanFunctions;
-
-    vkchk(vmaCreateAllocator(&allocatorCreateInfo, &vmaAllocator));
-
-    deletionQueue.Register([this] {
-       vmaDestroyAllocator(vmaAllocator);
-    });
-
     // #JOHN - can this just take the gpu context?
     swapchainResources.emplace(
         gpuContext->device, gpuContext->selectedPhysicalDeviceInfo.physicalDevice, gpuContext->surface,
         VkExtent2D{.width = static_cast<uint32_t>(width), .height = static_cast<uint32_t>(height)});
 
     deletionQueue.Register([this] {
-       swapchainResources.reset();
+        swapchainResources.reset();
     });
 
     // #JOHN this doesn't belong directly in the engine, but rather whatever represents our "draw passes" and this goes
@@ -93,14 +108,14 @@ bool VulkanEngine::init()
 
     pipelineObjects = CreatePipelineObjects(gpuContext->device, descriptorInfo.descriptorSetLayout);
     deletionQueue.Register([this] {
-       DestroyPipelineObjects(gpuContext->device, *pipelineObjects);
+        DestroyPipelineObjects(gpuContext->device, *pipelineObjects);
     });
-
 
     VkExtent2D initialOffscreenRenderImage = {.width = static_cast<uint32_t>(width),
                                               .height = static_cast<uint32_t>(height)};
 
-    offscreenRenderImageInfo = createOffscreenRenderImageInfo(gpuContext->device, initialOffscreenRenderImage, vmaAllocator);
+    offscreenRenderImageInfo = createOffscreenRenderImageInfo(gpuContext->device, initialOffscreenRenderImage,
+                                                              vmaAllocator);
 
     deletionQueue.Register([this] {
         DestroyOffscreenRenderImageInfo(gpuContext->device, offscreenRenderImageInfo, vmaAllocator);
@@ -115,7 +130,9 @@ bool VulkanEngine::init()
         DestroyDescriptorInformation(gpuContext->device, descriptorInfo);
     });
 
-    frameInFlightStructures = CreateFrameInFlightStructures(gpuContext->device, gpuContext->selectedPhysicalDeviceInfo.graphicsPresentQueueFamilyIndex, 3);
+    frameInFlightStructures = CreateFrameInFlightStructures(gpuContext->device,
+                                                            gpuContext->selectedPhysicalDeviceInfo.
+                                                                        graphicsPresentQueueFamilyIndex, 3);
     deletionQueue.Register([this] {
         DestroyFrameInFlightStructures(gpuContext->device, *frameInFlightStructures);
     });
@@ -124,7 +141,7 @@ bool VulkanEngine::init()
     {
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO,
         .semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE,
-        .initialValue = 0   // starts at 0 so that 1 can mean that the first one is done
+        .initialValue = 0 // starts at 0 so that 1 can mean that the first one is done
     };
     VkSemaphoreCreateInfo globalTimelineSemaphoreCreateInfo =
     {
@@ -296,7 +313,7 @@ void VulkanEngine::RenderAndPresentToSwapchain()
             .sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO,
             .semaphoreCount = 1,
             .pSemaphores = &globalTimelineSemaphore,
-            .pValues = &frameStruct.frameSubmitted  // #JOHN this isn't submitted yet... needs to be uhhh
+            .pValues = &frameStruct.frameSubmitted // #JOHN this isn't submitted yet... needs to be uhhh
         };
         vkchk(vkWaitSemaphores(gpuContext->device, &waitInfo, 1000000000));
     }
@@ -407,7 +424,7 @@ void VulkanEngine::ResizeOffscreenRenderTarget()
     DestroyOffscreenRenderImageInfo(gpuContext->device, offscreenRenderImageInfo, vmaAllocator);
 
     offscreenRenderImageInfo = createOffscreenRenderImageInfo(gpuContext->device, swapchainResources->GetExtent(),
-                                                                  vmaAllocator);
+                                                              vmaAllocator);
     UpdateOffscreenRenderImageDescriptorSet(gpuContext->device, offscreenRenderImageInfo,
                                             descriptorInfo.descriptorSet);
 }

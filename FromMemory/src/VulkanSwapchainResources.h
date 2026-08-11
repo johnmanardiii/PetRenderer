@@ -66,9 +66,12 @@ public:
         return fallbackExtentSize;
     }
 
+    void ReleaseSwapchainResources();
+
 private:
+
     bool Recreate();
-    void DestroySwapchainResources();
+
     bool CreateSwapchainResources();
 
     bool bNeedsRebuild = false;

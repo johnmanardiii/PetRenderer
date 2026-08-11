@@ -5,12 +5,15 @@
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv)
 {
     // do any one-time startup
-    auto* engine = new VulkanEngine();
-    if (!engine->init())
+    VulkanEngine* engine = VulkanEngine::Create();
+    if (!engine)
     {
-        delete engine;
         return SDL_APP_FAILURE;
     }
+
+    // #JOHN - todo, remove this
+    engine->init();
+
     *appstate = engine;
     return SDL_APP_CONTINUE;
 }

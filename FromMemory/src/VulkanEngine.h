@@ -20,9 +20,9 @@
 
 class VulkanEngine
 {
-  public:
+public:
     // #JOHN - maybe initialize with the width / height
-    static std::unique_ptr<VulkanEngine> Create();
+    static VulkanEngine* Create();
     ~VulkanEngine();
 
     bool init();
@@ -36,13 +36,13 @@ class VulkanEngine
     void Iterate();
     void OnWindowSizeChanged();
 
-    // #JOHN move to private once done with create
-    VulkanEngine();
-  private:
-
+private:
+    VulkanEngine(Platform platform, GpuContext gpuContext, VmaAllocator vmaAllocator,
+                 ScopedFunctionalQueue &&deletionQueue);
 
     void RenderToOffscreenImage(VkCommandBuffer commandBuffer);
-    void BlitOffscreenImageToSwapchainImage(VkCommandBuffer commandBuffer, AcquiredSwapchainImageInfo &acquiredSwapchainInfo);
+    void BlitOffscreenImageToSwapchainImage(VkCommandBuffer commandBuffer,
+                                            AcquiredSwapchainImageInfo &acquiredSwapchainInfo);
     void RenderAndPresentToSwapchain();
     void ResizeOffscreenRenderTarget();
 
@@ -64,10 +64,10 @@ class VulkanEngine
     DescriptorInformation descriptorInfo;
     std::optional<PipelineObjects> pipelineObjects;
 
-    VkSemaphore globalTimelineSemaphore = VK_NULL_HANDLE;    // used to track what submissions on the gpu are done
+    VkSemaphore globalTimelineSemaphore = VK_NULL_HANDLE; // used to track what submissions on the gpu are done
     uint64_t nextSubmitValue = 1;
 
-    FunctionalQueue deletionQueue;
+    ScopedFunctionalQueue deletionQueue;
 
     uint32_t currentFrame = 0; // always incrementing, doesn't loop around w/ modulo
     float elapsedTime = 0.0f;
