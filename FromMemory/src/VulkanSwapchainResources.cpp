@@ -378,7 +378,7 @@ std::optional<AcquiredSwapchainImageInfo> VulkanSwapchainResources::AcquireNextI
 
 void VulkanSwapchainResources::ReleaseSwapchainResources()
 {
-    if (gpuContext.device == VK_NULL_HANDLE)
+    if (!swapchainInfo || gpuContext.device == VK_NULL_HANDLE)
     {
         // this should never happen but whatever
         // #JOHN - this should probably make things not work at construction time, stored whole lifetime, no more
@@ -390,6 +390,7 @@ void VulkanSwapchainResources::ReleaseSwapchainResources()
     vkDeviceWaitIdle(gpuContext.device);
 
     deletionQueue.Flush();
+    swapchainInfo.reset();
 }
 
 bool VulkanSwapchainResources::CreateSwapchainResources()

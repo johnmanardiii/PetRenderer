@@ -71,6 +71,9 @@ VulkanEngine::VulkanEngine(Platform inPlatform, GpuContext inGpuContext, VmaAllo
       swapchainResources(gpuContext, inInitialExtent), deletionQueue(std::move(inDeletionQueue))
 
 {
+    deletionQueue.Register([this] {
+       swapchainResources.ReleaseSwapchainResources();
+    });
 }
 
 bool VulkanEngine::init()
