@@ -1,8 +1,8 @@
 //
 // Created by johnm on 4/1/2026.
 //
-// #JOHN - for now engine will be the one that defines the mem allocator but eventually this should probably be somewhere else
-// #JOHN - this include order is touchy... should maybe be outside of here.
+// #JOHN - for now engine will be the one that defines the mem allocator but eventually this should probably be
+// somewhere else #JOHN - this include order is touchy... should maybe be outside of here.
 #include <volk.h>
 #define VMA_IMPLEMENTATION
 #include "vk_mem_alloc.h"
@@ -10,16 +10,15 @@
 #include "VulkanEngine.h"
 
 #include "OffscreenRenderImage.h"
-#include "VulkanDebugUtil.h"
 #include "SDL3/SDL_timer.h"
+#include "VulkanDebugUtil.h"
 #include "VulkanSwapchainResources.h"
 #include "VulkanUtil.h"
 
 #include <array>
 #include <fmt/printf.h>
 
-
-VulkanEngine* VulkanEngine::Create()
+VulkanEngine *VulkanEngine::Create()
 {
     ScopedFunctionalQueue deletionQueue;
     vkchk(volkInitialize());
@@ -54,9 +53,7 @@ VulkanEngine* VulkanEngine::Create()
     VmaAllocator vmaAllocator;
     vkchk(vmaCreateAllocator(&allocatorCreateInfo, &vmaAllocator));
 
-    deletionQueue.Register([vmaAllocator] {
-        vmaDestroyAllocator(vmaAllocator);
-    });
+    deletionQueue.Register([vmaAllocator] { vmaDestroyAllocator(vmaAllocator); });
 
     // #JOHN - for this one maybe I should actually make the allocation an explicit callback.
     // i kind of like it for this one... going to resume this when I get back
@@ -66,82 +63,63 @@ VulkanEngine* VulkanEngine::Create()
 }
 
 VulkanEngine::VulkanEngine(Platform platform, GpuContext gpuContext, VmaAllocator vmaAllocator,
-                           ScopedFunctionalQueue &&deletionQueue) : platform(platform), gpuContext(gpuContext),
-                                                                    vmaAllocator(vmaAllocator),
-                                                                    deletionQueue(std::move(deletionQueue))
+                           ScopedFunctionalQueue &&deletionQueue)
+    : platform(platform), gpuContext(gpuContext), vmaAllocator(vmaAllocator), deletionQueue(std::move(deletionQueue))
 
 {
-
 }
 
 bool VulkanEngine::init()
 {
     int width = 640;
     int height = 480;
-    // #JOHN - can this just take the gpu context?
-    swapchainResources.emplace(
-        gpuContext->device, gpuContext->selectedPhysicalDeviceInfo.physicalDevice, gpuContext->surface,
-        VkExtent2D{.width = static_cast<uint32_t>(width), .height = static_cast<uint32_t>(height)});
 
-    deletionQueue.Register([this] {
-        swapchainResources.reset();
-    });
+    swapchainResources.emplace(
+        *gpuContext, VkExtent2D{.width = static_cast<uint32_t>(width), .height = static_cast<uint32_t>(height)});
+
+    deletionQueue.Register([this] { swapchainResources.reset(); });
 
     // #JOHN this doesn't belong directly in the engine, but rather whatever represents our "draw passes" and this goes
     // into the "compute shader draws a picture with 16x16 lines" logic
     AllocateDescriptorInfo(gpuContext->device, descriptorInfo);
 
     pipelineObjects = CreatePipelineObjects(gpuContext->device, descriptorInfo.descriptorSetLayout);
-    deletionQueue.Register([this] {
-        DestroyPipelineObjects(gpuContext->device, *pipelineObjects);
-    });
+    deletionQueue.Register([this] { DestroyPipelineObjects(gpuContext->device, *pipelineObjects); });
 
     VkExtent2D initialOffscreenRenderImage = {.width = static_cast<uint32_t>(width),
                                               .height = static_cast<uint32_t>(height)};
 
-    offscreenRenderImageInfo = createOffscreenRenderImageInfo(gpuContext->device, initialOffscreenRenderImage,
-                                                              vmaAllocator);
+    offscreenRenderImageInfo =
+        createOffscreenRenderImageInfo(gpuContext->device, initialOffscreenRenderImage, vmaAllocator);
 
-    deletionQueue.Register([this] {
-        DestroyOffscreenRenderImageInfo(gpuContext->device, offscreenRenderImageInfo, vmaAllocator);
-    });
+    deletionQueue.Register(
+        [this] { DestroyOffscreenRenderImageInfo(gpuContext->device, offscreenRenderImageInfo, vmaAllocator); });
 
     // #JOHN - manually do this for now, just because things are messy, don't submit until a design has been worked out
     // for this
-    UpdateOffscreenRenderImageDescriptorSet(gpuContext->device, offscreenRenderImageInfo,
-                                            descriptorInfo.descriptorSet);
+    UpdateOffscreenRenderImageDescriptorSet(gpuContext->device, offscreenRenderImageInfo, descriptorInfo.descriptorSet);
 
-    deletionQueue.Register([this] {
-        DestroyDescriptorInformation(gpuContext->device, descriptorInfo);
-    });
+    deletionQueue.Register([this] { DestroyDescriptorInformation(gpuContext->device, descriptorInfo); });
 
-    frameInFlightStructures = CreateFrameInFlightStructures(gpuContext->device,
-                                                            gpuContext->selectedPhysicalDeviceInfo.
-                                                                        graphicsPresentQueueFamilyIndex, 3);
-    deletionQueue.Register([this] {
-        DestroyFrameInFlightStructures(gpuContext->device, *frameInFlightStructures);
-    });
+    frameInFlightStructures = CreateFrameInFlightStructures(
+        gpuContext->device, gpuContext->selectedPhysicalDeviceInfo.graphicsPresentQueueFamilyIndex, 3);
+    deletionQueue.Register([this] { DestroyFrameInFlightStructures(gpuContext->device, *frameInFlightStructures); });
 
-    VkSemaphoreTypeCreateInfo globalTimelineSemaphoreTypeCreateInfo =
-    {
+    VkSemaphoreTypeCreateInfo globalTimelineSemaphoreTypeCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO,
         .semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE,
         .initialValue = 0 // starts at 0 so that 1 can mean that the first one is done
     };
-    VkSemaphoreCreateInfo globalTimelineSemaphoreCreateInfo =
-    {
+    VkSemaphoreCreateInfo globalTimelineSemaphoreCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
         .pNext = &globalTimelineSemaphoreTypeCreateInfo,
         .flags = 0,
     };
-    vkchk(vkCreateSemaphore(gpuContext->device, &globalTimelineSemaphoreCreateInfo, nullptr,
-                            &globalTimelineSemaphore));
+    vkchk(vkCreateSemaphore(gpuContext->device, &globalTimelineSemaphoreCreateInfo, nullptr, &globalTimelineSemaphore));
 
     DebugSetName(gpuContext->device, VK_OBJECT_TYPE_SEMAPHORE, globalTimelineSemaphore, "Global Timeline Semaphore");
 
-    deletionQueue.Register([this] {
-        vkDestroySemaphore(gpuContext->device, globalTimelineSemaphore, nullptr);
-    });
+    deletionQueue.Register([this] { vkDestroySemaphore(gpuContext->device, globalTimelineSemaphore, nullptr); });
 
     return true;
 }
@@ -162,8 +140,8 @@ void VulkanEngine::OnWindowSizeChanged()
     if (platform)
     {
         int width, height;
-        // there is window size, and window size in pixels... for us we are just going to use the pixel size for now for the
-        // renderer
+        // there is window size, and window size in pixels... for us we are just going to use the pixel size for now for
+        // the renderer
         if (SDL_GetWindowSizeInPixels(platform->window, &width, &height))
         {
             swapchainResources->SetDefaultExtent({static_cast<uint32_t>(width), static_cast<uint32_t>(height)});
@@ -301,7 +279,8 @@ void VulkanEngine::RenderAndPresentToSwapchain()
     // so it waits until it "hits" a given value... so == at least
     if (frameStruct.frameSubmitted != 0)
     {
-        // 0 means uninitialized... only "valid" value we should use for an unsigned int. Otherwise don't wait nothing submitted for this frame of work
+        // 0 means uninitialized... only "valid" value we should use for an unsigned int. Otherwise don't wait nothing
+        // submitted for this frame of work
         VkSemaphoreWaitInfo waitInfo = {
             .sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO,
             .semaphoreCount = 1,
@@ -311,8 +290,8 @@ void VulkanEngine::RenderAndPresentToSwapchain()
         vkchk(vkWaitSemaphores(gpuContext->device, &waitInfo, 1000000000));
     }
 
-    std::optional<AcquiredSwapchainImageInfo> acquiredImageInfo = swapchainResources->AcquireNextImage(
-        frameStruct.imageAcquiredSemaphore);
+    std::optional<AcquiredSwapchainImageInfo> acquiredImageInfo =
+        swapchainResources->AcquireNextImage(frameStruct.imageAcquiredSemaphore);
     if (!acquiredImageInfo)
     {
         return;
@@ -366,19 +345,17 @@ void VulkanEngine::RenderAndPresentToSwapchain()
     const uint64_t frameComplete = nextSubmitValue++;
     frameStruct.frameSubmitted = frameComplete; // ngl this is a littttle confusing with how I did the indexing.
 
-    const std::array signalInfos{
-        VkSemaphoreSubmitInfo{
-            .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
-            .semaphore = acquiredImageInfo->imageReadyToPresentSemaphore,
-            .stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
-        },
-        VkSemaphoreSubmitInfo{
-            .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
-            .semaphore = globalTimelineSemaphore,
-            .value = frameComplete,
-            .stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
-        }
-    };
+    const std::array signalInfos{VkSemaphoreSubmitInfo{
+                                     .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+                                     .semaphore = acquiredImageInfo->imageReadyToPresentSemaphore,
+                                     .stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
+                                 },
+                                 VkSemaphoreSubmitInfo{
+                                     .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+                                     .semaphore = globalTimelineSemaphore,
+                                     .value = frameComplete,
+                                     .stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
+                                 }};
 
     // gonna use the V1 submit info since that seems more simple
     VkSubmitInfo2 submitInfo = {
@@ -395,8 +372,8 @@ void VulkanEngine::RenderAndPresentToSwapchain()
     };
     vkchk(vkQueueSubmit2(gpuContext->graphicsPresentQueue, 1, &submitInfo, VK_NULL_HANDLE));
 
-    swapchainResources->PresentImage(gpuContext->graphicsPresentQueue,
-                                     acquiredImageInfo->imageReadyToPresentSemaphore, acquiredImageInfo->imageIndex);
+    swapchainResources->PresentImage(gpuContext->graphicsPresentQueue, acquiredImageInfo->imageReadyToPresentSemaphore,
+                                     acquiredImageInfo->imageIndex);
 }
 
 void VulkanEngine::ResizeOffscreenRenderTarget()
@@ -416,8 +393,7 @@ void VulkanEngine::ResizeOffscreenRenderTarget()
     // swapchain resize -> create new ones -> mark old ones as retired -> top of frame where no longer in use delete
     DestroyOffscreenRenderImageInfo(gpuContext->device, offscreenRenderImageInfo, vmaAllocator);
 
-    offscreenRenderImageInfo = createOffscreenRenderImageInfo(gpuContext->device, swapchainResources->GetExtent(),
-                                                              vmaAllocator);
-    UpdateOffscreenRenderImageDescriptorSet(gpuContext->device, offscreenRenderImageInfo,
-                                            descriptorInfo.descriptorSet);
+    offscreenRenderImageInfo =
+        createOffscreenRenderImageInfo(gpuContext->device, swapchainResources->GetExtent(), vmaAllocator);
+    UpdateOffscreenRenderImageDescriptorSet(gpuContext->device, offscreenRenderImageInfo, descriptorInfo.descriptorSet);
 }

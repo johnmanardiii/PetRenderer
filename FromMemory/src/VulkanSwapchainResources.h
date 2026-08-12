@@ -6,6 +6,8 @@
 #define VULKANCREATESWAPCHAIN_H
 
 #include "FunctionalQueue.h"
+#include "GpuContext.h"
+
 #include <SDL3/SDL_video.h>
 #include <optional>
 #include <vector>
@@ -36,8 +38,8 @@ struct AcquiredSwapchainImageInfo
 class VulkanSwapchainResources
 {
 public:
-    VulkanSwapchainResources(VkDevice device, VkPhysicalDevice physicalDevice, VkSurfaceKHR surface,
-                             VkExtent2D fallbackExtentSize);
+    // the gpu context must outlive this which is a guarantee from the engine
+    VulkanSwapchainResources(GpuContext& gpu_context, VkExtent2D fallbackExtentSize);
     ~VulkanSwapchainResources();
 
     // don't want this copied around
@@ -77,9 +79,7 @@ private:
     bool bNeedsRebuild = false;
     FunctionalQueue deletionQueue;
 
-    VkDevice device;
-    VkPhysicalDevice physicalDevice;
-    VkSurfaceKHR surface;
+    GpuContext& gpuContext;
 
     std::optional<SwapchainInfo> swapchainInfo;
     std::vector<VkSemaphore> swapchainImageReadyToPresentSemaphores;
