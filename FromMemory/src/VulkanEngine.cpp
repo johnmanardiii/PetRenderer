@@ -74,21 +74,6 @@ VulkanEngine::VulkanEngine(Platform platform, GpuContext gpuContext, VmaAllocato
 
 }
 
-VulkanEngine::~VulkanEngine()
-{
-    // once we should close, we wait for the device to be idle:
-    if (gpuContext && gpuContext->device != VK_NULL_HANDLE)
-    {
-        // #JOHN maybe... make this a thing that on destruct waits idle and make it a member that way tis all in one
-        // place and maybe consider... moving it into a more explicitly managed struct, but we are locked in
-        // on this pattern for nwo.
-        vkDeviceWaitIdle(gpuContext->device);
-
-        deletionQueue.Flush();
-    }
-}
-
-
 bool VulkanEngine::init()
 {
     int width = 640;
@@ -188,6 +173,14 @@ void VulkanEngine::OnWindowSizeChanged()
             fmt::printf("Failed to get window size: %s\n", SDL_GetError());
             std::abort();
         }
+    }
+}
+void VulkanEngine::WaitForDeviceIdle() const
+{
+    // once we should close, we wait for the device to be idle:
+    if (gpuContext && gpuContext->device != VK_NULL_HANDLE)
+    {
+        vkDeviceWaitIdle(gpuContext->device);
     }
 }
 
