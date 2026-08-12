@@ -7,6 +7,7 @@
 #include "VulkanDebugUtil.h"
 #include "VulkanUtil.h"
 
+#include <array>
 #include <cassert>
 #include <vector>
 
