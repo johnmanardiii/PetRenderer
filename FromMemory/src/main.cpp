@@ -50,5 +50,9 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
 void SDL_AppQuit(void *appstate, SDL_AppResult result)
 {
     // called once before terminating app, chance to clean up. where you should also free appstate if needed
-    delete static_cast<VulkanEngine*>(appstate);
+    if (VulkanEngine *engine = static_cast<VulkanEngine *>(appstate))
+    {
+        engine->WaitForDeviceIdle();
+        delete engine;
+    }
 }

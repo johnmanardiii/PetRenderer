@@ -23,7 +23,6 @@ class VulkanEngine
 public:
     // #JOHN - maybe initialize with the width / height
     static VulkanEngine* Create();
-    ~VulkanEngine();
 
     bool init();
 
@@ -35,7 +34,7 @@ public:
 
     void Iterate();
     void OnWindowSizeChanged();
-
+    void WaitForDeviceIdle() const;
 private:
     VulkanEngine(Platform platform, GpuContext gpuContext, VmaAllocator vmaAllocator,
                  ScopedFunctionalQueue &&deletionQueue);

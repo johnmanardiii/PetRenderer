@@ -69,6 +69,24 @@ static VkSurfaceFormat2KHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFo
     return formats[0];
 }
 
+std::optional<VkPresentModeKHR> SelectAvailablePresentMode(std::vector<VkPresentModeKHR> presentModes)
+{
+    // VkPresentModeKHR desiredPresentMode = VK_PRESENT_MODE_MAILBOX_KHR;
+    std::array desiredPresentModes = {VK_PRESENT_MODE_MAILBOX_KHR, VK_PRESENT_MODE_FIFO_KHR};
+
+    for (auto &requestedPresentMode : desiredPresentModes)
+    {
+        for (auto &presentMode : presentModes)
+        {
+            if (presentMode == requestedPresentMode)
+            {
+                return presentMode;
+            }
+        }
+    }
+
+    return std::nullopt;
+}
 // #JOHN this should probably take an old swapchain as an option here.
 std::optional<SwapchainInfo> CreateSwapchain(VkDevice device, VkPhysicalDevice physicalDevice, VkSurfaceKHR surface,
                                              VkExtent2D fallbackExtentSize)
@@ -83,16 +101,7 @@ std::optional<SwapchainInfo> CreateSwapchain(VkDevice device, VkPhysicalDevice p
     // VkPresentModeKHR desiredPresentMode = VK_PRESENT_MODE_FIFO_KHR;
     // #JOHN - this should be controllable from something and then be able to be changed at runtime I think
     // based on what is queried to be available.
-    VkPresentModeKHR desiredPresentMode = VK_PRESENT_MODE_MAILBOX_KHR;
-    std::optional<VkPresentModeKHR> selectedPresentMode;
-
-    for (auto &presentMode : presentModes)
-    {
-        if (presentMode == desiredPresentMode)
-        {
-            selectedPresentMode = presentMode;
-        }
-    }
+    std::optional<VkPresentModeKHR> selectedPresentMode = SelectAvailablePresentMode(presentModes);
 
     if (!selectedPresentMode)
     {
@@ -287,9 +296,8 @@ std::vector<VkImageView> CreateSwapchainImageViews(VkDevice device, const Swapch
 
 } // namespace VulkanCreateSwapchain
 
-VulkanSwapchainResources::VulkanSwapchainResources(VkDevice device, VkPhysicalDevice physicalDevice,
-                                                   VkSurfaceKHR surface, VkExtent2D fallbackExtentSize)
-    : device(device), physicalDevice(physicalDevice), surface(surface), fallbackExtentSize(fallbackExtentSize)
+VulkanSwapchainResources::VulkanSwapchainResources(GpuContext &gpuContext, VkExtent2D fallbackExtentSize)
+    : gpuContext(gpuContext), fallbackExtentSize(fallbackExtentSize)
 {
     CreateSwapchainResources();
 }
@@ -301,7 +309,7 @@ VulkanSwapchainResources::~VulkanSwapchainResources()
 
 bool VulkanSwapchainResources::Recreate()
 {
-    vkDeviceWaitIdle(device);
+    vkDeviceWaitIdle(gpuContext.device);
     ReleaseSwapchainResources();
     return CreateSwapchainResources();
 }
@@ -325,7 +333,7 @@ void VulkanSwapchainResources::PresentImage(VkQueue presentQueue, VkSemaphore wa
 }
 
 std::optional<AcquiredSwapchainImageInfo> VulkanSwapchainResources::AcquireNextImage(VkSemaphore imageAcquiredSemaphore,
-                                                    uint32_t timeout)
+                                                                                     uint32_t timeout)
 {
     if (bNeedsRebuild)
     {
@@ -344,8 +352,8 @@ std::optional<AcquiredSwapchainImageInfo> VulkanSwapchainResources::AcquireNextI
     }
 
     uint32_t imageIndex;
-    VkResult result = vkAcquireNextImageKHR(device, swapchainInfo->swapchain, timeout, imageAcquiredSemaphore,
-                                                       VK_NULL_HANDLE, &imageIndex);
+    VkResult result = vkAcquireNextImageKHR(gpuContext.device, swapchainInfo->swapchain, timeout, imageAcquiredSemaphore,
+                                            VK_NULL_HANDLE, &imageIndex);
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR)
     {
@@ -370,7 +378,7 @@ std::optional<AcquiredSwapchainImageInfo> VulkanSwapchainResources::AcquireNextI
 
 void VulkanSwapchainResources::ReleaseSwapchainResources()
 {
-    if (device == VK_NULL_HANDLE)
+    if (gpuContext.device == VK_NULL_HANDLE)
     {
         // this should never happen but whatever
         // #JOHN - this should probably make things not work at construction time, stored whole lifetime, no more
@@ -379,28 +387,29 @@ void VulkanSwapchainResources::ReleaseSwapchainResources()
     }
 
     // wait for the device to be idle so we aren't destroying anything in use:
-    vkDeviceWaitIdle(device);
+    vkDeviceWaitIdle(gpuContext.device);
 
     deletionQueue.Flush();
 }
 
 bool VulkanSwapchainResources::CreateSwapchainResources()
 {
-    swapchainInfo = VulkanCreateSwapchain::CreateSwapchain(device, physicalDevice, surface, fallbackExtentSize);
+    swapchainInfo =
+        VulkanCreateSwapchain::CreateSwapchain(gpuContext.device, gpuContext.selectedPhysicalDeviceInfo.physicalDevice,
+                                               gpuContext.surface, fallbackExtentSize);
 
     if (swapchainInfo)
     {
         // #JOHN - maybe this should be bundled with the swapchain info instead of here
-        deletionQueue.Register([this]() {
-            vkDestroySwapchainKHR(device, swapchainInfo->swapchain, nullptr);
-        });
+        deletionQueue.Register(
+            [this]() { vkDestroySwapchainKHR(gpuContext.device, swapchainInfo->swapchain, nullptr); });
 
-        swapchainImageViews = VulkanCreateSwapchain::CreateSwapchainImageViews(device, *swapchainInfo);
+        swapchainImageViews = VulkanCreateSwapchain::CreateSwapchainImageViews(gpuContext.device, *swapchainInfo);
 
         deletionQueue.Register([this]() {
             for (VkImageView swapchainImageView : swapchainImageViews)
             {
-                vkDestroyImageView(device, swapchainImageView, nullptr);
+                vkDestroyImageView(gpuContext.device, swapchainImageView, nullptr);
             }
             swapchainImageViews.clear();
         });
@@ -412,11 +421,11 @@ bool VulkanSwapchainResources::CreateSwapchainResources()
         for (int i = 0; i < swapchainImageViews.size(); i++)
         {
             VkSemaphore semaphore;
-            vkchk(vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &semaphore));
+            vkchk(vkCreateSemaphore(gpuContext.device, &semaphoreCreateInfo, nullptr, &semaphore));
 
             // name the object as what it is:
             std::string semaphoreName = fmt::format("Image Available Semaphore {}", i);
-            DebugSetName(device, VK_OBJECT_TYPE_SEMAPHORE, semaphore, semaphoreName.c_str());
+            DebugSetName(gpuContext.device, VK_OBJECT_TYPE_SEMAPHORE, semaphore, semaphoreName.c_str());
 
             swapchainImageReadyToPresentSemaphores.emplace_back(semaphore);
         }
@@ -424,7 +433,7 @@ bool VulkanSwapchainResources::CreateSwapchainResources()
         deletionQueue.Register([this]() {
             for (VkSemaphore semaphore : swapchainImageReadyToPresentSemaphores)
             {
-                vkDestroySemaphore(device, semaphore, nullptr);
+                vkDestroySemaphore(gpuContext.device, semaphore, nullptr);
             }
 
             swapchainImageReadyToPresentSemaphores.clear();
