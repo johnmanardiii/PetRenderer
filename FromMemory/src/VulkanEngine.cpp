@@ -77,12 +77,12 @@ VulkanEngine::VulkanEngine(Platform platform, GpuContext gpuContext, VmaAllocato
 VulkanEngine::~VulkanEngine()
 {
     // once we should close, we wait for the device to be idle:
-    if (gpuContext && gpuContext->device != VK_NULL_HANDLE)
+    if (gpuContext.device != VK_NULL_HANDLE)
     {
         // #JOHN maybe... make this a thing that on destruct waits idle and make it a member that way tis all in one
         // place and maybe consider... moving it into a more explicitly managed struct, but we are locked in
         // on this pattern for nwo.
-        vkDeviceWaitIdle(gpuContext->device);
+        vkDeviceWaitIdle(gpuContext.device);
 
         deletionQueue.Flush();
     }
@@ -95,7 +95,7 @@ bool VulkanEngine::init()
     int height = 480;
     // #JOHN - can this just take the gpu context?
     swapchainResources.emplace(
-        gpuContext->device, gpuContext->selectedPhysicalDeviceInfo.physicalDevice, gpuContext->surface,
+        gpuContext.device, gpuContext.selectedPhysicalDeviceInfo.physicalDevice, gpuContext.surface,
         VkExtent2D{.width = static_cast<uint32_t>(width), .height = static_cast<uint32_t>(height)});
 
     deletionQueue.Register([this] {
@@ -104,37 +104,37 @@ bool VulkanEngine::init()
 
     // #JOHN this doesn't belong directly in the engine, but rather whatever represents our "draw passes" and this goes
     // into the "compute shader draws a picture with 16x16 lines" logic
-    AllocateDescriptorInfo(gpuContext->device, descriptorInfo);
+    AllocateDescriptorInfo(gpuContext.device, descriptorInfo);
 
-    pipelineObjects = CreatePipelineObjects(gpuContext->device, descriptorInfo.descriptorSetLayout);
+    pipelineObjects = CreatePipelineObjects(gpuContext.device, descriptorInfo.descriptorSetLayout);
     deletionQueue.Register([this] {
-        DestroyPipelineObjects(gpuContext->device, *pipelineObjects);
+        DestroyPipelineObjects(gpuContext.device, *pipelineObjects);
     });
 
     VkExtent2D initialOffscreenRenderImage = {.width = static_cast<uint32_t>(width),
                                               .height = static_cast<uint32_t>(height)};
 
-    offscreenRenderImageInfo = createOffscreenRenderImageInfo(gpuContext->device, initialOffscreenRenderImage,
+    offscreenRenderImageInfo = createOffscreenRenderImageInfo(gpuContext.device, initialOffscreenRenderImage,
                                                               vmaAllocator);
 
     deletionQueue.Register([this] {
-        DestroyOffscreenRenderImageInfo(gpuContext->device, offscreenRenderImageInfo, vmaAllocator);
+        DestroyOffscreenRenderImageInfo(gpuContext.device, offscreenRenderImageInfo, vmaAllocator);
     });
 
     // #JOHN - manually do this for now, just because things are messy, don't submit until a design has been worked out
     // for this
-    UpdateOffscreenRenderImageDescriptorSet(gpuContext->device, offscreenRenderImageInfo,
+    UpdateOffscreenRenderImageDescriptorSet(gpuContext.device, offscreenRenderImageInfo,
                                             descriptorInfo.descriptorSet);
 
     deletionQueue.Register([this] {
-        DestroyDescriptorInformation(gpuContext->device, descriptorInfo);
+        DestroyDescriptorInformation(gpuContext.device, descriptorInfo);
     });
 
-    frameInFlightStructures = CreateFrameInFlightStructures(gpuContext->device,
-                                                            gpuContext->selectedPhysicalDeviceInfo.
+    frameInFlightStructures = CreateFrameInFlightStructures(gpuContext.device,
+                                                            gpuContext.selectedPhysicalDeviceInfo.
                                                                         graphicsPresentQueueFamilyIndex, 3);
     deletionQueue.Register([this] {
-        DestroyFrameInFlightStructures(gpuContext->device, *frameInFlightStructures);
+        DestroyFrameInFlightStructures(gpuContext.device, *frameInFlightStructures);
     });
 
     VkSemaphoreTypeCreateInfo globalTimelineSemaphoreTypeCreateInfo =
@@ -149,13 +149,13 @@ bool VulkanEngine::init()
         .pNext = &globalTimelineSemaphoreTypeCreateInfo,
         .flags = 0,
     };
-    vkchk(vkCreateSemaphore(gpuContext->device, &globalTimelineSemaphoreCreateInfo, nullptr,
+    vkchk(vkCreateSemaphore(gpuContext.device, &globalTimelineSemaphoreCreateInfo, nullptr,
                             &globalTimelineSemaphore));
 
-    DebugSetName(gpuContext->device, VK_OBJECT_TYPE_SEMAPHORE, globalTimelineSemaphore, "Global Timeline Semaphore");
+    DebugSetName(gpuContext.device, VK_OBJECT_TYPE_SEMAPHORE, globalTimelineSemaphore, "Global Timeline Semaphore");
 
     deletionQueue.Register([this] {
-        vkDestroySemaphore(gpuContext->device, globalTimelineSemaphore, nullptr);
+        vkDestroySemaphore(gpuContext.device, globalTimelineSemaphore, nullptr);
     });
 
     return true;
@@ -173,21 +173,18 @@ void VulkanEngine::Iterate()
 
 void VulkanEngine::OnWindowSizeChanged()
 {
-    // #JOHN - move this logic to platform somehow
-    if (platform)
+
+    int width, height;
+    // there is window size, and window size in pixels... for us we are just going to use the pixel size for now for the
+    // renderer
+    if (SDL_GetWindowSizeInPixels(platform.window, &width, &height))
     {
-        int width, height;
-        // there is window size, and window size in pixels... for us we are just going to use the pixel size for now for the
-        // renderer
-        if (SDL_GetWindowSizeInPixels(platform->window, &width, &height))
-        {
-            swapchainResources->SetDefaultExtent({static_cast<uint32_t>(width), static_cast<uint32_t>(height)});
-        }
-        else
-        {
-            fmt::printf("Failed to get window size: %s\n", SDL_GetError());
-            std::abort();
-        }
+        swapchainResources->SetDefaultExtent({static_cast<uint32_t>(width), static_cast<uint32_t>(height)});
+    }
+    else
+    {
+        fmt::printf("Failed to get window size: %s\n", SDL_GetError());
+        std::abort();
     }
 }
 
@@ -315,7 +312,7 @@ void VulkanEngine::RenderAndPresentToSwapchain()
             .pSemaphores = &globalTimelineSemaphore,
             .pValues = &frameStruct.frameSubmitted // #JOHN this isn't submitted yet... needs to be uhhh
         };
-        vkchk(vkWaitSemaphores(gpuContext->device, &waitInfo, 1000000000));
+        vkchk(vkWaitSemaphores(gpuContext.device, &waitInfo, 1000000000));
     }
 
     std::optional<AcquiredSwapchainImageInfo> acquiredImageInfo = swapchainResources->AcquireNextImage(
@@ -400,9 +397,9 @@ void VulkanEngine::RenderAndPresentToSwapchain()
         .signalSemaphoreInfoCount = static_cast<uint32_t>(signalInfos.size()),
         .pSignalSemaphoreInfos = signalInfos.data(),
     };
-    vkchk(vkQueueSubmit2(gpuContext->graphicsPresentQueue, 1, &submitInfo, VK_NULL_HANDLE));
+    vkchk(vkQueueSubmit2(gpuContext.graphicsPresentQueue, 1, &submitInfo, VK_NULL_HANDLE));
 
-    swapchainResources->PresentImage(gpuContext->graphicsPresentQueue,
+    swapchainResources->PresentImage(gpuContext.graphicsPresentQueue,
                                      acquiredImageInfo->imageReadyToPresentSemaphore, acquiredImageInfo->imageIndex);
 }
 
@@ -421,10 +418,10 @@ void VulkanEngine::ResizeOffscreenRenderTarget()
     // currently waits on idle before doing anything, which means that old resources aren't in use and can be destroyed
     // before creation. The real pattern for these swapchain resources you want is more like:
     // swapchain resize -> create new ones -> mark old ones as retired -> top of frame where no longer in use delete
-    DestroyOffscreenRenderImageInfo(gpuContext->device, offscreenRenderImageInfo, vmaAllocator);
+    DestroyOffscreenRenderImageInfo(gpuContext.device, offscreenRenderImageInfo, vmaAllocator);
 
-    offscreenRenderImageInfo = createOffscreenRenderImageInfo(gpuContext->device, swapchainResources->GetExtent(),
+    offscreenRenderImageInfo = createOffscreenRenderImageInfo(gpuContext.device, swapchainResources->GetExtent(),
                                                               vmaAllocator);
-    UpdateOffscreenRenderImageDescriptorSet(gpuContext->device, offscreenRenderImageInfo,
+    UpdateOffscreenRenderImageDescriptorSet(gpuContext.device, offscreenRenderImageInfo,
                                             descriptorInfo.descriptorSet);
 }

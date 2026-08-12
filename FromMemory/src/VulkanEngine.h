@@ -47,13 +47,13 @@ private:
     void ResizeOffscreenRenderTarget();
 
     // This should be destructed last because it kinda owns vulkan. should have more guarantees on that #JOHN
-    std::optional<Platform> platform;
+    Platform platform;
 
-    std::optional<GpuContext> gpuContext;
-
-    std::optional<FrameInFlightStructures> frameInFlightStructures;
+    GpuContext gpuContext;
 
     VmaAllocator vmaAllocator;
+
+    std::optional<FrameInFlightStructures> frameInFlightStructures;
 
     std::optional<VulkanSwapchainResources> swapchainResources;
 
