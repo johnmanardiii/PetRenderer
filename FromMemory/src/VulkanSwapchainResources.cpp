@@ -300,7 +300,6 @@ std::vector<VkImageView> CreateSwapchainImageViews(VkDevice device, const Swapch
 VulkanSwapchainResources::VulkanSwapchainResources(GpuContext &gpuContext, VkExtent2D fallbackExtentSize)
     : gpuContext(gpuContext), fallbackExtentSize(fallbackExtentSize)
 {
-    CreateSwapchainResources();
 }
 
 VulkanSwapchainResources::~VulkanSwapchainResources()

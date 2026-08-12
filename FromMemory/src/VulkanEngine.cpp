@@ -57,16 +57,18 @@ VulkanEngine *VulkanEngine::Create()
         vmaDestroyAllocator(vmaAllocator);
     });
 
-    // #JOHN - for this one maybe I should actually make the allocation an explicit callback.
-    // i kind of like it for this one... going to resume this when I get back
-    // VulkanSwapchainResources swapchainResources = VulkanSwapchainResources;
-
-    return new VulkanEngine(*platform, *gpuContext, vmaAllocator, std::move(deletionQueue));
+    return new VulkanEngine(*platform, *gpuContext, vmaAllocator, VkExtent2D{.width = static_cast<uint32_t>(width),
+                                                                             .height = static_cast<uint32_t>(height)},
+                            std::move(deletionQueue));
 }
 
-VulkanEngine::VulkanEngine(Platform platform, GpuContext gpuContext, VmaAllocator vmaAllocator,
-                           ScopedFunctionalQueue &&deletionQueue)
-    : platform(platform), gpuContext(gpuContext), vmaAllocator(vmaAllocator), deletionQueue(std::move(deletionQueue))
+VulkanEngine::VulkanEngine(Platform inPlatform, GpuContext inGpuContext, VmaAllocator inVmaAllocator,
+                           VkExtent2D inInitialExtent,
+                           ScopedFunctionalQueue &&inDeletionQueue)
+    : platform(inPlatform), gpuContext(inGpuContext), vmaAllocator(inVmaAllocator),
+// #JOHN - this "gpu context ref" is super duper dangerous seeming and a bad pattern...
+// should read modern C++ design...
+      swapchainResources(gpuContext, inInitialExtent), deletionQueue(std::move(inDeletionQueue))
 
 {
 }
@@ -75,13 +77,6 @@ bool VulkanEngine::init()
 {
     int width = 640;
     int height = 480;
-
-    swapchainResources.emplace(gpuContext, VkExtent2D{.width = static_cast<uint32_t>(width),
-                                                      .height = static_cast<uint32_t>(height)});
-
-    deletionQueue.Register([this] {
-        swapchainResources.reset();
-    });
 
     // #JOHN this doesn't belong directly in the engine, but rather whatever represents our "draw passes" and this goes
     // into the "compute shader draws a picture with 16x16 lines" logic
@@ -114,7 +109,7 @@ bool VulkanEngine::init()
     frameInFlightStructures = CreateFrameInFlightStructures(
         gpuContext.device, gpuContext.selectedPhysicalDeviceInfo.graphicsPresentQueueFamilyIndex, 3);
     deletionQueue.Register([this] {
-        DestroyFrameInFlightStructures(gpuContext.device, *frameInFlightStructures);
+        DestroyFrameInFlightStructures(gpuContext.device, frameInFlightStructures);
     });
 
     VkSemaphoreTypeCreateInfo globalTimelineSemaphoreTypeCreateInfo = {
@@ -155,7 +150,7 @@ void VulkanEngine::OnWindowSizeChanged()
     // the renderer
     if (SDL_GetWindowSizeInPixels(platform.window, &width, &height))
     {
-        swapchainResources->SetDefaultExtent({static_cast<uint32_t>(width), static_cast<uint32_t>(height)});
+        swapchainResources.SetDefaultExtent({static_cast<uint32_t>(width), static_cast<uint32_t>(height)});
     }
     else
     {
@@ -215,11 +210,6 @@ void VulkanEngine::RenderToOffscreenImage(VkCommandBuffer commandBuffer)
 void VulkanEngine::BlitOffscreenImageToSwapchainImage(VkCommandBuffer commandBuffer,
                                                       AcquiredSwapchainImageInfo &acquiredSwapchainInfo)
 {
-    if (!swapchainResources)
-    {
-        return;
-    }
-
     // Transition our acquired image to be ready for blit
     TransitionVkImageFormat({
         .cmd = commandBuffer,
@@ -284,7 +274,7 @@ void VulkanEngine::RenderAndPresentToSwapchain()
 {
     // Get this frame's sync primitives and command buffer and stuff:
     // #JOHN this really needs to not be an optional... also maybe it should have it's own deletion queue?
-    PerFrameInFlightStructure &frameStruct = GetFrameInFlightStructure(*frameInFlightStructures, currentFrame);
+    PerFrameInFlightStructure &frameStruct = GetFrameInFlightStructure(frameInFlightStructures, currentFrame);
 
     // ensure that the gpu is done up until the frame we are trying to access:
     // so it waits until it "hits" a given value... so == at least
@@ -302,7 +292,7 @@ void VulkanEngine::RenderAndPresentToSwapchain()
     }
 
     std::optional<AcquiredSwapchainImageInfo> acquiredImageInfo =
-        swapchainResources->AcquireNextImage(frameStruct.imageAcquiredSemaphore);
+        swapchainResources.AcquireNextImage(frameStruct.imageAcquiredSemaphore);
     if (!acquiredImageInfo)
     {
         return;
@@ -383,13 +373,13 @@ void VulkanEngine::RenderAndPresentToSwapchain()
     };
     vkchk(vkQueueSubmit2(gpuContext.graphicsPresentQueue, 1, &submitInfo, VK_NULL_HANDLE));
 
-    swapchainResources->PresentImage(gpuContext.graphicsPresentQueue, acquiredImageInfo->imageReadyToPresentSemaphore,
-                                     acquiredImageInfo->imageIndex);
+    swapchainResources.PresentImage(gpuContext.graphicsPresentQueue, acquiredImageInfo->imageReadyToPresentSemaphore,
+                                    acquiredImageInfo->imageIndex);
 }
 
 void VulkanEngine::ResizeOffscreenRenderTarget()
 {
-    if (swapchainResources->GetExtent().width == 0 || swapchainResources->GetExtent().height == 0)
+    if (swapchainResources.GetExtent().width == 0 || swapchainResources.GetExtent().height == 0)
     {
         // on 0 size, just like... don't do anything and keep the old one around in memory
         return;
@@ -405,6 +395,6 @@ void VulkanEngine::ResizeOffscreenRenderTarget()
     DestroyOffscreenRenderImageInfo(gpuContext.device, offscreenRenderImageInfo, vmaAllocator);
 
     offscreenRenderImageInfo =
-        createOffscreenRenderImageInfo(gpuContext.device, swapchainResources->GetExtent(), vmaAllocator);
+        createOffscreenRenderImageInfo(gpuContext.device, swapchainResources.GetExtent(), vmaAllocator);
     UpdateOffscreenRenderImageDescriptorSet(gpuContext.device, offscreenRenderImageInfo, descriptorInfo.descriptorSet);
 }

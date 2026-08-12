@@ -22,7 +22,7 @@ class VulkanEngine
 {
 public:
     // #JOHN - maybe initialize with the width / height
-    static VulkanEngine* Create();
+    static VulkanEngine *Create();
 
     bool init();
 
@@ -35,8 +35,10 @@ public:
     void Iterate();
     void OnWindowSizeChanged();
     void WaitForDeviceIdle() const;
+
 private:
     VulkanEngine(Platform platform, GpuContext gpuContext, VmaAllocator vmaAllocator,
+                 VkExtent2D initialExtent,
                  ScopedFunctionalQueue &&deletionQueue);
 
     void RenderToOffscreenImage(VkCommandBuffer commandBuffer);
@@ -52,19 +54,20 @@ private:
 
     VmaAllocator vmaAllocator;
 
-    std::optional<FrameInFlightStructures> frameInFlightStructures;
+    FrameInFlightStructures frameInFlightStructures;
 
-    std::optional<VulkanSwapchainResources> swapchainResources;
+    VulkanSwapchainResources swapchainResources;
+
+    // global submit state tracking (actual engine stuff that is important)
+    VkSemaphore globalTimelineSemaphore = VK_NULL_HANDLE; // used to track what submissions on the gpu are done
+    uint64_t nextSubmitValue = 1;
 
     // #JOHN - this should not be an optional, just need to convert out of swapchain for now.
     OffscreenRenderImageInfo offscreenRenderImageInfo;
 
-    // random rendering stuff
+    // random rendering stuff for the compute shader
     DescriptorInformation descriptorInfo;
     std::optional<PipelineObjects> pipelineObjects;
-
-    VkSemaphore globalTimelineSemaphore = VK_NULL_HANDLE; // used to track what submissions on the gpu are done
-    uint64_t nextSubmitValue = 1;
 
     ScopedFunctionalQueue deletionQueue;
 

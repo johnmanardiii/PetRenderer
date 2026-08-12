@@ -68,15 +68,15 @@ public:
         return fallbackExtentSize;
     }
 
+    bool CreateSwapchainResources();
+
     void ReleaseSwapchainResources();
 
 private:
 
     bool Recreate();
 
-    bool CreateSwapchainResources();
-
-    bool bNeedsRebuild = false;
+    bool bNeedsRebuild = true;
     FunctionalQueue deletionQueue;
 
     GpuContext& gpuContext;
