@@ -69,6 +69,24 @@ static VkSurfaceFormat2KHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFo
     return formats[0];
 }
 
+std::optional<VkPresentModeKHR> SelectAvailablePresentMode(std::vector<VkPresentModeKHR> presentModes)
+{
+    // VkPresentModeKHR desiredPresentMode = VK_PRESENT_MODE_MAILBOX_KHR;
+    std::array desiredPresentModes = {VK_PRESENT_MODE_MAILBOX_KHR, VK_PRESENT_MODE_FIFO_KHR};
+
+    for (auto& requestedPresentMode : desiredPresentModes)
+    {
+        for (auto &presentMode : presentModes)
+        {
+            if (presentMode == requestedPresentMode)
+            {
+                return presentMode;
+            }
+        }
+    }
+
+    return std::nullopt;
+}
 // #JOHN this should probably take an old swapchain as an option here.
 std::optional<SwapchainInfo> CreateSwapchain(VkDevice device, VkPhysicalDevice physicalDevice, VkSurfaceKHR surface,
                                              VkExtent2D fallbackExtentSize)
@@ -83,16 +101,7 @@ std::optional<SwapchainInfo> CreateSwapchain(VkDevice device, VkPhysicalDevice p
     // VkPresentModeKHR desiredPresentMode = VK_PRESENT_MODE_FIFO_KHR;
     // #JOHN - this should be controllable from something and then be able to be changed at runtime I think
     // based on what is queried to be available.
-    VkPresentModeKHR desiredPresentMode = VK_PRESENT_MODE_MAILBOX_KHR;
-    std::optional<VkPresentModeKHR> selectedPresentMode;
-
-    for (auto &presentMode : presentModes)
-    {
-        if (presentMode == desiredPresentMode)
-        {
-            selectedPresentMode = presentMode;
-        }
-    }
+    std::optional<VkPresentModeKHR> selectedPresentMode = SelectAvailablePresentMode(presentModes);
 
     if (!selectedPresentMode)
     {
