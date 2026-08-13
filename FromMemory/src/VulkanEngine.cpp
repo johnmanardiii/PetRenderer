@@ -87,8 +87,10 @@ bool VulkanEngine::init()
 
     pipelineObjects = CreatePipelineObjects(gpuContext.device, descriptorInfo.descriptorSetLayout);
     deletionQueue.Register([this] {
-        DestroyPipelineObjects(gpuContext.device, *pipelineObjects);
+        DestroyPipelineObjects(gpuContext.device, pipelineObjects);
     });
+
+    babysFirstGraphicsPipelineInfo = CreateBabysFirstGraphicsPipelineInfo();
 
     VkExtent2D initialOffscreenRenderImage = {.width = static_cast<uint32_t>(width),
                                               .height = static_cast<uint32_t>(height)};
@@ -188,9 +190,9 @@ void VulkanEngine::RenderToOffscreenImage(VkCommandBuffer commandBuffer)
     });
 
     // bind the pipeline
-    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipelineObjects->pipeline);
+    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipelineObjects.pipeline);
 
-    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipelineObjects->layout, 0, 1,
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipelineObjects.layout, 0, 1,
                             &descriptorInfo.descriptorSet, 0, nullptr);
 
     // #JOHN - this should be.... the size of the offscreen render target actually like the image itself...

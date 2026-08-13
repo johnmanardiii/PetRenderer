@@ -6,6 +6,8 @@
 #define VULKAN_ENGINE_H
 
 #define GLFW_INCLUDE_VULKAN
+
+#include "BabysFirstGraphicsPipeline.h"
 #include "CreatePipeline.h"
 #include "DescriptorAllocator.h"
 #include "FrameInFlightStructures.h"
@@ -14,8 +16,6 @@
 #include "Platform.h"
 
 #include "VulkanSwapchainResources.h"
-
-#include <optional>
 #include "vk_mem_alloc.h"
 
 class VulkanEngine
@@ -67,7 +67,9 @@ private:
 
     // random rendering stuff for the compute shader
     DescriptorInformation descriptorInfo;
-    std::optional<PipelineObjects> pipelineObjects;
+    PipelineObjects pipelineObjects;
+
+    BabyFirstGraphicsPipelineInfo babysFirstGraphicsPipelineInfo;
 
     ScopedFunctionalQueue deletionQueue;
 
