@@ -90,7 +90,7 @@ bool VulkanEngine::init()
         DestroyPipelineObjects(gpuContext.device, pipelineObjects);
     });
 
-    babysFirstGraphicsPipelineInfo = CreateBabysFirstGraphicsPipelineInfo();
+    babysFirstGraphicsPipelineInfo = CreateBabysFirstGraphicsPipelineInfo(gpuContext);
 
     VkExtent2D initialOffscreenRenderImage = {.width = static_cast<uint32_t>(width),
                                               .height = static_cast<uint32_t>(height)};

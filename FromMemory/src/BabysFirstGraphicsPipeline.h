@@ -4,6 +4,7 @@
 
 #ifndef BABYSFIRSTGRAPHICSPIPELINE_H
 #define BABYSFIRSTGRAPHICSPIPELINE_H
+#include "GpuContext.h"
 
 
 /*
@@ -18,7 +19,7 @@ struct BabyFirstGraphicsPipelineInfo
 
 };
 
-BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo();
+BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo(GpuContext& gpuContext);
 
 
 

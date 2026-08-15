@@ -22,7 +22,7 @@ bool LoadShader(const char *filePath, VkDevice device, VkShaderModule *shaderMod
     VkShaderModuleCreateInfo moduleCreateInfo = {};
     moduleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     moduleCreateInfo.codeSize = bitesRead;
-    moduleCreateInfo.pCode = reinterpret_cast<uint32_t *>(data);
+    moduleCreateInfo.pCode = static_cast<uint32_t *>(data);
 
     vkchk(vkCreateShaderModule(device, &moduleCreateInfo, nullptr, shaderModule));
     SDL_free(data);
