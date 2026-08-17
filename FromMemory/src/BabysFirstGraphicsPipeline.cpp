@@ -4,21 +4,68 @@
 
 #include "BabysFirstGraphicsPipeline.h"
 
+#include "ShaderLoader.h"
+
 BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo(GpuContext &gpuContext)
 {
     // create the shaders we are going to use (vert and frag for now)
 
-    // VkPipelineShaderStageCreateInfo
+    VkShaderModule vertexShaderModule;
+    if (!LoadShader("../shaders/hardcoded_triangle/hardcoded_triangle.vert.spv", gpuContext.device,
+                    &vertexShaderModule))
+    {
+        assert(false);
+    }
 
+    VkPipelineShaderStageCreateInfo vertexStageCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+        .stage = VK_SHADER_STAGE_VERTEX_BIT,
+        .module = vertexShaderModule,
+        .pName = "vertexMain"
+    };
+
+    // fragment shader create info
+    VkShaderModule fragmentShaderModule;
+    if (!LoadShader("../shaders/hardcoded_triangle/hardcoded_triangle.frag.spv", gpuContext.device,
+                    &fragmentShaderModule))
+    {
+        assert(false);
+    }
+
+    VkPipelineShaderStageCreateInfo fragmentStageCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+        .stage = VK_SHADER_STAGE_VERTEX_BIT,
+        .module = fragmentShaderModule,
+        .pName = "fragmentMain"
+    };
 
     // create the pipeline
+    VkPipelineShaderStageCreateInfo stageInfos[2] =
+    {
+        vertexStageCreateInfo,
+        fragmentStageCreateInfo
+    };
+
+    // vertex input state create info... I don't think i'll describe anything here just yet and pray it is something I can put off for later
+    VkPipelineVertexInputStateCreateInfo vertexInputState = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO};
 
     VkGraphicsPipelineCreateInfo createInfo = {
         .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
         .flags = 0,
+        .stageCount = 2,
+        .pStages = stageInfos,
+        .pVertexInputState = &vertexInputState,
+
     };
 
     VkPipeline babyPipeline = VK_NULL_HANDLE;
+
+    // CREATE PIPELINE HERE
+
+    // now we can delete the shader modules we used to create it
+    vkDestroyShaderModule(gpuContext.device, vertexShaderModule, nullptr);
+    vkDestroyShaderModule(gpuContext.device, fragmentShaderModule, nullptr);
 
     return BabyFirstGraphicsPipelineInfo();
 }
