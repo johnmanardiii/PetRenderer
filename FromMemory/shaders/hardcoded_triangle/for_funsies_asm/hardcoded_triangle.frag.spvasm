@@ -1,0 +1,35 @@
+; SPIR-V
+; Version: 1.5
+; Generator: Khronos Slang Compiler; 0
+; Bound: 14
+; Schema: 0
+OpCapability Shader
+OpMemoryModel Logical GLSL450
+OpEntryPoint Fragment %fragmentMain "main" %entryPointParam_fragmentMain
+OpExecutionMode %fragmentMain OriginUpperLeft
+
+; Debug Information
+OpSource Slang 1
+OpName %entryPointParam_fragmentMain "entryPointParam_fragmentMain"     ; id %8
+OpName %fragmentMain "fragmentMain"                                     ; id %2
+
+; Annotations
+OpDecorate %entryPointParam_fragmentMain Location 0
+
+; Types, variables and constants
+%void = OpTypeVoid
+%3 = OpTypeFunction %void
+%float = OpTypeFloat 32
+%v4float = OpTypeVector %float 4
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+%float_1 = OpConstant %float 1
+%float_0 = OpConstant %float 0
+%9 = OpConstantComposite %v4float %float_1 %float_0 %float_0 %float_1
+%entryPointParam_fragmentMain = OpVariable %_ptr_Output_v4float Output  ; Location 0
+
+; Function fragmentMain
+%fragmentMain = OpFunction %void None %3
+%4 = OpLabel
+OpStore %entryPointParam_fragmentMain %9
+OpReturn
+OpFunctionEnd

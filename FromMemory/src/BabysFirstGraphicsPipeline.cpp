@@ -50,18 +50,26 @@ BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo(GpuContext &g
     VkPipelineVertexInputStateCreateInfo vertexInputState = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO};
 
+    VkPipelineInputAssemblyStateCreateInfo inputAssemblyState = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
+        .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+        .primitiveRestartEnable = VK_FALSE
+    };
+
     VkGraphicsPipelineCreateInfo createInfo = {
         .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
         .flags = 0,
         .stageCount = 2,
         .pStages = stageInfos,
         .pVertexInputState = &vertexInputState,
-
+        .pInputAssemblyState = &inputAssemblyState,
+        .pTessellationState = nullptr,  // don't think I need this if I don't have tesselation.
     };
 
     VkPipeline babyPipeline = VK_NULL_HANDLE;
 
     // CREATE PIPELINE HERE
+    vkchk(vkCreateGraphicsPipelines(gpuContext.device, VK_NULL_HANDLE, 1, &createInfo, nullptr, &babyPipeline));
 
     // now we can delete the shader modules we used to create it
     vkDestroyShaderModule(gpuContext.device, vertexShaderModule, nullptr);

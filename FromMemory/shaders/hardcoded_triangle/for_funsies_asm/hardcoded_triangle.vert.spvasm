@@ -1,0 +1,58 @@
+; SPIR-V
+; Version: 1.5
+; Generator: Khronos Slang Compiler; 0
+; Bound: 36
+; Schema: 0
+OpCapability DrawParameters
+OpCapability Shader
+OpMemoryModel Logical GLSL450
+OpEntryPoint Vertex %vertexMain "main" %gl_Position %gl_VertexIndex %14
+
+; Debug Information
+OpSource Slang 1
+OpName %vertexMain "vertexMain"                     ; id %2
+
+; Annotations
+OpDecorate %14 BuiltIn BaseVertex
+OpDecorate %gl_VertexIndex BuiltIn VertexIndex
+OpDecorate %gl_Position BuiltIn Position
+
+; Types, variables and constants
+%void = OpTypeVoid
+%3 = OpTypeFunction %void
+%float = OpTypeFloat 32
+%v4float = OpTypeVector %float 4
+%int = OpTypeInt 32 1
+%int_3 = OpConstant %int 3
+%_arr_v4float_int_3 = OpTypeArray %v4float %int_3
+%_ptr_Function__arr_v4float_int_3 = OpTypePointer Function %_arr_v4float_int_3
+%_ptr_Input_int = OpTypePointer Input %int
+%uint = OpTypeInt 32 0
+%float_n0_5 = OpConstant %float -0.5
+%float_0 = OpConstant %float 0
+%float_1 = OpConstant %float 1
+%21 = OpConstantComposite %v4float %float_n0_5 %float_n0_5 %float_0 %float_1
+%float_0_5 = OpConstant %float 0.5
+%25 = OpConstantComposite %v4float %float_0_5 %float_n0_5 %float_0 %float_1
+%27 = OpConstantComposite %v4float %float_0 %float_0_5 %float_0 %float_1
+%20 = OpConstantComposite %_arr_v4float_int_3 %21 %25 %27
+%_ptr_Function_v4float = OpTypePointer Function %v4float
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+%14 = OpVariable %_ptr_Input_int Input              ; BuiltIn BaseVertex
+%gl_VertexIndex = OpVariable %_ptr_Input_int Input  ; BuiltIn VertexIndex
+%gl_Position = OpVariable %_ptr_Output_v4float Output   ; BuiltIn Position
+
+; Function vertexMain
+%vertexMain = OpFunction %void None %3
+%4 = OpLabel
+%11 = OpVariable %_ptr_Function__arr_v4float_int_3 Function
+%12 = OpLoad %int %14
+%15 = OpLoad %int %gl_VertexIndex
+%17 = OpISub %int %15 %12
+%19 = OpBitcast %uint %17
+OpStore %11 %20
+%30 = OpAccessChain %_ptr_Function_v4float %11 %19
+%31 = OpLoad %v4float %30
+OpStore %gl_Position %31
+OpReturn
+OpFunctionEnd
