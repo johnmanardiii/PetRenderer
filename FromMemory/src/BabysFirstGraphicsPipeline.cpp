@@ -59,8 +59,24 @@ BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo(GpuContext &g
     VkPipelineViewportStateCreateInfo viewportStateCreateInfo =
     {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
-
+        .viewportCount = 1,
+        .pViewports = nullptr, // going to use dynamic state for viewport size
+        .scissorCount = 1,
+        .pScissors = nullptr// guess I am also going to make this dynamic
     };
+
+    VkDynamicState viewportDynamicStates[2] = {
+        VK_DYNAMIC_STATE_VIEWPORT,
+        VK_DYNAMIC_STATE_SCISSOR
+    };
+
+    VkPipelineDynamicStateCreateInfo dynamicStates = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
+        .dynamicStateCount = 2, // for now
+        .pDynamicStates = viewportDynamicStates
+    };
+
+    // up next, rasterization state and a significant amount of trips through the graphics pipeline with notes
 
     VkGraphicsPipelineCreateInfo createInfo = {
         .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
@@ -70,6 +86,9 @@ BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo(GpuContext &g
         .pVertexInputState = &vertexInputState,
         .pInputAssemblyState = &inputAssemblyState,
         .pTessellationState = nullptr, // don't think I need this if I don't have tesselation.
+        .pViewportState = &viewportStateCreateInfo,
+
+        .pDynamicState = &dynamicStates
     };
 
     VkPipeline babyPipeline = VK_NULL_HANDLE;
