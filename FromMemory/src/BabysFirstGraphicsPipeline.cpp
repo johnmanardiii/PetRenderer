@@ -56,6 +56,12 @@ BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo(GpuContext &g
         .primitiveRestartEnable = VK_FALSE
     };
 
+    VkPipelineViewportStateCreateInfo viewportStateCreateInfo =
+    {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
+
+    };
+
     VkGraphicsPipelineCreateInfo createInfo = {
         .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
         .flags = 0,
@@ -63,7 +69,7 @@ BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo(GpuContext &g
         .pStages = stageInfos,
         .pVertexInputState = &vertexInputState,
         .pInputAssemblyState = &inputAssemblyState,
-        .pTessellationState = nullptr,  // don't think I need this if I don't have tesselation.
+        .pTessellationState = nullptr, // don't think I need this if I don't have tesselation.
     };
 
     VkPipeline babyPipeline = VK_NULL_HANDLE;
