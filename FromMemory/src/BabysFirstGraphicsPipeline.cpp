@@ -99,7 +99,8 @@ BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo(GpuContext &g
     VkPipelineDepthStencilStateCreateInfo depth_stencil_state_create_info =
     {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
-
+        .depthTestEnable = VK_FALSE,
+        .stencilTestEnable = VK_FALSE
     };
 
     VkGraphicsPipelineCreateInfo createInfo = {
@@ -113,6 +114,7 @@ BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo(GpuContext &g
         .pViewportState = &viewportStateCreateInfo,
         .pRasterizationState = &rasterization_state_create_info,
         .pMultisampleState = &multisample_state_create_info,
+        .pDepthStencilState = &depth_stencil_state_create_info,
         .pDynamicState = &dynamicStates
     };
 
