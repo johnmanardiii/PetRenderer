@@ -10,7 +10,6 @@ BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo(GpuContext &g
 {
     // create the layout for the pipeline
 
-
     // create the shaders we are going to use (vert and frag for now)
     VkShaderModule vertexShaderModule;
     if (!LoadShader("../shaders/hardcoded_triangle/hardcoded_triangle.vert.spv", gpuContext.device,
@@ -36,7 +35,7 @@ BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo(GpuContext &g
 
     VkPipelineShaderStageCreateInfo fragmentStageCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-        .stage = VK_SHADER_STAGE_VERTEX_BIT,
+        .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
         .module = fragmentShaderModule,
         .pName = "fragmentMain"
     };
@@ -107,17 +106,19 @@ BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo(GpuContext &g
 
     // for the only color attachment
     VkPipelineColorBlendAttachmentState color_blend_attachment_state =
-        {
-            .blendEnable = VK_FALSE,
-        };
+    {
+        .blendEnable = VK_FALSE,
+        .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT |
+                          VK_COLOR_COMPONENT_A_BIT
+    };
 
     VkPipelineColorBlendStateCreateInfo color_blend_state_create_info =
-        {
+    {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
         .logicOpEnable = VK_FALSE,
         .attachmentCount = 1,
         .pAttachments = &color_blend_attachment_state
-        };
+    };
 
     VkGraphicsPipelineCreateInfo createInfo = {
         .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
