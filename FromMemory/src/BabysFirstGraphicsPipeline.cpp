@@ -8,8 +8,10 @@
 
 BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo(GpuContext &gpuContext)
 {
-    // create the shaders we are going to use (vert and frag for now)
+    // create the layout for the pipeline
 
+
+    // create the shaders we are going to use (vert and frag for now)
     VkShaderModule vertexShaderModule;
     if (!LoadShader("../shaders/hardcoded_triangle/hardcoded_triangle.vert.spv", gpuContext.device,
                     &vertexShaderModule))
@@ -103,6 +105,20 @@ BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo(GpuContext &g
         .stencilTestEnable = VK_FALSE
     };
 
+    // for the only color attachment
+    VkPipelineColorBlendAttachmentState color_blend_attachment_state =
+        {
+            .blendEnable = VK_FALSE,
+        };
+
+    VkPipelineColorBlendStateCreateInfo color_blend_state_create_info =
+        {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
+        .logicOpEnable = VK_FALSE,
+        .attachmentCount = 1,
+        .pAttachments = &color_blend_attachment_state
+        };
+
     VkGraphicsPipelineCreateInfo createInfo = {
         .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
         .flags = 0,
@@ -115,6 +131,7 @@ BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo(GpuContext &g
         .pRasterizationState = &rasterization_state_create_info,
         .pMultisampleState = &multisample_state_create_info,
         .pDepthStencilState = &depth_stencil_state_create_info,
+        .pColorBlendState = &color_blend_state_create_info,
         .pDynamicState = &dynamicStates
     };
 
