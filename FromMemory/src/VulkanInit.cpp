@@ -240,16 +240,23 @@ std::optional<PhysicalDeviceInfo> selectPhysicalDevice(VkInstance instance, VkSu
 }
 
 // kind of hacky but for my purposes I want my project to have these
-static void AssertPhysicalDeviceHasSync2Features(VkPhysicalDevice physDevice)
+static void AssertPhysicalDeviceHasRequestedFeatures(VkPhysicalDevice physDevice)
 {
+    VkPhysicalDeviceDynamicRenderingFeatures dynRenderingFeatures = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES
+    };
+
     VkPhysicalDeviceSynchronization2Features syncFeatures = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES,
+        .pNext = &dynRenderingFeatures
     };
+
     VkPhysicalDeviceFeatures2 features2;
     features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
     features2.pNext = &syncFeatures;
     vkGetPhysicalDeviceFeatures2(physDevice, &features2);
     assert(syncFeatures.synchronization2 == VK_TRUE);
+    assert(dynRenderingFeatures.dynamicRendering == VK_TRUE);
 }
 
 // #JOHN technically this signature doesn't make any sense because we assert if the device fails to be created
@@ -258,7 +265,7 @@ VkDevice CreateLogicalDevice(VkPhysicalDevice physDevice, uint32_t queueFamilyIn
 {
     // guarantee we have sync 2 or assert on this device... could probably be part of the whole "device selection thing" #JOHN, but I
     //  am pretty sure this is gonna work OK for my needs...
-    AssertPhysicalDeviceHasSync2Features(physDevice);
+    AssertPhysicalDeviceHasRequestedFeatures(physDevice);
 
     // Ok, seems like the hard part of writing this function is getting the device create info right,
     // like querying the extensions we need ahead of time and making sure they are there and appropriately
@@ -285,25 +292,25 @@ VkDevice CreateLogicalDevice(VkPhysicalDevice physDevice, uint32_t queueFamilyIn
     // extensions we want
     // #JOHN we hardcoded swapchain extension in the physical device selector... move that to somewhere shared if you
     // even cared. technicall guaranteed to have it but not nice.
-    const std::vector<const char*> deviceExtensions = {"VK_KHR_swapchain"};
+    const std::vector<const char*> deviceExtensions = {"VK_KHR_swapchain", VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME};
     createInfo.ppEnabledExtensionNames = deviceExtensions.data();
     createInfo.enabledExtensionCount = deviceExtensions.size();
 
-    // allows for timeline semaphores
+    VkPhysicalDeviceVulkan13Features vk13Features = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
+        .synchronization2 = VK_TRUE,
+        .dynamicRendering = VK_TRUE,
+
+    };
+
+    // allows for timeline semaphore
     VkPhysicalDeviceVulkan12Features vk12features = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
+        .pNext = &vk13Features,
         .timelineSemaphore = VK_TRUE
     };
 
-    VkPhysicalDeviceSynchronization2Features sync2Enabled = {
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES,
-        .pNext = &vk12features,
-        .synchronization2 = VK_TRUE
-    };
-
-
-
-    createInfo.pNext = &sync2Enabled;
+    createInfo.pNext = &vk12features;
 
     // physical device features? gotta query this later
     VkDevice device;
