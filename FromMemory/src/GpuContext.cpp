@@ -20,6 +20,9 @@ std::optional<GpuContext> CreateGpuContext(const Platform &platform, FunctionalQ
     requiredExtensions.push_back(VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME);
     requiredExtensions.push_back(VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME);
 
+    // we want dynamic rendering
+    requiredExtensions.push_back(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
+
     // VkInstance instance = VulkanInstanceBuilder()
     //                           .SetRequiredLayers({"VK_LAYER_KHRONOS_validation"})
     //                           .SetRequiredExtensions(requiredExtensions)
