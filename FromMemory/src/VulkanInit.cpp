@@ -20,6 +20,20 @@ VKAPI_ATTR VkBool32 VKAPI_CALL DebugCreateInstanceCallback(VkDebugUtilsMessageSe
 VkInstance CreateInstance(std::vector<std::string> requiredLayers,
                           const std::vector<const char *> &requiredExtensions)
 {
+    // ensure that this device supports at least a 1.3 vulkan instance version (hard requirement for now that the
+    // instance and device are of at least this version)
+    //
+    const uint32_t instanceApiVersion = volkGetInstanceVersion();
+    // god bless volk I didn't like the get proc address thing
+    if (VK_API_VERSION_VARIANT(instanceApiVersion) != 0
+        || VK_API_VERSION_MAJOR(instanceApiVersion) != 1
+        || VK_API_VERSION_MINOR(instanceApiVersion) < 3)
+    {
+        // we need instance version at least 1.3 guaranteed
+        fmt::printf("Application requires instance version at least 1.3.\n");
+        return VK_NULL_HANDLE;
+    }
+
     // #JOHN break out all of this instance stuff into a class / funciton in
     // a different file where you can just pass a "release" bool.
     // query the layers available
@@ -190,6 +204,15 @@ std::optional<PhysicalDeviceInfo> selectPhysicalDevice(VkInstance instance, VkSu
         VkPhysicalDevice device = physicalDevices[physicalDeviceIndex];
         vkGetPhysicalDeviceProperties2(device, &physicalDeviceProperties);
 
+        // let's also make sure that this physical device also supports at least vulkan 1.3
+        const uint32_t physDeviceApiVersion = physicalDeviceProperties.properties.apiVersion;
+        if (VK_API_VERSION_VARIANT(physDeviceApiVersion) != 0
+            || VK_API_VERSION_MAJOR(physDeviceApiVersion) != 1
+            || VK_API_VERSION_MINOR(physDeviceApiVersion) < 3)
+        {
+            continue;   // we require at least version 1.3
+        }
+
         // ensure that the physical device works with the swapchain extension, if not return early
         // #JOHN this could very well be some "shared guarantee" between physical and logical and honestly
         // the entire program itself if it ends up being more than just the swapchain extension
@@ -292,7 +315,7 @@ VkDevice CreateLogicalDevice(VkPhysicalDevice physDevice, uint32_t queueFamilyIn
     // extensions we want
     // #JOHN we hardcoded swapchain extension in the physical device selector... move that to somewhere shared if you
     // even cared. technicall guaranteed to have it but not nice.
-    const std::vector<const char*> deviceExtensions = {"VK_KHR_swapchain", VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME};
+    const std::vector<const char *> deviceExtensions = {"VK_KHR_swapchain", VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME};
     createInfo.ppEnabledExtensionNames = deviceExtensions.data();
     createInfo.enabledExtensionCount = deviceExtensions.size();
 
