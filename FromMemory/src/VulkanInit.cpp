@@ -315,7 +315,7 @@ VkDevice CreateLogicalDevice(VkPhysicalDevice physDevice, uint32_t queueFamilyIn
     // extensions we want
     // #JOHN we hardcoded swapchain extension in the physical device selector... move that to somewhere shared if you
     // even cared. technicall guaranteed to have it but not nice.
-    const std::vector<const char *> deviceExtensions = {"VK_KHR_swapchain", VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME};
+    const std::vector<const char *> deviceExtensions = {"VK_KHR_swapchain"};
     createInfo.ppEnabledExtensionNames = deviceExtensions.data();
     createInfo.enabledExtensionCount = deviceExtensions.size();
 
@@ -323,7 +323,6 @@ VkDevice CreateLogicalDevice(VkPhysicalDevice physDevice, uint32_t queueFamilyIn
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
         .synchronization2 = VK_TRUE,
         .dynamicRendering = VK_TRUE,
-
     };
 
     // allows for timeline semaphore
