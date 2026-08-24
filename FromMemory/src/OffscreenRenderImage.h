@@ -23,7 +23,7 @@ struct OffscreenRenderImageInfo
     VkExtent2D extent;
     VkImageView offscreenImageView = VK_NULL_HANDLE;
     VkImage offscreenImage = VK_NULL_HANDLE;
-
+    VkFormat offscreenImageFormat;
     VmaAllocation allocation = VK_NULL_HANDLE;
 };
 
@@ -32,7 +32,7 @@ struct OffscreenRenderImageInfo
 // to construct that it could maybe be useful./
 // oh woah big fan of how this is pass around by value... hole mole
 OffscreenRenderImageInfo createOffscreenRenderImageInfo(VkDevice device, VkExtent2D swapchainExtent,
-                                                        VmaAllocator allocator);
+                                                        VmaAllocator allocator, VkFormat offscreenImageFormat);
 
 void DestroyOffscreenRenderImageInfo(VkDevice device, OffscreenRenderImageInfo &offscreenRenderImageInfo, VmaAllocator allocator);
 

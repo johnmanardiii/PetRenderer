@@ -66,13 +66,13 @@ VulkanEngine::VulkanEngine(Platform inPlatform, GpuContext inGpuContext, VmaAllo
                            VkExtent2D inInitialExtent,
                            ScopedFunctionalQueue &&inDeletionQueue)
     : platform(inPlatform), gpuContext(inGpuContext), vmaAllocator(inVmaAllocator),
-// #JOHN - this "gpu context ref" is super duper dangerous seeming and a bad pattern...
-// should read modern C++ design...
+      // #JOHN - this "gpu context ref" is super duper dangerous seeming and a bad pattern...
+      // should read modern C++ design...
       swapchainResources(gpuContext, inInitialExtent), deletionQueue(std::move(inDeletionQueue))
 
 {
     deletionQueue.Register([this] {
-       swapchainResources.ReleaseSwapchainResources();
+        swapchainResources.ReleaseSwapchainResources();
     });
 }
 
@@ -90,13 +90,12 @@ bool VulkanEngine::init()
         DestroyPipelineObjects(gpuContext.device, pipelineObjects);
     });
 
-    // babysFirstGraphicsPipelineInfo = CreateBabysFirstGraphicsPipelineInfo(gpuContext);
-
     VkExtent2D initialOffscreenRenderImage = {.width = static_cast<uint32_t>(width),
                                               .height = static_cast<uint32_t>(height)};
 
     offscreenRenderImageInfo =
-        createOffscreenRenderImageInfo(gpuContext.device, initialOffscreenRenderImage, vmaAllocator);
+        createOffscreenRenderImageInfo(gpuContext.device, initialOffscreenRenderImage, vmaAllocator,
+                                       VK_FORMAT_R16G16B16A16_SFLOAT);
 
     deletionQueue.Register(
         [this] {
@@ -109,6 +108,11 @@ bool VulkanEngine::init()
 
     deletionQueue.Register([this] {
         DestroyDescriptorInformation(gpuContext.device, descriptorInfo);
+    });
+
+    babysFirstGraphicsPipelineInfo = CreateBabysFirstGraphicsPipelineInfo(gpuContext, offscreenRenderImageInfo);
+    deletionQueue.Register([this] {
+        DestroyBabysFirstGraphicsPipelineInfo(gpuContext, babysFirstGraphicsPipelineInfo);
     });
 
     frameInFlightStructures = CreateFrameInFlightStructures(
@@ -399,7 +403,9 @@ void VulkanEngine::ResizeOffscreenRenderTarget()
     // swapchain resize -> create new ones -> mark old ones as retired -> top of frame where no longer in use delete
     DestroyOffscreenRenderImageInfo(gpuContext.device, offscreenRenderImageInfo, vmaAllocator);
 
+    // maybe this should be stored in something idk. (repeated format is red flag-y)
     offscreenRenderImageInfo =
-        createOffscreenRenderImageInfo(gpuContext.device, swapchainResources.GetExtent(), vmaAllocator);
+        createOffscreenRenderImageInfo(gpuContext.device, swapchainResources.GetExtent(), vmaAllocator,
+                                       VK_FORMAT_R16G16B16A16_SFLOAT);
     UpdateOffscreenRenderImageDescriptorSet(gpuContext.device, offscreenRenderImageInfo, descriptorInfo.descriptorSet);
 }

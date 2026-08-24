@@ -17,10 +17,11 @@ void DestroyOffscreenRenderImageInfo(VkDevice device, OffscreenRenderImageInfo &
 }
 
 OffscreenRenderImageInfo createOffscreenRenderImageInfo(VkDevice device, VkExtent2D swapchainExtent,
-                                                        VmaAllocator allocator)
+                                                        VmaAllocator allocator, VkFormat offscreenImageFormat)
 {
     OffscreenRenderImageInfo offscreenRenderImageInfo;
 
+    offscreenRenderImageInfo.offscreenImageFormat = offscreenImageFormat;
     offscreenRenderImageInfo.extent = swapchainExtent;
 
     VkImageCreateInfo imgCreateInfo = {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
@@ -30,7 +31,7 @@ OffscreenRenderImageInfo createOffscreenRenderImageInfo(VkDevice device, VkExten
     imgCreateInfo.extent.depth = 1;
     imgCreateInfo.mipLevels = 1;
     imgCreateInfo.arrayLayers = 1;
-    imgCreateInfo.format = VK_FORMAT_R16G16B16A16_SFLOAT;
+    imgCreateInfo.format = offscreenImageFormat;
     imgCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
     imgCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     imgCreateInfo.usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT |

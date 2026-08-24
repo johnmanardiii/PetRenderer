@@ -14,16 +14,17 @@
  *  Trying not to take myself too seriously and just get a triangle on screen here
  */
 
+struct OffscreenRenderImageInfo;
+
 struct BabyFirstGraphicsPipelineInfo
 {
-
+    VkPipelineLayout graphicsPipelineLayout;
+    VkPipeline graphicsPipeline;
 };
 
-BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo(GpuContext& gpuContext);
+BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo(GpuContext& gpuContext, const OffscreenRenderImageInfo& offscreen_render_image_info);
 
-
-
-void DestroyBabysFirstGraphicsPipelineInfo();
+void DestroyBabysFirstGraphicsPipelineInfo(GpuContext& gpuContext, BabyFirstGraphicsPipelineInfo& pipeline_info);
 
 
 

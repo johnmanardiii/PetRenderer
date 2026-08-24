@@ -4,11 +4,20 @@
 
 #include "BabysFirstGraphicsPipeline.h"
 
+#include "OffscreenRenderImage.h"
 #include "ShaderLoader.h"
 
-BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo(GpuContext &gpuContext)
+BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo(GpuContext &gpuContext, const OffscreenRenderImageInfo& offscreen_render_image_info)
 {
     // create the layout for the pipeline
+    VkPipelineLayoutCreateInfo pipeline_layout_create_info =
+    {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+        .setLayoutCount = 0
+    };
+
+    VkPipelineLayout graphicsPipelineLayout;
+    vkchk(vkCreatePipelineLayout(gpuContext.device, &pipeline_layout_create_info, nullptr, &graphicsPipelineLayout));
 
     // create the shaders we are going to use (vert and frag for now)
     VkShaderModule vertexShaderModule;
@@ -22,7 +31,7 @@ BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo(GpuContext &g
         .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
         .stage = VK_SHADER_STAGE_VERTEX_BIT,
         .module = vertexShaderModule,
-        .pName = "vertexMain"
+        .pName = "main"
     };
 
     // fragment shader create info
@@ -37,7 +46,7 @@ BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo(GpuContext &g
         .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
         .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
         .module = fragmentShaderModule,
-        .pName = "fragmentMain"
+        .pName = "main"
     };
 
     // create the pipeline
@@ -86,7 +95,8 @@ BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo(GpuContext &g
         .polygonMode = VK_POLYGON_MODE_FILL,
         .frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE, // forgot what is standard here
         .depthBiasEnable = VK_FALSE, // don't want this for now
-        // other things can go here but I don't care about them right now
+        // other things can go here but I don't care about them right now, except for this linewidth thing
+        .lineWidth = 1.0f
     };
 
     VkPipelineMultisampleStateCreateInfo multisample_state_create_info = {
@@ -120,8 +130,20 @@ BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo(GpuContext &g
         .pAttachments = &color_blend_attachment_state
     };
 
+    VkFormat colorAttachmentFormat = offscreen_render_image_info.offscreenImageFormat;
+
+    VkPipelineRenderingCreateInfo rendering_create_info = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
+        .viewMask = 0,
+        .colorAttachmentCount = 1,
+        .pColorAttachmentFormats = &colorAttachmentFormat,
+        .depthAttachmentFormat = VK_FORMAT_UNDEFINED,
+        .stencilAttachmentFormat = VK_FORMAT_UNDEFINED
+    };
+
     VkGraphicsPipelineCreateInfo createInfo = {
         .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+        .pNext = &rendering_create_info,
         .flags = 0,
         .stageCount = 2,
         .pStages = stageInfos,
@@ -133,7 +155,8 @@ BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo(GpuContext &g
         .pMultisampleState = &multisample_state_create_info,
         .pDepthStencilState = &depth_stencil_state_create_info,
         .pColorBlendState = &color_blend_state_create_info,
-        .pDynamicState = &dynamicStates
+        .pDynamicState = &dynamicStates,
+        .layout = graphicsPipelineLayout,
     };
 
     VkPipeline babyPipeline = VK_NULL_HANDLE;
@@ -145,9 +168,14 @@ BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo(GpuContext &g
     vkDestroyShaderModule(gpuContext.device, vertexShaderModule, nullptr);
     vkDestroyShaderModule(gpuContext.device, fragmentShaderModule, nullptr);
 
-    return BabyFirstGraphicsPipelineInfo();
+    return {
+        .graphicsPipelineLayout = graphicsPipelineLayout,
+        .graphicsPipeline = babyPipeline
+    };
 }
 
-void DestroyBabysFirstGraphicsPipelineInfo()
+void DestroyBabysFirstGraphicsPipelineInfo(GpuContext& gpuContext, BabyFirstGraphicsPipelineInfo& pipeline_info)
 {
+    vkDestroyPipeline(gpuContext.device, pipeline_info.graphicsPipeline, nullptr);
+    vkDestroyPipelineLayout(gpuContext.device, pipeline_info.graphicsPipelineLayout, nullptr);
 }

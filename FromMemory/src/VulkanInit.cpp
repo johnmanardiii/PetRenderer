@@ -210,7 +210,7 @@ std::optional<PhysicalDeviceInfo> selectPhysicalDevice(VkInstance instance, VkSu
             || VK_API_VERSION_MAJOR(physDeviceApiVersion) != 1
             || VK_API_VERSION_MINOR(physDeviceApiVersion) < 3)
         {
-            continue;   // we require at least version 1.3
+            continue; // we require at least version 1.3
         }
 
         // ensure that the physical device works with the swapchain extension, if not return early
@@ -263,6 +263,9 @@ std::optional<PhysicalDeviceInfo> selectPhysicalDevice(VkInstance instance, VkSu
 }
 
 // kind of hacky but for my purposes I want my project to have these
+// WAIT SHOULD THESE BE CHECKED AT THE PHYSICAL DEVICE SELECTION WHAT
+// #JOHN - when I get back move this to that... section what are you doing dude.
+// also next time you ad this use the "13 parameters" type thing it seems way easier to check instead of chaining all this
 static void AssertPhysicalDeviceHasRequestedFeatures(VkPhysicalDevice physDevice)
 {
     VkPhysicalDeviceDynamicRenderingFeatures dynRenderingFeatures = {
@@ -274,12 +277,21 @@ static void AssertPhysicalDeviceHasRequestedFeatures(VkPhysicalDevice physDevice
         .pNext = &dynRenderingFeatures
     };
 
+    VkPhysicalDeviceShaderDrawParametersFeatures draw_parameters_features =
+    {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_DRAW_PARAMETERS_FEATURES,
+        .pNext = &syncFeatures
+    };
+
     VkPhysicalDeviceFeatures2 features2;
     features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
-    features2.pNext = &syncFeatures;
+    features2.pNext = &draw_parameters_features;
     vkGetPhysicalDeviceFeatures2(physDevice, &features2);
+
+    // when you move this to physical device selection, && these together dude
     assert(syncFeatures.synchronization2 == VK_TRUE);
     assert(dynRenderingFeatures.dynamicRendering == VK_TRUE);
+    assert(draw_parameters_features.shaderDrawParameters == VK_TRUE);
 }
 
 // #JOHN technically this signature doesn't make any sense because we assert if the device fails to be created
@@ -332,7 +344,13 @@ VkDevice CreateLogicalDevice(VkPhysicalDevice physDevice, uint32_t queueFamilyIn
         .timelineSemaphore = VK_TRUE
     };
 
-    createInfo.pNext = &vk12features;
+    VkPhysicalDeviceVulkan11Features vk_physical_device11_features = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
+        .pNext = &vk12features,
+        .shaderDrawParameters = VK_TRUE,
+    };
+
+    createInfo.pNext = &vk_physical_device11_features;
 
     // physical device features? gotta query this later
     VkDevice device;
