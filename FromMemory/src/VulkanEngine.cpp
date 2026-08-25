@@ -215,6 +215,9 @@ void VulkanEngine::RenderToOffscreenImage(VkCommandBuffer commandBuffer)
         .image = offscreenRenderImageInfo.offscreenImage,
     });
 
+    // bind the graphics pipeline
+    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, babysFirstGraphicsPipelineInfo.graphicsPipeline);
+
     VkRenderingAttachmentInfo color_attachment_info = {
         .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
         .imageView = offscreenRenderImageInfo.offscreenImageView,
