@@ -203,14 +203,65 @@ void VulkanEngine::RenderToOffscreenImage(VkCommandBuffer commandBuffer)
     auto [width, height] = offscreenRenderImageInfo.extent;
     vkCmdDispatch(commandBuffer, ceil(width / 16.0), ceil(height / 16.0), 1);
 
-    // after the offscreen image has been written to, convert it to be transferred over to the swapchain image
+    // wait for the compute pass to finish writing to it and then transition to a color attachment
     TransitionVkImageFormat({
         .cmd = commandBuffer,
         .srcStageMask = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
         .srcAccessMask = VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT,
+        .dstStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+        .dstAccessMask = VK_ACCESS_2_SHADER_READ_BIT,
+        .oldLayout = VK_IMAGE_LAYOUT_GENERAL,
+        .newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        .image = offscreenRenderImageInfo.offscreenImage,
+    });
+
+    VkRenderingAttachmentInfo color_attachment_info = {
+        .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+        .imageView = offscreenRenderImageInfo.offscreenImageView,
+        .imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD, // even tho we don't really need to know this
+        .storeOp = VK_ATTACHMENT_STORE_OP_STORE
+    };
+    VkRenderingInfo rendering_info = {
+        .sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
+        .renderArea = {{0, 0}, {offscreenRenderImageInfo.extent}},
+        .layerCount = 1,
+        .colorAttachmentCount = 1,
+        .pColorAttachments = &color_attachment_info
+    };
+
+    vkCmdBeginRendering(commandBuffer, &rendering_info);
+
+    // set dynamic viewport state.
+    // #JOHN - weirdly... I am forgetting how the depth buffer works down to the NDC space here...
+    VkViewport viewport = {
+        .x = 0.0f,
+        .y = 0.0f,
+        .width = static_cast<float>(offscreenRenderImageInfo.extent.width),
+        .height = static_cast<float>(offscreenRenderImageInfo.extent.height),
+        .minDepth = 0.0f,
+        .maxDepth = 1.0f
+    };
+    vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+    VkRect2D scissor = {
+        {.x = 0, .y = 0},
+        offscreenRenderImageInfo.extent
+    };
+    vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+
+    // draw here
+    vkCmdDraw(commandBuffer, 3, 1, 0, 0);
+
+    vkCmdEndRendering(commandBuffer);
+
+    // after the offscreen image has been written to, convert it to be transferred over to the swapchain image
+    TransitionVkImageFormat({
+        .cmd = commandBuffer,
+        .srcStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+        .srcAccessMask = VK_ACCESS_2_SHADER_WRITE_BIT,
         .dstStageMask = VK_PIPELINE_STAGE_2_BLIT_BIT,
         .dstAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT,
-        .oldLayout = VK_IMAGE_LAYOUT_GENERAL,
+        .oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
         .newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
         .image = offscreenRenderImageInfo.offscreenImage,
     });
