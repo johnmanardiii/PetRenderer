@@ -309,6 +309,7 @@ VulkanSwapchainResources::~VulkanSwapchainResources()
 
 bool VulkanSwapchainResources::Recreate()
 {
+    // going to try not to have it wait for idle that's the goal
     vkDeviceWaitIdle(gpuContext.device);
     ReleaseSwapchainResources();
     return CreateSwapchainResources();
