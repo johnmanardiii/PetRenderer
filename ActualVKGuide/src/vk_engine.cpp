@@ -712,6 +712,30 @@ void VulkanEngine::init_imgui()
 		});
 }
 
+
+AllocatedBuffer VulkanEngine::create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage)
+{
+    // allocate buffer
+    VkBufferCreateInfo bufferInfo = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+    };
+    bufferInfo.pNext = nullptr;
+    bufferInfo.size = allocSize;
+
+    bufferInfo.usage = usage;
+
+    VmaAllocationCreateInfo vmaallocInfo = {};
+    vmaallocInfo.usage = memoryUsage;
+    vmaallocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;// what this mean
+    AllocatedBuffer newBuffer;
+
+    // allocate the buffer
+    // #JOHN - jeeeez what do i need to read vma wise to understand at a high level how this even maps to a GPU bruh
+    VK_CHECK(vmaCreateBuffer(_allocator, &bufferInfo, &vmaallocInfo, &newBuffer.buffer, &newBuffer.allocation, &newBuffer.info));
+
+    return newBuffer;
+}
+
 void VulkanEngine::draw_background(VkCommandBuffer cmd)
 {
     VkClearColorValue clearValue;
