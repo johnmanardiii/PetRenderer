@@ -34,6 +34,13 @@ struct Vertex
 
 // we are going to put this alongside here for now, even though it has a different lifetime than the pipeline itself
 
+struct StuffINeedToTrackForAVertexBuffer
+{
 
+};
+
+StuffINeedToTrackForAVertexBuffer CreateBasicVertexBuffer();
+
+void DestroyBasicVertexBuffer();
 
 #endif //BABYSFIRSTGRAPHICSPIPELINE_H

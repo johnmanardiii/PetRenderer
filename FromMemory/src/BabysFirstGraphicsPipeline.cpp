@@ -179,3 +179,10 @@ void DestroyBabysFirstGraphicsPipelineInfo(GpuContext& gpuContext, BabyFirstGrap
     vkDestroyPipeline(gpuContext.device, pipeline_info.graphicsPipeline, nullptr);
     vkDestroyPipelineLayout(gpuContext.device, pipeline_info.graphicsPipelineLayout, nullptr);
 }
+
+StuffINeedToTrackForAVertexBuffer CreateBasicVertexBuffer()
+{
+    VmaAllocationCreateInfo allocCreateInfo = {
+        .flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT |
+    };
+}
