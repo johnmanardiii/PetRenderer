@@ -182,7 +182,15 @@ void DestroyBabysFirstGraphicsPipelineInfo(GpuContext& gpuContext, BabyFirstGrap
 
 StuffINeedToTrackForAVertexBuffer CreateBasicVertexBuffer()
 {
+    // was reading over this: https://gpuopen-librariesandsdks.github.io/VulkanMemoryAllocator/html/struct_vma_allocation_create_info.html
     VmaAllocationCreateInfo allocCreateInfo = {
-        .flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT |
+        .flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
+        .usage = VMA_MEMORY_USAGE_AUTO
     };
+
+    VkBufferCreateInfo buffer_create_info =
+        {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+
+        };
 }
