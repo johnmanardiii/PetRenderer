@@ -5,6 +5,7 @@
 #ifndef BABYSFIRSTGRAPHICSPIPELINE_H
 #define BABYSFIRSTGRAPHICSPIPELINE_H
 #include "GpuContext.h"
+#include "vk_mem_alloc.h"
 
 
 /*
@@ -39,7 +40,7 @@ struct StuffINeedToTrackForAVertexBuffer
 
 };
 
-StuffINeedToTrackForAVertexBuffer CreateBasicVertexBuffer();
+StuffINeedToTrackForAVertexBuffer CreateBasicVertexBuffer(VmaAllocator vmaAllocator);
 
 void DestroyBasicVertexBuffer();
 

@@ -7,7 +7,9 @@
 #include "OffscreenRenderImage.h"
 #include "ShaderLoader.h"
 
-BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo(GpuContext &gpuContext, const OffscreenRenderImageInfo& offscreen_render_image_info)
+BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo(GpuContext &gpuContext,
+                                                                   const OffscreenRenderImageInfo &
+                                                                   offscreen_render_image_info)
 {
     // create the layout for the pipeline
     VkPipelineLayoutCreateInfo pipeline_layout_create_info =
@@ -174,14 +176,22 @@ BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo(GpuContext &g
     };
 }
 
-void DestroyBabysFirstGraphicsPipelineInfo(GpuContext& gpuContext, BabyFirstGraphicsPipelineInfo& pipeline_info)
+void DestroyBabysFirstGraphicsPipelineInfo(GpuContext &gpuContext, BabyFirstGraphicsPipelineInfo &pipeline_info)
 {
     vkDestroyPipeline(gpuContext.device, pipeline_info.graphicsPipeline, nullptr);
     vkDestroyPipelineLayout(gpuContext.device, pipeline_info.graphicsPipelineLayout, nullptr);
 }
 
-StuffINeedToTrackForAVertexBuffer CreateBasicVertexBuffer()
+StuffINeedToTrackForAVertexBuffer CreateBasicVertexBuffer(VmaAllocator vmaAllocator)
 {
+
+    float positionsAsFloats[9] =
+    {
+        -.5f, -.5f, 0.0f,
+        .5f, -.5f, 0.0f,
+        0.0f, .5f, 0.0f
+    };
+
     // was reading over this: https://gpuopen-librariesandsdks.github.io/VulkanMemoryAllocator/html/struct_vma_allocation_create_info.html
     VmaAllocationCreateInfo allocCreateInfo = {
         .flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
@@ -189,8 +199,18 @@ StuffINeedToTrackForAVertexBuffer CreateBasicVertexBuffer()
     };
 
     VkBufferCreateInfo buffer_create_info =
-        {
+    {
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+        .size = sizeof(positionsAsFloats),
+        .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, // #JOHN probably want some other ones I can't think of rn
+        .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
 
-        };
+    };
+
+    VkBuffer buffer;
+    VmaAllocation alloc;
+    VmaAllocationInfo alloc_info;
+    vkchk(vmaCreateBuffer(vmaAllocator, &buffer_create_info, &allocCreateInfo, &buffer, &alloc, &alloc_info));
+
+    // OK - left off here, need to memcpy our position data into allocinfo pMappedData
 }
