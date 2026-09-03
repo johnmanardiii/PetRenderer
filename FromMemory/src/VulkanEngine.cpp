@@ -139,7 +139,11 @@ bool VulkanEngine::init()
         vkDestroySemaphore(gpuContext.device, globalTimelineSemaphore, nullptr);
     });
 
-    StuffINeedToTrackForAVertexBuffer vertexBufferStuff = CreateBasicVertexBuffer(vmaAllocator);
+    vertexBufferInfo = CreateBasicVertexBuffer(vmaAllocator);
+
+    deletionQueue.Register([this] {
+        DestroyBasicVertexBuffer(vmaAllocator, vertexBufferInfo);
+    });
 
     return true;
 }

@@ -71,6 +71,9 @@ private:
 
     BabyFirstGraphicsPipelineInfo babysFirstGraphicsPipelineInfo;
 
+    // #JOHN - this doesn't belong here but need to track it for now
+    StuffINeedToTrackForAVertexBuffer vertexBufferInfo;
+
     ScopedFunctionalQueue deletionQueue;
 
     uint32_t currentFrame = 0; // always incrementing, doesn't loop around w/ modulo

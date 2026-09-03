@@ -44,6 +44,6 @@ struct StuffINeedToTrackForAVertexBuffer
 
 StuffINeedToTrackForAVertexBuffer CreateBasicVertexBuffer(VmaAllocator vmaAllocator);
 
-void DestroyBasicVertexBuffer();
+void DestroyBasicVertexBuffer(VmaAllocator vmaAllocator, StuffINeedToTrackForAVertexBuffer& vertexInfo);
 
 #endif //BABYSFIRSTGRAPHICSPIPELINE_H

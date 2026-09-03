@@ -207,14 +207,19 @@ StuffINeedToTrackForAVertexBuffer CreateBasicVertexBuffer(VmaAllocator vmaAlloca
 
     };
 
-    VkBuffer buffer;
-    VmaAllocation alloc;
-    VmaAllocationInfo alloc_info;
-    vkchk(vmaCreateBuffer(vmaAllocator, &buffer_create_info, &allocCreateInfo, &buffer, &alloc, &alloc_info));
+    StuffINeedToTrackForAVertexBuffer returnVal;
 
-    memcpy(alloc_info.pMappedData, &positionsAsFloats, sizeof(positionsAsFloats));
+    vkchk(vmaCreateBuffer(vmaAllocator, &buffer_create_info, &allocCreateInfo, &returnVal.vertexBuffer,
+        &returnVal.vertexBufferAlloc, &returnVal.vertexBufferAllocInfo));
+
+    memcpy(returnVal.vertexBufferAllocInfo.pMappedData, &positionsAsFloats, sizeof(positionsAsFloats));
 
     // now the vertex buffer contains the data...
 
-    return {};
+    return returnVal;
+}
+
+void DestroyBasicVertexBuffer(VmaAllocator vmaAllocator, StuffINeedToTrackForAVertexBuffer &vertexInfo)
+{
+    vmaDestroyBuffer(vmaAllocator, vertexInfo.vertexBuffer, vertexInfo.vertexBufferAlloc);
 }
