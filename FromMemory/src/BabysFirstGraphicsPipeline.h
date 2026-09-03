@@ -37,7 +37,9 @@ struct Vertex
 
 struct StuffINeedToTrackForAVertexBuffer
 {
-
+    VkBuffer vertexBuffer;
+    VmaAllocation vertexBufferAlloc;
+    VmaAllocationInfo vertexBufferAllocInfo;
 };
 
 StuffINeedToTrackForAVertexBuffer CreateBasicVertexBuffer(VmaAllocator vmaAllocator);

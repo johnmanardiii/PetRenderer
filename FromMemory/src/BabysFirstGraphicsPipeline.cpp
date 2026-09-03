@@ -212,5 +212,9 @@ StuffINeedToTrackForAVertexBuffer CreateBasicVertexBuffer(VmaAllocator vmaAlloca
     VmaAllocationInfo alloc_info;
     vkchk(vmaCreateBuffer(vmaAllocator, &buffer_create_info, &allocCreateInfo, &buffer, &alloc, &alloc_info));
 
-    // OK - left off here, need to memcpy our position data into allocinfo pMappedData
+    memcpy(alloc_info.pMappedData, &positionsAsFloats, sizeof(positionsAsFloats));
+
+    // now the vertex buffer contains the data...
+
+    return {};
 }
