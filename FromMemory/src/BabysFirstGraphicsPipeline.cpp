@@ -23,7 +23,7 @@ BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo(GpuContext &g
 
     // create the shaders we are going to use (vert and frag for now)
     VkShaderModule vertexShaderModule;
-    if (!LoadShader("../shaders/hardcoded_triangle/hardcoded_triangle.vert.spv", gpuContext.device,
+    if (!LoadShader("../shaders/vertex_buffer_triangle/vertex_buffer_triangle.vert.spv", gpuContext.device,
                     &vertexShaderModule))
     {
         assert(false);
@@ -38,7 +38,7 @@ BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo(GpuContext &g
 
     // fragment shader create info
     VkShaderModule fragmentShaderModule;
-    if (!LoadShader("../shaders/hardcoded_triangle/hardcoded_triangle.frag.spv", gpuContext.device,
+    if (!LoadShader("../shaders/vertex_buffer_triangle/vertex_buffer_triangle.frag.spv", gpuContext.device,
                     &fragmentShaderModule))
     {
         assert(false);
@@ -58,9 +58,26 @@ BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo(GpuContext &g
         fragmentStageCreateInfo
     };
 
-    // vertex input state create info... I don't think i'll describe anything here just yet and pray it is something I can put off for later
+    VkVertexInputBindingDescription binding_description{};
+    binding_description.binding = 0;
+    binding_description.stride = sizeof(Vertex);
+    binding_description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+    VkVertexInputAttributeDescription attribute_description =
+    {
+        .location = 0, // #JOHN - still not fully sure how to appropriatly connect this to slang
+        .binding = 0,
+        .format = VK_FORMAT_R32G32B32_SFLOAT,
+        .offset = offsetof(Vertex, x)
+    };
+
     VkPipelineVertexInputStateCreateInfo vertexInputState = {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO};
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+        .vertexBindingDescriptionCount = 1,
+        .pVertexBindingDescriptions = &binding_description,
+        .vertexAttributeDescriptionCount = 1,
+        .pVertexAttributeDescriptions = &attribute_description
+    };
 
     VkPipelineInputAssemblyStateCreateInfo inputAssemblyState = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
@@ -187,9 +204,9 @@ StuffINeedToTrackForAVertexBuffer CreateBasicVertexBuffer(VmaAllocator vmaAlloca
 
     float positionsAsFloats[9] =
     {
-        -.5f, -.5f, 0.0f,
-        .5f, -.5f, 0.0f,
-        0.0f, .5f, 0.0f
+        -.5f, .5f, 0.0f,
+        .5f, .5f, 0.0f,
+        0.0f, -.5f, 0.0f
     };
 
     // was reading over this: https://gpuopen-librariesandsdks.github.io/VulkanMemoryAllocator/html/struct_vma_allocation_create_info.html
@@ -210,7 +227,7 @@ StuffINeedToTrackForAVertexBuffer CreateBasicVertexBuffer(VmaAllocator vmaAlloca
     StuffINeedToTrackForAVertexBuffer returnVal;
 
     vkchk(vmaCreateBuffer(vmaAllocator, &buffer_create_info, &allocCreateInfo, &returnVal.vertexBuffer,
-        &returnVal.vertexBufferAlloc, &returnVal.vertexBufferAllocInfo));
+                          &returnVal.vertexBufferAlloc, &returnVal.vertexBufferAllocInfo));
 
     memcpy(returnVal.vertexBufferAllocInfo.pMappedData, &positionsAsFloats, sizeof(positionsAsFloats));
 

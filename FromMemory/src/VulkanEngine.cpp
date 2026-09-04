@@ -259,7 +259,8 @@ void VulkanEngine::RenderToOffscreenImage(VkCommandBuffer commandBuffer)
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
     // bind vertex buffer b4 drawing
-    vkCmdBindVertexBuffers(commandBuffer, );
+    VkDeviceSize offsets[] = {0};    // no idea what this is doing #JOHN or when I would actually use it
+    vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBufferInfo.vertexBuffer, offsets);
 
     // draw here
     vkCmdDraw(commandBuffer, 3, 1, 0, 0);
