@@ -258,6 +258,9 @@ void VulkanEngine::RenderToOffscreenImage(VkCommandBuffer commandBuffer)
     };
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
+    // bind vertex buffer b4 drawing
+    vkCmdBindVertexBuffers(commandBuffer, );
+
     // draw here
     vkCmdDraw(commandBuffer, 3, 1, 0, 0);
 
