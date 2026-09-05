@@ -1,6 +1,7 @@
 
 struct VSInput
 {
+// #JOHN - is there a way to do it without this vk location thing?
     [[vk::location(0)]] float3 Pos;
 };
 
