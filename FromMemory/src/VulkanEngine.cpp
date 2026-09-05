@@ -4,9 +4,6 @@
 // #JOHN - for now engine will be the one that defines the mem allocator but eventually this should probably be
 // somewhere else #JOHN - this include order is touchy... should maybe be outside of here.
 #include <volk.h>
-#define VMA_IMPLEMENTATION
-#include "vk_mem_alloc.h"
-
 #include "VulkanEngine.h"
 
 #include "OffscreenRenderImage.h"

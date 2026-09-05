@@ -28,3 +28,4 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(volk)
 
 include(imgui.cmake)
+include(vma.cmake)
