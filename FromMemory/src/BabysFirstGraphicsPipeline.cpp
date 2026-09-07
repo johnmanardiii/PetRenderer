@@ -6,6 +6,7 @@
 
 #include "OffscreenRenderImage.h"
 #include "ShaderLoader.h"
+#include "Vector3D.h"
 
 BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo(GpuContext &gpuContext,
                                                                    const OffscreenRenderImageInfo &
@@ -201,13 +202,7 @@ void DestroyBabysFirstGraphicsPipelineInfo(GpuContext &gpuContext, BabyFirstGrap
 
 StuffINeedToTrackForAVertexBuffer CreateBasicVertexBuffer(VmaAllocator vmaAllocator)
 {
-
-    float positionsAsFloats[9] =
-    {
-        -.5f, .5f, 0.0f,
-        .5f, .5f, 0.0f,
-        0.0f, -.5f, 0.0f
-    };
+    Vector3D positions[3] = {{-.5f, .5f, 0.0f}, {.5f, .5f, 0.0f}, {0.0f, -.5f, 0.0f}};
 
     // was reading over this: https://gpuopen-librariesandsdks.github.io/VulkanMemoryAllocator/html/struct_vma_allocation_create_info.html
     VmaAllocationCreateInfo allocCreateInfo = {
@@ -218,7 +213,7 @@ StuffINeedToTrackForAVertexBuffer CreateBasicVertexBuffer(VmaAllocator vmaAlloca
     VkBufferCreateInfo buffer_create_info =
     {
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-        .size = sizeof(positionsAsFloats),
+        .size = sizeof(positions),
         .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, // #JOHN probably want some other ones I can't think of rn
         .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
 
@@ -229,7 +224,7 @@ StuffINeedToTrackForAVertexBuffer CreateBasicVertexBuffer(VmaAllocator vmaAlloca
     vkchk(vmaCreateBuffer(vmaAllocator, &buffer_create_info, &allocCreateInfo, &returnVal.vertexBuffer,
                           &returnVal.vertexBufferAlloc, &returnVal.vertexBufferAllocInfo));
 
-    memcpy(returnVal.vertexBufferAllocInfo.pMappedData, &positionsAsFloats, sizeof(positionsAsFloats));
+    memcpy(returnVal.vertexBufferAllocInfo.pMappedData, &positions, sizeof(positions));
 
     // now the vertex buffer contains the data...
 

@@ -27,6 +27,8 @@ target_sources(PetRenderer PRIVATE
 
         BabysFirstGraphicsPipeline.cpp
         BabysFirstGraphicsPipeline.h
+
+        Vector3D.h
 )
 
 target_include_directories(PetRenderer PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
