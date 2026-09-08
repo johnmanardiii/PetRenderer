@@ -22,4 +22,54 @@ struct Vector3D
     {
         return ((&x)[i]);
     }
+
+    Vector3D& operator*=(float s)
+    {
+        x *= s;
+        y *= s;
+        z *= s;
+        return *this;
+    }
+
+    Vector3D& operator/=(float s)
+    {
+        x /= s;
+        y /= s;
+        z /= s;
+        return *this;
+    }
 };
+
+inline Vector3D operator*(const Vector3D& v, float s)
+{
+    return
+    {
+        v.x *s, v.y *s, v.z * s
+    };
+}
+
+inline Vector3D operator*(float s, const Vector3D &v)
+{
+    return v * s;
+}
+
+inline Vector3D operator/(const Vector3D &v, float s)
+{
+    s = 1.0F / s;
+    return v * s;
+}
+
+inline Vector3D operator-(const Vector3D& v)
+{
+    return {-v.x, -v.y, -v.z};
+}
+
+inline float Magnitude(const Vector3D& v)
+{
+    return (sqrt(v.x * v.x + v.y * v.y + v.z * v.z));
+}
+
+inline Vector3D Normalize(const Vector3D& v)
+{
+    return v / Magnitude(v);
+}
