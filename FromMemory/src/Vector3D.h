@@ -73,3 +73,5 @@ inline Vector3D Normalize(const Vector3D& v)
 {
     return v / Magnitude(v);
 }
+
+// just making a little change for now will come back to this
