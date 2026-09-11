@@ -77,3 +77,5 @@ inline Vector3D Normalize(const Vector3D& v)
 // just making a little change for now will come back to this
 
  // modifying some files while i read the math book heh
+
+// going over vector addition rn
