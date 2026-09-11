@@ -38,6 +38,22 @@ struct Vector3D
         z /= s;
         return *this;
     }
+
+    Vector3D& operator+=(const Vector3D& other)
+    {
+        x += other.x;
+        y += other.y;
+        z += other.z;
+        return *this;
+    }
+
+    Vector3D& operator-=(const Vector3D& other)
+    {
+        x -= other.x;
+        y -= other.y;
+        z -= other.z;
+        return *this;
+    }
 };
 
 inline Vector3D operator*(const Vector3D& v, float s)
@@ -62,6 +78,19 @@ inline Vector3D operator/(const Vector3D &v, float s)
 inline Vector3D operator-(const Vector3D& v)
 {
     return {-v.x, -v.y, -v.z};
+}
+
+inline Vector3D operator+(const Vector3D& rhs, const Vector3D& lhs)
+{
+    return
+    {
+        rhs.x + lhs.x, rhs.y + lhs.y, rhs.z + lhs.z
+    };
+}
+
+inline Vector3D operator-(const Vector3D &rhs, const Vector3D &lhs)
+{
+    return {rhs.x - lhs.x, rhs.y - lhs.y, rhs.z - lhs.z};
 }
 
 inline float Magnitude(const Vector3D& v)
