@@ -108,3 +108,5 @@ inline Vector3D Normalize(const Vector3D& v)
  // modifying some files while i read the math book heh
 
 // going over vector addition rn
+
+// lowkey just installing android studio today
