@@ -68,4 +68,10 @@ public:
     }
 };
 
+// for later slang stuff: docs.shader-slang.org/en/latest/external/slang/docs/user-guide/a1-01-matrix-layout.html
+// docs.vulkan.org/guide/latest/shader_memory_layout.html
+//docs.vulkan.org/spec/latest/chapters/interfaces.html#interfaces-resources-layout
+//docs.shader-slang.org/en/latest/external/slang/docs/command-line-slangc-reference.html
+// fvk-use-scalar-layout
+
 #endif //MATRIX3D_H

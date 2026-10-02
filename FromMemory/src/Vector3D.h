@@ -103,6 +103,9 @@ inline Vector3D Normalize(const Vector3D& v)
     return v / Magnitude(v);
 }
 
+static_assert(sizeof(Vector3D) == 3 * sizeof(float));
+static_assert(alignof(Vector3D) == alignof(float));
+
 // just making a little change for now will come back to this
 
  // modifying some files while i read the math book heh
