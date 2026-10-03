@@ -68,6 +68,32 @@ public:
     }
 };
 
+Matrix3D operator*(const Matrix3D& A, const Matrix3D& B)
+{
+    return Matrix3D(
+        A(0, 0) * B(0, 0) + A(0, 1) * B(1, 0) + A(0, 2) * B(2, 0),
+        A(0, 0) * B(0, 1) + A(0, 1) * B(1, 1) + A(0, 2) * B(2, 1),
+        A(0, 0) * B(0, 2) + A(0, 1) * B(1, 2) + A(0, 2) * B(2, 2),
+
+        A(1, 0) * B(0, 0) + A(1, 1) * B(1, 0) + A(1, 2) * B(2, 0),
+        A(1, 0) * B(0, 1) + A(1, 1) * B(1, 1) + A(1, 2) * B(2, 1),
+        A(1, 0) * B(0, 2) + A(1, 1) * B(1, 2) + A(1, 2) * B(2, 2),
+
+        A(2, 0) * B(0, 0) + A(2, 1) * B(1, 0) + A(2, 2) * B(2, 0),
+        A(2, 0) * B(0, 1) + A(2, 1) * B(1, 1) + A(2, 2) * B(2, 1),
+        A(2, 0) * B(0, 2) + A(2, 1) * B(1, 2) + A(2, 2) * B(2, 2)
+    );
+}
+
+Vector3D operator*(const Matrix3D& M, const Vector3D& v)
+{
+    return Vector3D(
+        v.x * M(0, 0) + v.y * M(0, 1) + v.z * M(0, 2),
+        v.x * M(1, 0) + v.y * M(1, 1) + v.z * M(1, 2),
+        v.x * M(2, 0) + v.y * M(2, 1) + v.z * M(2, 2)
+    );
+}
+
 // for later slang stuff: docs.shader-slang.org/en/latest/external/slang/docs/user-guide/a1-01-matrix-layout.html
 // docs.vulkan.org/guide/latest/shader_memory_layout.html
 //docs.vulkan.org/spec/latest/chapters/interfaces.html#interfaces-resources-layout
