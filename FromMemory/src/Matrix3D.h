@@ -5,6 +5,7 @@
 #ifndef MATRIX3D_H
 #define MATRIX3D_H
 #include "Vector3D.h"
+#include <cmath>
 
 struct Matrix3D
 {
@@ -94,10 +95,20 @@ Vector3D operator*(const Matrix3D& M, const Vector3D& v)
     );
 }
 
+// skipping ahead in the lengyel book just for some results.
+Matrix3D MakeRotationY(float rad)
+{
+    return Matrix3D(
+        cos(rad), 0.0f, sin(rad),
+        0.0f, 1.0f, 0.0f,
+        -sin(rad), 0.0f, cos(rad)
+    );
+}
+
 // for later slang stuff: docs.shader-slang.org/en/latest/external/slang/docs/user-guide/a1-01-matrix-layout.html
 // docs.vulkan.org/guide/latest/shader_memory_layout.html
-//docs.vulkan.org/spec/latest/chapters/interfaces.html#interfaces-resources-layout
-//docs.shader-slang.org/en/latest/external/slang/docs/command-line-slangc-reference.html
+// docs.vulkan.org/spec/latest/chapters/interfaces.html#interfaces-resources-layout
+// docs.shader-slang.org/en/latest/external/slang/docs/command-line-slangc-reference.html
 // fvk-use-scalar-layout
 
 #endif //MATRIX3D_H
