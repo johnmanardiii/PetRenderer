@@ -13,10 +13,10 @@ struct VSOutput
 
 // .\hardcoded_triangle.slang -target spirv -entry vertexMain -o hardcoded_triangle.vert.spv
 [shader("vertex")]
-VSOutput vertexMain(VSInput input)
+VSOutput vertexMain(VSInput input, uniform matrix<float, 3, 3> rotation)
 {
     VSOutput output;
-    output.Pos = float4(input.Pos, 1.0f);
+    output.Pos = float4(mul(rotation, input.Pos), 1.0f);
     return output;
 }
 

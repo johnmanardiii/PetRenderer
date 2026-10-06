@@ -19,7 +19,8 @@ set(CMAKE_CXX_STANDARD 23)
 
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-add_executable(PetRenderer)
+add_executable(PetRenderer
+        src/Matrix4D.h)
 
 add_subdirectory(third_party)
 

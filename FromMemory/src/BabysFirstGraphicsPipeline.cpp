@@ -4,6 +4,7 @@
 
 #include "BabysFirstGraphicsPipeline.h"
 
+#include "Matrix3D.h"
 #include "OffscreenRenderImage.h"
 #include "ShaderLoader.h"
 #include "Vector3D.h"
@@ -13,10 +14,22 @@ BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo(GpuContext &g
                                                                    offscreen_render_image_info)
 {
     // create the layout for the pipeline
+
+    // #JOHN - this is temp for just passing in one matrix into this
+    // I want to see the disassembly for the slang.. just to see the padding
+    // if it is a real thing
+    // I really want to see in slang the rules for layout
+    VkPushConstantRange push_constant_range{};
+    push_constant_range.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    push_constant_range.offset = 0;
+    push_constant_range.size = sizeof(Matrix3D);
+
     VkPipelineLayoutCreateInfo pipeline_layout_create_info =
     {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-        .setLayoutCount = 0
+        .setLayoutCount = 0,
+        .pushConstantRangeCount = 1,
+        .pPushConstantRanges = &push_constant_range
     };
 
     VkPipelineLayout graphicsPipelineLayout;
