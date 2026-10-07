@@ -1,0 +1,58 @@
+; SPIR-V
+; Version: 1.5
+; Generator: Khronos Slang Compiler; 0
+; Bound: 36
+; Schema: 0
+OpCapability DrawParameters
+OpCapability Shader
+OpMemoryModel Logical GLSL450
+OpEntryPoint Vertex %vertexMain "main" %gl_Position %gl_VertexIndex %8
+
+; Debug Information
+OpSource Slang 1
+OpName %vertexMain "vertexMain"                     ; id %10
+
+; Annotations
+OpDecorate %gl_Position BuiltIn Position
+OpDecorate %gl_VertexIndex BuiltIn VertexIndex
+OpDecorate %8 BuiltIn BaseVertex
+
+; Types, variables and constants
+%float = OpTypeFloat 32
+%v4float = OpTypeVector %float 4
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+%int = OpTypeInt 32 1
+%_ptr_Input_int = OpTypePointer Input %int
+%void = OpTypeVoid
+%11 = OpTypeFunction %void
+%int_3 = OpConstant %int 3
+%_arr_v4float_int_3 = OpTypeArray %v4float %int_3
+%_ptr_Function__arr_v4float_int_3 = OpTypePointer Function %_arr_v4float_int_3
+%uint = OpTypeInt 32 0
+%float_n0_5 = OpConstant %float -0.5
+%float_0 = OpConstant %float 0
+%float_1 = OpConstant %float 1
+%23 = OpConstantComposite %v4float %float_n0_5 %float_n0_5 %float_0 %float_1
+%float_0_5 = OpConstant %float 0.5
+%27 = OpConstantComposite %v4float %float_0_5 %float_n0_5 %float_0 %float_1
+%29 = OpConstantComposite %v4float %float_0 %float_0_5 %float_0 %float_1
+%22 = OpConstantComposite %_arr_v4float_int_3 %23 %27 %29
+%_ptr_Function_v4float = OpTypePointer Function %v4float
+%gl_Position = OpVariable %_ptr_Output_v4float Output   ; BuiltIn Position
+%gl_VertexIndex = OpVariable %_ptr_Input_int Input      ; BuiltIn VertexIndex
+%8 = OpVariable %_ptr_Input_int Input                   ; BuiltIn BaseVertex
+
+; Function vertexMain
+%vertexMain = OpFunction %void None %11
+%12 = OpLabel
+%16 = OpVariable %_ptr_Function__arr_v4float_int_3 Function
+%17 = OpLoad %int %8
+%18 = OpLoad %int %gl_VertexIndex
+%19 = OpISub %int %18 %17
+%21 = OpBitcast %uint %19
+OpStore %16 %22
+%32 = OpAccessChain %_ptr_Function_v4float %16 %21
+%33 = OpLoad %v4float %32
+OpStore %gl_Position %33
+OpReturn
+OpFunctionEnd

@@ -1,0 +1,55 @@
+; SPIR-V
+; Version: 1.5
+; Generator: Khronos Slang Compiler; 0
+; Bound: 33
+; Schema: 0
+OpCapability Shader
+OpMemoryModel Logical GLSL450
+OpEntryPoint Vertex %vertexMain "main" %entryPointParams %gl_Position %input_Pos
+
+; Debug Information
+OpSource Slang 1
+OpName %input_Pos "input.Pos"                       ; id %17
+OpName %EntryPointParams_std430 "EntryPointParams_std430"   ; id %18
+OpMemberName %EntryPointParams_std430 0 "rotation"
+OpName %entryPointParams "entryPointParams"         ; id %21
+OpName %vertexMain "vertexMain"                     ; id %2
+
+; Annotations
+OpDecorate %input_Pos Location 0
+OpDecorate %EntryPointParams_std430 Block
+OpMemberDecorate %EntryPointParams_std430 0 Offset 0
+OpMemberDecorate %EntryPointParams_std430 0 RowMajor
+OpMemberDecorate %EntryPointParams_std430 0 MatrixStride 16
+OpDecorate %gl_Position BuiltIn Position
+
+; Types, variables and constants
+%void = OpTypeVoid
+%3 = OpTypeFunction %void
+%float = OpTypeFloat 32
+%v4float = OpTypeVector %float 4
+%int = OpTypeInt 32 1
+%int_0 = OpConstant %int 0
+%v3float = OpTypeVector %float 3
+%_ptr_Input_v3float = OpTypePointer Input %v3float
+%mat3v3float = OpTypeMatrix %v3float 3
+%EntryPointParams_std430 = OpTypeStruct %mat3v3float    ; Block
+%_ptr_PushConstant_EntryPointParams_std430 = OpTypePointer PushConstant %EntryPointParams_std430
+%_ptr_PushConstant_mat3v3float = OpTypePointer PushConstant %mat3v3float
+%float_1 = OpConstant %float 1
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+%input_Pos = OpVariable %_ptr_Input_v3float Input   ; Location 0
+%entryPointParams = OpVariable %_ptr_PushConstant_EntryPointParams_std430 PushConstant
+%gl_Position = OpVariable %_ptr_Output_v4float Output   ; BuiltIn Position
+
+; Function vertexMain
+%vertexMain = OpFunction %void None %3
+%4 = OpLabel
+%15 = OpLoad %v3float %input_Pos
+%23 = OpAccessChain %_ptr_PushConstant_mat3v3float %entryPointParams %int_0
+%24 = OpLoad %mat3v3float %23
+%25 = OpVectorTimesMatrix %v3float %15 %24
+%26 = OpCompositeConstruct %v4float %25 %float_1
+OpStore %gl_Position %26
+OpReturn
+OpFunctionEnd
