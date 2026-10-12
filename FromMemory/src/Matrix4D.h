@@ -8,19 +8,18 @@
 // making this now because I need to pass a matrix to a shader and it seems to have complications if not
 // 16 byte aligned...
 // column-major just like Matrix3D
-#include "Matrix3D.h"   // not sure if including this is a good idea but yolo
+#include "Matrix3D.h" // not sure if including this is a good idea but yolo
 
 struct Matrix4D
 {
-private:
+  private:
     float n[4][4];
-public:
+
+  public:
     Matrix4D() = default;
 
-    Matrix4D(float n00, float n01, float n02, float n03,
-        float n10, float n11, float n12, float n13,
-        float n20, float n21, float n22, float n23,
-        float n30, float n31, float n32, float n33)
+    Matrix4D(float n00, float n01, float n02, float n03, float n10, float n11, float n12, float n13, float n20,
+             float n21, float n22, float n23, float n30, float n31, float n32, float n33)
     {
         // row / column are switched because we are storing in column major order
         n[0][0] = n00;
@@ -45,10 +44,10 @@ public:
     }
 
     // #JOHN - not sure if this is efficient but yolo
-    Matrix4D(const Matrix3D& other)
+    Matrix4D(const Matrix3D &other)
     {
-        //FromMemory/docs/matrix-gpu-upload-and-layout.md
-        // return Matrix4D();
+        // FromMemory/docs/matrix-gpu-upload-and-layout.md
+        //  return Matrix4D();
         n[0][0] = other(0, 0);
         n[0][1] = other(1, 0);
         n[0][2] = other(2, 0);
@@ -70,37 +69,56 @@ public:
         n[3][3] = 1.0;
     }
 
-    float& operator()(int i, int j)
+    float &operator()(int i, int j)
     {
         return n[j][i];
     }
 
-    const float& operator()(int i, int j) const
+    const float &operator()(int i, int j) const
     {
         return n[j][i];
+    }
+
+    static Matrix4D MakeRotationY(float rad)
+    {
+        return Matrix4D(cos(rad), 0.0f, sin(rad), 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, -sin(rad), 0.0f, cos(rad), 0.0f, 0.0,
+                        0.0, 0.0, 1.0);
+    }
+
+    static Matrix4D Translate(const Vector3D &v)
+    {
+        return Matrix4D(1, 0, 0, v.x, 0, 1, 0, v.y, 0, 0, 1, v.z, 0, 0, 0, 1);
     }
 };
 
-inline Matrix4D operator*(const Matrix4D& A, const Matrix4D& B)
+inline Matrix4D operator*(const Matrix4D &A, const Matrix4D &B)
 {
-    return Matrix4D(
-        A(0, 0) * B(0, 0) + A(0, 1) * B(1, 0) + A(0, 2) * B(2, 0) + A(0, 3) * B(3, 0),
-        A(0, 0) * B(0, 1) + A(0, 1) * B(1, 1) + A(0, 2) * B(2, 1) + A(0, 3) * B(3, 1),
-        A(0, 0) * B(0, 2) + A(0, 1) * B(1, 2) + A(0, 2) * B(2, 2) + A(0, 3) * B(3, 2),
-        A(0, 0) * B(0, 3) + A(0, 1) * B(1, 3) + A(0, 2) * B(2, 3) + A(0, 3) * B(3, 3),
+    return Matrix4D(A(0, 0) * B(0, 0) + A(0, 1) * B(1, 0) + A(0, 2) * B(2, 0) + A(0, 3) * B(3, 0),
+                    A(0, 0) * B(0, 1) + A(0, 1) * B(1, 1) + A(0, 2) * B(2, 1) + A(0, 3) * B(3, 1),
+                    A(0, 0) * B(0, 2) + A(0, 1) * B(1, 2) + A(0, 2) * B(2, 2) + A(0, 3) * B(3, 2),
+                    A(0, 0) * B(0, 3) + A(0, 1) * B(1, 3) + A(0, 2) * B(2, 3) + A(0, 3) * B(3, 3),
 
-        A(1, 0) * B(0, 0) + A(1, 1) * B(1, 0) + A(1, 2) * B(2, 0),
-        A(1, 0) * B(0, 1) + A(1, 1) * B(1, 1) + A(1, 2) * B(2, 1),
-        A(1, 0) * B(0, 2) + A(1, 1) * B(1, 2) + A(1, 2) * B(2, 2),
-        0.0f,
+                    A(1, 0) * B(0, 0) + A(1, 1) * B(1, 0) + A(1, 2) * B(2, 0) + A(1, 3) * B(3, 0),
+                    A(1, 0) * B(0, 1) + A(1, 1) * B(1, 1) + A(1, 2) * B(2, 1) + A(1, 3) * B(3, 1),
+                    A(1, 0) * B(0, 2) + A(1, 1) * B(1, 2) + A(1, 2) * B(2, 2) + A(1, 3) * B(3, 2),
+                    A(1, 0) * B(0, 3) + A(1, 1) * B(1, 3) + A(1, 2) * B(2, 3) + A(1, 3) * B(3, 3),
 
-        A(2, 0) * B(0, 0) + A(2, 1) * B(1, 0) + A(2, 2) * B(2, 0),
-        A(2, 0) * B(0, 1) + A(2, 1) * B(1, 1) + A(2, 2) * B(2, 1),
-        A(2, 0) * B(0, 2) + A(2, 1) * B(1, 2) + A(2, 2) * B(2, 2),
-        0.0f,
+                    A(2, 0) * B(0, 0) + A(2, 1) * B(1, 0) + A(2, 2) * B(2, 0) + A(2, 3) * B(3, 0),
+                    A(2, 0) * B(0, 1) + A(2, 1) * B(1, 1) + A(2, 2) * B(2, 1) + A(2, 3) * B(3, 1),
+                    A(2, 0) * B(0, 2) + A(2, 1) * B(1, 2) + A(2, 2) * B(2, 2) + A(2, 3) * B(3, 2),
+                    A(2, 0) * B(0, 3) + A(2, 1) * B(1, 3) + A(2, 2) * B(2, 3) + A(2, 3) * B(3, 3),
 
-        0.0f, 0.0f, 0.0f, 0.0f
-    );
+                    A(3, 0) * B(0, 0) + A(3, 1) * B(1, 0) + A(3, 2) * B(2, 0) + A(3, 3) * B(3, 0),
+                    A(3, 0) * B(0, 1) + A(3, 1) * B(1, 1) + A(3, 2) * B(2, 1) + A(3, 3) * B(3, 1),
+                    A(3, 0) * B(0, 2) + A(3, 1) * B(1, 2) + A(3, 2) * B(2, 2) + A(3, 3) * B(3, 2),
+                    A(3, 0) * B(0, 3) + A(3, 1) * B(1, 3) + A(3, 2) * B(2, 3) + A(3, 3) * B(3, 3));
+}
+
+inline Matrix4D MakeFrustumProjection(float fovyRad, float aspectRatio, float n, float f)
+{
+    float g = 1 / tanf(fovyRad * .5f);
+    float k = f / (f - n);
+    return Matrix4D(g / aspectRatio, 0, 0, 0, 0, g, 0, 0, 0, 0, k, -n * k, 0, 0, 1, 0);
 }
 
 #endif // PETRENDERER_MATRIX4D_H
