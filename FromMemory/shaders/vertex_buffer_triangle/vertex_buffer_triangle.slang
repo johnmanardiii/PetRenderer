@@ -1,3 +1,4 @@
+//  slangc .\vertex_buffer_triangle.slang -target spirv -o .\vertex_buffer_triangle.vert.spv -entry vertexMain -matrix-layout-column-major
 
 struct VSInput
 {
@@ -13,10 +14,10 @@ struct VSOutput
 
 // .\hardcoded_triangle.slang -target spirv -entry vertexMain -o hardcoded_triangle.vert.spv
 [shader("vertex")]
-VSOutput vertexMain(VSInput input, uniform matrix<float, 3, 3> rotation)
+VSOutput vertexMain(VSInput input, uniform matrix<float, 4, 4> rotation)
 {
     VSOutput output;
-    output.Pos = float4(mul(rotation, input.Pos), 1.0f);
+    output.Pos = mul(rotation, float4(input.Pos, 1.0f));
     return output;
 }
 

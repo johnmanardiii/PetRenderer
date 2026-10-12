@@ -6,6 +6,7 @@
 #include <volk.h>
 #include "VulkanEngine.h"
 
+#include "Matrix4D.h"
 #include "OffscreenRenderImage.h"
 #include "SDL3/SDL_timer.h"
 #include "VulkanDebugUtil.h"
@@ -260,6 +261,12 @@ void VulkanEngine::RenderToOffscreenImage(VkCommandBuffer commandBuffer)
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBufferInfo.vertexBuffer, offsets);
 
     // draw here
+    // (upload rotation matrix as push constant)
+    Matrix3D rotationMatrix = MakeRotationY(elapsedTime / 5.0f);
+    Matrix4D matrixToUpload {rotationMatrix};
+    vkCmdPushConstants(commandBuffer, babysFirstGraphicsPipelineInfo.graphicsPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT,
+        0, sizeof(Matrix4D), &matrixToUpload);
+
     vkCmdDraw(commandBuffer, 3, 1, 0, 0);
 
     vkCmdEndRendering(commandBuffer);

@@ -4,6 +4,7 @@
 
 #ifndef MATRIX3D_H
 #define MATRIX3D_H
+
 #include "Vector3D.h"
 #include <cmath>
 
@@ -69,7 +70,7 @@ public:
     }
 };
 
-Matrix3D operator*(const Matrix3D& A, const Matrix3D& B)
+inline Matrix3D operator*(const Matrix3D& A, const Matrix3D& B)
 {
     return Matrix3D(
         A(0, 0) * B(0, 0) + A(0, 1) * B(1, 0) + A(0, 2) * B(2, 0),
@@ -86,7 +87,7 @@ Matrix3D operator*(const Matrix3D& A, const Matrix3D& B)
     );
 }
 
-Vector3D operator*(const Matrix3D& M, const Vector3D& v)
+inline Vector3D operator*(const Matrix3D& M, const Vector3D& v)
 {
     return Vector3D(
         v.x * M(0, 0) + v.y * M(0, 1) + v.z * M(0, 2),
@@ -96,7 +97,7 @@ Vector3D operator*(const Matrix3D& M, const Vector3D& v)
 }
 
 // skipping ahead in the lengyel book just for some results.
-Matrix3D MakeRotationY(float rad)
+inline Matrix3D MakeRotationY(float rad)
 {
     return Matrix3D(
         cos(rad), 0.0f, sin(rad),
