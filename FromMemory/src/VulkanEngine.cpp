@@ -264,7 +264,8 @@ void VulkanEngine::RenderToOffscreenImage(VkCommandBuffer commandBuffer)
     // draw here
     // (upload rotation matrix as push constant)
     float aspectRatio = offscreenRenderImageInfo.extent.width / offscreenRenderImageInfo.extent.height;
-    Matrix4D matrixToUpload = MakeFrustumProjection(deg2rad(60.0f), aspectRatio, .1f, 100.0f) * Matrix4D::Translate({0, 0, 5}) * Matrix4D::MakeRotationY(elapsedTime);
+    //Matrix4D matrixToUpload = MakeFrustumProjection(deg2rad(60.0f), aspectRatio, .1f, 100.0f) * Matrix4D::Translate({0, 0, 3}) * Matrix4D::MakeRotationY(elapsedTime);
+    Matrix4D matrixToUpload = MakeInfiniteProjection(deg2rad(60.0f), aspectRatio, .1f) * Matrix4D::Translate({0, 0, 3}) * Matrix4D::MakeRotationY(elapsedTime);
     vkCmdPushConstants(commandBuffer, babysFirstGraphicsPipelineInfo.graphicsPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT,
         0, sizeof(Matrix4D), &matrixToUpload);
 

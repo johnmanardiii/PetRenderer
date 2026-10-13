@@ -121,4 +121,14 @@ inline Matrix4D MakeFrustumProjection(float fovyRad, float aspectRatio, float n,
     return Matrix4D(g / aspectRatio, 0, 0, 0, 0, g, 0, 0, 0, 0, k, -n * k, 0, 0, 1, 0);
 }
 
+inline Matrix4D MakeInfiniteProjection(float fovyRad, float aspectRatio, float n, float e = 0x1p-20f) //2^-20
+{
+    float g = 1 / tanf(fovyRad * .5f);
+    e = 1.0f - e;
+    return Matrix4D(g / aspectRatio, 0, 0, 0,
+        0, g, 0, 0,
+        0, 0, e, -n * e,
+        0, 0, 1, 0);
+}
+
 #endif // PETRENDERER_MATRIX4D_H
