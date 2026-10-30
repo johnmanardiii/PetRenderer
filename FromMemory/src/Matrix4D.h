@@ -131,4 +131,29 @@ inline Matrix4D MakeInfiniteProjection(float fovyRad, float aspectRatio, float n
         0, 0, 1, 0);
 }
 
+
+// use these! (greater z values pass depth test)
+// honestly I am shocked about learning the way floating point is distributed especially with 1/z function
+
+inline Matrix4D MakeRevFrustumProjection(float fovy, float s, float n, float f)
+{
+    float g = 1.0F / tanf(fovy * 0.5f);
+    float k = n / (n - f);
+
+    return (Matrix4D(g / s, 0.0F, 0.0F, 0.0f,
+        0.0f, g, 0.0f, 0.0f,
+        0.0f, 0.0f, k, -f * k,
+        0.0f, 0.0f, 1.0f, 0.0f));
+}
+
+inline Matrix4D MakeRevInfiniteProjection(float fovy, float s, float n, float e = 0x1p-20f)
+{
+    float g = 1.0F / tanf(fovy * 0.5f);
+
+    return (Matrix4D(g / s, 0.0F, 0.0F, 0.0f,
+        0.0f, g, 0.0f, 0.0f,
+        0.0f, 0.0f, e, n * (1.0f - e),
+        0.0f, 0.0f, 1.0f, 0.0f));
+}
+
 #endif // PETRENDERER_MATRIX4D_H
