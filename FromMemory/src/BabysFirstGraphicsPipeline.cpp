@@ -10,6 +10,10 @@
 #include "ShaderLoader.h"
 #include "Vector3D.h"
 
+
+// #JOHN - just a test to see if this is importing correctly
+#include "cgltf.h"
+
 BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo(GpuContext &gpuContext,
                                                                    const OffscreenRenderImageInfo &
                                                                    offscreen_render_image_info)

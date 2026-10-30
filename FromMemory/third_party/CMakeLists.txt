@@ -29,3 +29,4 @@ FetchContent_MakeAvailable(volk)
 
 include(imgui.cmake)
 include(vma.cmake)
+include(cgltf.cmake)
