@@ -21,7 +21,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 add_executable(PetRenderer
         src/Matrix4D.h
-        src/CustomMath.h)
+        src/CustomMath.h
+        src/Application.cpp
+        src/Application.h)
 
 add_subdirectory(third_party)
 

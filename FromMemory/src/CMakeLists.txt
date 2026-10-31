@@ -33,6 +33,8 @@ target_sources(PetRenderer PRIVATE
         Matrix4D.h
 
         CustomMath.h
+
+        Application.cpp
 )
 
 target_include_directories(PetRenderer PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})

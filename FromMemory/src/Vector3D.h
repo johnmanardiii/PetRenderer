@@ -1,4 +1,5 @@
 #pragma once
+#include <cmath>
 
 // basing this on that one eric lengyel book
 

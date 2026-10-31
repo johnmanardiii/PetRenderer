@@ -7,6 +7,7 @@
 
 #define GLFW_INCLUDE_VULKAN
 
+#include "Application.h"
 #include "BabysFirstGraphicsPipeline.h"
 #include "CreatePipeline.h"
 #include "DescriptorAllocator.h"
@@ -78,6 +79,8 @@ private:
 
     uint32_t currentFrame = 0; // always incrementing, doesn't loop around w/ modulo
     float elapsedTime = 0.0f;
+
+    Application app;
 };
 
 #endif // VULKAN_ENGINE_H

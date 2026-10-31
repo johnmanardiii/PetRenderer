@@ -3,6 +3,7 @@
 //
 #pragma once
 
+#define CGLTF_IMPLEMENTATION
+
 #include "cgltf.h"
 
-#define CGLTF_IMPLEMENTATION

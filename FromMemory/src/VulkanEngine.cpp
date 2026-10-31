@@ -144,6 +144,8 @@ bool VulkanEngine::init()
         DestroyBasicVertexBuffer(vmaAllocator, vertexBufferInfo);
     });
 
+    app.LoadModels();
+
     return true;
 }
 
