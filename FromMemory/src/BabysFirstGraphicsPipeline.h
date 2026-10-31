@@ -27,12 +27,6 @@ BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo(GpuContext& g
 
 void DestroyBabysFirstGraphicsPipelineInfo(GpuContext& gpuContext, BabyFirstGraphicsPipelineInfo& pipeline_info);
 
-struct Vertex
-{
-    // keep this simple as possible for now
-    float x, y, z;
-};
-
 // we are going to put this alongside here for now, even though it has a different lifetime than the pipeline itself
 
 struct StuffINeedToTrackForAVertexBuffer

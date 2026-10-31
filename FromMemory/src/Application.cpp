@@ -95,6 +95,8 @@ CPUMeshData loadMeshPositions(const char* filePath)
     {
         assert(false);
     }
+
+    return cpu_mesh_data;
 }
 
 // #JOHN - you legally aren't allowed to continue until you make a model abstraction

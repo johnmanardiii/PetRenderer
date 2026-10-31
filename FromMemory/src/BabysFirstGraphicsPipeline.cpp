@@ -79,7 +79,7 @@ BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo(GpuContext &g
 
     VkVertexInputBindingDescription binding_description{};
     binding_description.binding = 0;
-    binding_description.stride = sizeof(Vertex);
+    binding_description.stride = sizeof(Vector3D);
     binding_description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
     VkVertexInputAttributeDescription attribute_description =
@@ -87,7 +87,7 @@ BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo(GpuContext &g
         .location = 0, // #JOHN - still not fully sure how to appropriatly connect this to slang
         .binding = 0,
         .format = VK_FORMAT_R32G32B32_SFLOAT,
-        .offset = offsetof(Vertex, x)
+        .offset = offsetof(Vector3D, x)
     };
 
     VkPipelineVertexInputStateCreateInfo vertexInputState = {
