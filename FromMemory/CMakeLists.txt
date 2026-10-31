@@ -23,7 +23,9 @@ add_executable(PetRenderer
         src/Matrix4D.h
         src/CustomMath.h
         src/Application.cpp
-        src/Application.h)
+        src/Application.h
+        src/Model.cpp
+        src/Model.h)
 
 add_subdirectory(third_party)
 

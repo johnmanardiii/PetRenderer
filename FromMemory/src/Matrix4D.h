@@ -81,13 +81,32 @@ struct Matrix4D
 
     static Matrix4D MakeRotationY(float rad)
     {
-        return Matrix4D(cos(rad), 0.0f, sin(rad), 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, -sin(rad), 0.0f, cos(rad), 0.0f, 0.0,
-                        0.0, 0.0, 1.0);
+        float c = cos(rad);
+        float s = sin(rad);
+        return Matrix4D(c, 0.0f, s, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, -s, 0.0f, c, 0.0f, 0.0, 0.0, 0.0, 1.0);
+    }
+
+    static Matrix4D MakeRotationZ(float rad)
+    {
+        float c = cos(rad);
+        float s = sin(rad);
+        return Matrix4D(c, -s, 0, 0, s, c, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
     }
 
     static Matrix4D Translate(const Vector3D &v)
     {
         return Matrix4D(1, 0, 0, v.x, 0, 1, 0, v.y, 0, 0, 1, v.z, 0, 0, 0, 1);
+    }
+
+    static Matrix4D Scale(const Vector3D &v)
+    {
+        return Matrix4D(v.x, 0, 0, 0, 0, v.y, 0, 0, 0, 0, v.z, 0, 0, 0, 0, 1);
+    }
+
+    // uniform scale
+    static Matrix4D Scale(float s)
+    {
+        return Matrix4D(s, 0, 0, 0, 0, s, 0, 0, 0, 0, s, 0, 0, 0, 0, 1);
     }
 };
 
@@ -121,16 +140,12 @@ inline Matrix4D MakeFrustumProjection(float fovyRad, float aspectRatio, float n,
     return Matrix4D(g / aspectRatio, 0, 0, 0, 0, g, 0, 0, 0, 0, k, -n * k, 0, 0, 1, 0);
 }
 
-inline Matrix4D MakeInfiniteProjection(float fovyRad, float aspectRatio, float n, float e = 0x1p-20f) //2^-20
+inline Matrix4D MakeInfiniteProjection(float fovyRad, float aspectRatio, float n, float e = 0x1p-20f) // 2^-20
 {
     float g = 1 / tanf(fovyRad * .5f);
     e = 1.0f - e;
-    return Matrix4D(g / aspectRatio, 0, 0, 0,
-        0, g, 0, 0,
-        0, 0, e, -n * e,
-        0, 0, 1, 0);
+    return Matrix4D(g / aspectRatio, 0, 0, 0, 0, g, 0, 0, 0, 0, e, -n * e, 0, 0, 1, 0);
 }
-
 
 // use these! (greater z values pass depth test)
 // honestly I am shocked about learning the way floating point is distributed especially with 1/z function
@@ -140,20 +155,15 @@ inline Matrix4D MakeRevFrustumProjection(float fovy, float s, float n, float f)
     float g = 1.0F / tanf(fovy * 0.5f);
     float k = n / (n - f);
 
-    return (Matrix4D(g / s, 0.0F, 0.0F, 0.0f,
-        0.0f, g, 0.0f, 0.0f,
-        0.0f, 0.0f, k, -f * k,
-        0.0f, 0.0f, 1.0f, 0.0f));
+    return (Matrix4D(g / s, 0.0F, 0.0F, 0.0f, 0.0f, g, 0.0f, 0.0f, 0.0f, 0.0f, k, -f * k, 0.0f, 0.0f, 1.0f, 0.0f));
 }
 
 inline Matrix4D MakeRevInfiniteProjection(float fovy, float s, float n, float e = 0x1p-20f)
 {
     float g = 1.0F / tanf(fovy * 0.5f);
 
-    return (Matrix4D(g / s, 0.0F, 0.0F, 0.0f,
-        0.0f, g, 0.0f, 0.0f,
-        0.0f, 0.0f, e, n * (1.0f - e),
-        0.0f, 0.0f, 1.0f, 0.0f));
+    return (
+        Matrix4D(g / s, 0.0F, 0.0F, 0.0f, 0.0f, g, 0.0f, 0.0f, 0.0f, 0.0f, e, n * (1.0f - e), 0.0f, 0.0f, 1.0f, 0.0f));
 }
 
 #endif // PETRENDERER_MATRIX4D_H

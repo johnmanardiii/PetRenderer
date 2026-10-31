@@ -12,6 +12,7 @@
 
 
 // #JOHN - just a test to see if this is importing correctly
+#include "Model.h"
 #include "cgltf.h"
 
 BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo(GpuContext &gpuContext,
@@ -220,7 +221,11 @@ void DestroyBabysFirstGraphicsPipelineInfo(GpuContext &gpuContext, BabyFirstGrap
 
 StuffINeedToTrackForAVertexBuffer CreateBasicVertexBuffer(VmaAllocator vmaAllocator)
 {
-    Vector3D positions[3] = {{-.5f, .5f, 0.0f}, {.5f, .5f, 0.0f}, {0.0f, -.5f, 0.0f}};
+    CPUMeshData foxMeshData;
+
+    // #JOHN - really need to figure out a long term working dir strat.
+    const char *exampleFilePath = "../models/Fox.glb";
+    foxMeshData = loadMeshPositions(exampleFilePath);
 
     // was reading over this: https://gpuopen-librariesandsdks.github.io/VulkanMemoryAllocator/html/struct_vma_allocation_create_info.html
     VmaAllocationCreateInfo allocCreateInfo = {
@@ -228,10 +233,11 @@ StuffINeedToTrackForAVertexBuffer CreateBasicVertexBuffer(VmaAllocator vmaAlloca
         .usage = VMA_MEMORY_USAGE_AUTO
     };
 
+    size_t positionDataSize = sizeof(Vector3D) * foxMeshData.positions.size();
     VkBufferCreateInfo buffer_create_info =
     {
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-        .size = sizeof(positions),
+        .size = positionDataSize,
         .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, // #JOHN probably want some other ones I can't think of rn
         .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
 
@@ -239,10 +245,12 @@ StuffINeedToTrackForAVertexBuffer CreateBasicVertexBuffer(VmaAllocator vmaAlloca
 
     StuffINeedToTrackForAVertexBuffer returnVal;
 
+    returnVal.vertexCount = foxMeshData.positions.size();
+
     vkchk(vmaCreateBuffer(vmaAllocator, &buffer_create_info, &allocCreateInfo, &returnVal.vertexBuffer,
                           &returnVal.vertexBufferAlloc, &returnVal.vertexBufferAllocInfo));
 
-    memcpy(returnVal.vertexBufferAllocInfo.pMappedData, &positions, sizeof(positions));
+    memcpy(returnVal.vertexBufferAllocInfo.pMappedData, foxMeshData.positions.data(), positionDataSize);
 
     // now the vertex buffer contains the data...
 

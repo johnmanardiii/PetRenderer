@@ -35,6 +35,7 @@ target_sources(PetRenderer PRIVATE
         CustomMath.h
 
         Application.cpp
+        Model.cpp
 )
 
 target_include_directories(PetRenderer PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})

@@ -3,8 +3,8 @@
 //
 // #JOHN - for now engine will be the one that defines the mem allocator but eventually this should probably be
 // somewhere else #JOHN - this include order is touchy... should maybe be outside of here.
-#include <volk.h>
 #include "VulkanEngine.h"
+#include <volk.h>
 
 #include "CustomMath.h"
 #include "Matrix4D.h"
@@ -52,27 +52,22 @@ VulkanEngine *VulkanEngine::Create()
     VmaAllocator vmaAllocator;
     vkchk(vmaCreateAllocator(&allocatorCreateInfo, &vmaAllocator));
 
-    deletionQueue.Register([vmaAllocator] {
-        vmaDestroyAllocator(vmaAllocator);
-    });
+    deletionQueue.Register([vmaAllocator] { vmaDestroyAllocator(vmaAllocator); });
 
-    return new VulkanEngine(*platform, *gpuContext, vmaAllocator, VkExtent2D{.width = static_cast<uint32_t>(width),
-                                                                             .height = static_cast<uint32_t>(height)},
+    return new VulkanEngine(*platform, *gpuContext, vmaAllocator,
+                            VkExtent2D{.width = static_cast<uint32_t>(width), .height = static_cast<uint32_t>(height)},
                             std::move(deletionQueue));
 }
 
 VulkanEngine::VulkanEngine(Platform inPlatform, GpuContext inGpuContext, VmaAllocator inVmaAllocator,
-                           VkExtent2D inInitialExtent,
-                           ScopedFunctionalQueue &&inDeletionQueue)
+                           VkExtent2D inInitialExtent, ScopedFunctionalQueue &&inDeletionQueue)
     : platform(inPlatform), gpuContext(inGpuContext), vmaAllocator(inVmaAllocator),
       // #JOHN - this "gpu context ref" is super duper dangerous seeming and a bad pattern...
       // should read modern C++ design...
       swapchainResources(gpuContext, inInitialExtent), deletionQueue(std::move(inDeletionQueue))
 
 {
-    deletionQueue.Register([this] {
-        swapchainResources.ReleaseSwapchainResources();
-    });
+    deletionQueue.Register([this] { swapchainResources.ReleaseSwapchainResources(); });
 }
 
 bool VulkanEngine::init()
@@ -85,40 +80,30 @@ bool VulkanEngine::init()
     AllocateDescriptorInfo(gpuContext.device, descriptorInfo);
 
     pipelineObjects = CreatePipelineObjects(gpuContext.device, descriptorInfo.descriptorSetLayout);
-    deletionQueue.Register([this] {
-        DestroyPipelineObjects(gpuContext.device, pipelineObjects);
-    });
+    deletionQueue.Register([this] { DestroyPipelineObjects(gpuContext.device, pipelineObjects); });
 
     VkExtent2D initialOffscreenRenderImage = {.width = static_cast<uint32_t>(width),
                                               .height = static_cast<uint32_t>(height)};
 
-    offscreenRenderImageInfo =
-        createOffscreenRenderImageInfo(gpuContext.device, initialOffscreenRenderImage, vmaAllocator,
-                                       VK_FORMAT_R16G16B16A16_SFLOAT);
+    offscreenRenderImageInfo = createOffscreenRenderImageInfo(gpuContext.device, initialOffscreenRenderImage,
+                                                              vmaAllocator, VK_FORMAT_R16G16B16A16_SFLOAT);
 
     deletionQueue.Register(
-        [this] {
-            DestroyOffscreenRenderImageInfo(gpuContext.device, offscreenRenderImageInfo, vmaAllocator);
-        });
+        [this] { DestroyOffscreenRenderImageInfo(gpuContext.device, offscreenRenderImageInfo, vmaAllocator); });
 
     // #JOHN - manually do this for now, just because things are messy, don't submit until a design has been worked out
     // for this
     UpdateOffscreenRenderImageDescriptorSet(gpuContext.device, offscreenRenderImageInfo, descriptorInfo.descriptorSet);
 
-    deletionQueue.Register([this] {
-        DestroyDescriptorInformation(gpuContext.device, descriptorInfo);
-    });
+    deletionQueue.Register([this] { DestroyDescriptorInformation(gpuContext.device, descriptorInfo); });
 
     babysFirstGraphicsPipelineInfo = CreateBabysFirstGraphicsPipelineInfo(gpuContext, offscreenRenderImageInfo);
-    deletionQueue.Register([this] {
-        DestroyBabysFirstGraphicsPipelineInfo(gpuContext, babysFirstGraphicsPipelineInfo);
-    });
+    deletionQueue.Register(
+        [this] { DestroyBabysFirstGraphicsPipelineInfo(gpuContext, babysFirstGraphicsPipelineInfo); });
 
     frameInFlightStructures = CreateFrameInFlightStructures(
         gpuContext.device, gpuContext.selectedPhysicalDeviceInfo.graphicsPresentQueueFamilyIndex, 3);
-    deletionQueue.Register([this] {
-        DestroyFrameInFlightStructures(gpuContext.device, frameInFlightStructures);
-    });
+    deletionQueue.Register([this] { DestroyFrameInFlightStructures(gpuContext.device, frameInFlightStructures); });
 
     VkSemaphoreTypeCreateInfo globalTimelineSemaphoreTypeCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO,
@@ -134,15 +119,11 @@ bool VulkanEngine::init()
 
     DebugSetName(gpuContext.device, VK_OBJECT_TYPE_SEMAPHORE, globalTimelineSemaphore, "Global Timeline Semaphore");
 
-    deletionQueue.Register([this] {
-        vkDestroySemaphore(gpuContext.device, globalTimelineSemaphore, nullptr);
-    });
+    deletionQueue.Register([this] { vkDestroySemaphore(gpuContext.device, globalTimelineSemaphore, nullptr); });
 
     vertexBufferInfo = CreateBasicVertexBuffer(vmaAllocator);
 
-    deletionQueue.Register([this] {
-        DestroyBasicVertexBuffer(vmaAllocator, vertexBufferInfo);
-    });
+    deletionQueue.Register([this] { DestroyBasicVertexBuffer(vmaAllocator, vertexBufferInfo); });
 
     app.LoadModels();
 
@@ -230,48 +211,43 @@ void VulkanEngine::RenderToOffscreenImage(VkCommandBuffer commandBuffer)
         .imageView = offscreenRenderImageInfo.offscreenImageView,
         .imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
         .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD, // even tho we don't really need to know this
-        .storeOp = VK_ATTACHMENT_STORE_OP_STORE
-    };
-    VkRenderingInfo rendering_info = {
-        .sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
-        .renderArea = {{0, 0}, {offscreenRenderImageInfo.extent}},
-        .layerCount = 1,
-        .colorAttachmentCount = 1,
-        .pColorAttachments = &color_attachment_info
-    };
+        .storeOp = VK_ATTACHMENT_STORE_OP_STORE};
+    VkRenderingInfo rendering_info = {.sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
+                                      .renderArea = {{0, 0}, {offscreenRenderImageInfo.extent}},
+                                      .layerCount = 1,
+                                      .colorAttachmentCount = 1,
+                                      .pColorAttachments = &color_attachment_info};
 
     vkCmdBeginRendering(commandBuffer, &rendering_info);
 
     // set dynamic viewport state.
     // #JOHN - weirdly... I am forgetting how the depth buffer works down to the NDC space here...
-    VkViewport viewport = {
-        .x = 0.0f,
-        .y = 0.0f,
-        .width = static_cast<float>(offscreenRenderImageInfo.extent.width),
-        .height = static_cast<float>(offscreenRenderImageInfo.extent.height),
-        .minDepth = 0.0f,
-        .maxDepth = 1.0f
-    };
+    VkViewport viewport = {.x = 0.0f,
+                           .y = 0.0f,
+                           .width = static_cast<float>(offscreenRenderImageInfo.extent.width),
+                           .height = static_cast<float>(offscreenRenderImageInfo.extent.height),
+                           .minDepth = 0.0f,
+                           .maxDepth = 1.0f};
     vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
-    VkRect2D scissor = {
-        {.x = 0, .y = 0},
-        offscreenRenderImageInfo.extent
-    };
+    VkRect2D scissor = {{.x = 0, .y = 0}, offscreenRenderImageInfo.extent};
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
     // bind vertex buffer b4 drawing
-    VkDeviceSize offsets[] = {0};    // no idea what this is doing #JOHN or when I would actually use it
+    VkDeviceSize offsets[] = {0}; // no idea what this is doing #JOHN or when I would actually use it
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBufferInfo.vertexBuffer, offsets);
 
     // draw here
     // (upload rotation matrix as push constant)
     float aspectRatio = offscreenRenderImageInfo.extent.width / offscreenRenderImageInfo.extent.height;
-    //Matrix4D matrixToUpload = MakeFrustumProjection(deg2rad(60.0f), aspectRatio, .1f, 100.0f) * Matrix4D::Translate({0, 0, 3}) * Matrix4D::MakeRotationY(elapsedTime);
-    Matrix4D matrixToUpload = MakeRevInfiniteProjection(deg2rad(60.0f), aspectRatio, .1f) * Matrix4D::Translate({0, 0, 3}) * Matrix4D::MakeRotationY(elapsedTime);
+    // Matrix4D matrixToUpload = MakeFrustumProjection(deg2rad(60.0f), aspectRatio, .1f, 100.0f) *
+    // Matrix4D::Translate({0, 0, 3}) * Matrix4D::MakeRotationY(elapsedTime);
+    Matrix4D matrixToUpload = MakeRevInfiniteProjection(deg2rad(60.0f), aspectRatio, .1f) *
+                              Matrix4D::Translate({0, 0, 6}) * Matrix4D::MakeRotationY(elapsedTime) *
+                              Matrix4D::MakeRotationZ(deg2rad(180)) * Matrix4D::Scale(.02);
     vkCmdPushConstants(commandBuffer, babysFirstGraphicsPipelineInfo.graphicsPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT,
-        0, sizeof(Matrix4D), &matrixToUpload);
+                       0, sizeof(Matrix4D), &matrixToUpload);
 
-    vkCmdDraw(commandBuffer, 3, 1, 0, 0);
+    vkCmdDraw(commandBuffer, vertexBufferInfo.vertexCount, 1, 0, 0);
 
     vkCmdEndRendering(commandBuffer);
 
@@ -476,8 +452,7 @@ void VulkanEngine::ResizeOffscreenRenderTarget()
     DestroyOffscreenRenderImageInfo(gpuContext.device, offscreenRenderImageInfo, vmaAllocator);
 
     // maybe this should be stored in something idk. (repeated format is red flag-y)
-    offscreenRenderImageInfo =
-        createOffscreenRenderImageInfo(gpuContext.device, swapchainResources.GetExtent(), vmaAllocator,
-                                       VK_FORMAT_R16G16B16A16_SFLOAT);
+    offscreenRenderImageInfo = createOffscreenRenderImageInfo(gpuContext.device, swapchainResources.GetExtent(),
+                                                              vmaAllocator, VK_FORMAT_R16G16B16A16_SFLOAT);
     UpdateOffscreenRenderImageDescriptorSet(gpuContext.device, offscreenRenderImageInfo, descriptorInfo.descriptorSet);
 }
