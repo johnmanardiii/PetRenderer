@@ -219,45 +219,64 @@ void DestroyBabysFirstGraphicsPipelineInfo(GpuContext &gpuContext, BabyFirstGrap
     vkDestroyPipelineLayout(gpuContext.device, pipeline_info.graphicsPipelineLayout, nullptr);
 }
 
-StuffINeedToTrackForAVertexBuffer CreateBasicVertexBuffer(VmaAllocator vmaAllocator)
+StuffINeedToTrackForAVertexIndexBuffer CreateBasicVertexBuffer(VmaAllocator vmaAllocator)
 {
     CPUMeshData foxMeshData;
 
     // #JOHN - really need to figure out a long term working dir strat.
-    const char *exampleFilePath = "../models/Fox.glb";
+    const char *exampleFilePath = "../models/DamagedHelmet.glb";
     foxMeshData = loadMeshPositions(exampleFilePath);
 
+    StuffINeedToTrackForAVertexIndexBuffer returnVal;
+
+    // #JOHN - todo: move this to dedicated gpu local memory as part of a larger system
     // was reading over this: https://gpuopen-librariesandsdks.github.io/VulkanMemoryAllocator/html/struct_vma_allocation_create_info.html
-    VmaAllocationCreateInfo allocCreateInfo = {
+    VmaAllocationCreateInfo vertexAllocCreateInfo = {
         .flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
         .usage = VMA_MEMORY_USAGE_AUTO
     };
 
     size_t positionDataSize = sizeof(Vector3D) * foxMeshData.positions.size();
-    VkBufferCreateInfo buffer_create_info =
+    VkBufferCreateInfo vertex_buffer_create_info =
     {
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
         .size = positionDataSize,
         .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, // #JOHN probably want some other ones I can't think of rn
         .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-
     };
 
-    StuffINeedToTrackForAVertexBuffer returnVal;
-
-    returnVal.vertexCount = foxMeshData.positions.size();
-
-    vkchk(vmaCreateBuffer(vmaAllocator, &buffer_create_info, &allocCreateInfo, &returnVal.vertexBuffer,
+    vkchk(vmaCreateBuffer(vmaAllocator, &vertex_buffer_create_info, &vertexAllocCreateInfo, &returnVal.vertexBuffer,
                           &returnVal.vertexBufferAlloc, &returnVal.vertexBufferAllocInfo));
 
     memcpy(returnVal.vertexBufferAllocInfo.pMappedData, foxMeshData.positions.data(), positionDataSize);
 
-    // now the vertex buffer contains the data...
+    VmaAllocationCreateInfo indexAllocCreateInfo = {
+        .flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
+        .usage = VMA_MEMORY_USAGE_AUTO
+    };
+
+    // #JOHN - should probably make a types file that specifies we are using uint32 for the index type
+    size_t indexDataSize = sizeof(uint32_t) * foxMeshData.indices.size();
+    VkBufferCreateInfo index_buffer_create_info =
+    {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+        .size = indexDataSize,
+        .usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+        .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+    };
+
+    vkchk(vmaCreateBuffer(vmaAllocator, &index_buffer_create_info, &indexAllocCreateInfo, &returnVal.indexBuffer,
+                          &returnVal.indexBufferAlloc, &returnVal.indexBufferAllocInfo));
+
+    memcpy(returnVal.indexBufferAllocInfo.pMappedData, foxMeshData.indices.data(), indexDataSize);
+
+    returnVal.indexCount = foxMeshData.indices.size();
 
     return returnVal;
 }
 
-void DestroyBasicVertexBuffer(VmaAllocator vmaAllocator, StuffINeedToTrackForAVertexBuffer &vertexInfo)
+void DestroyBasicVertexBuffer(VmaAllocator vmaAllocator, StuffINeedToTrackForAVertexIndexBuffer &vertexInfo)
 {
     vmaDestroyBuffer(vmaAllocator, vertexInfo.vertexBuffer, vertexInfo.vertexBufferAlloc);
+    vmaDestroyBuffer(vmaAllocator, vertexInfo.indexBuffer, vertexInfo.indexBufferAlloc);
 }

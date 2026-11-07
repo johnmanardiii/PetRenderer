@@ -73,7 +73,7 @@ private:
     BabyFirstGraphicsPipelineInfo babysFirstGraphicsPipelineInfo;
 
     // #JOHN - this doesn't belong here but need to track it for now
-    StuffINeedToTrackForAVertexBuffer vertexBufferInfo;
+    StuffINeedToTrackForAVertexIndexBuffer vertexBufferInfo;
 
     ScopedFunctionalQueue deletionQueue;
 

@@ -232,22 +232,26 @@ void VulkanEngine::RenderToOffscreenImage(VkCommandBuffer commandBuffer)
     VkRect2D scissor = {{.x = 0, .y = 0}, offscreenRenderImageInfo.extent};
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-    // bind vertex buffer b4 drawing
-    VkDeviceSize offsets[] = {0}; // no idea what this is doing #JOHN or when I would actually use it
-    vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBufferInfo.vertexBuffer, offsets);
-
     // draw here
     // (upload rotation matrix as push constant)
     float aspectRatio = offscreenRenderImageInfo.extent.width / offscreenRenderImageInfo.extent.height;
     // Matrix4D matrixToUpload = MakeFrustumProjection(deg2rad(60.0f), aspectRatio, .1f, 100.0f) *
     // Matrix4D::Translate({0, 0, 3}) * Matrix4D::MakeRotationY(elapsedTime);
+    // Matrix4D matrixToUpload = MakeRevInfiniteProjection(deg2rad(60.0f), aspectRatio, .1f) *
+    //                           Matrix4D::Translate({0, 0, 6}) * Matrix4D::MakeRotationY(elapsedTime) *
+    //                           Matrix4D::MakeRotationZ(deg2rad(180)) * Matrix4D::Scale(1.02);
     Matrix4D matrixToUpload = MakeRevInfiniteProjection(deg2rad(60.0f), aspectRatio, .1f) *
-                              Matrix4D::Translate({0, 0, 6}) * Matrix4D::MakeRotationY(elapsedTime) *
-                              Matrix4D::MakeRotationZ(deg2rad(180)) * Matrix4D::Scale(.02);
+                              Matrix4D::Translate({0, 0, 6}) * Matrix4D::MakeRotationY(elapsedTime);
     vkCmdPushConstants(commandBuffer, babysFirstGraphicsPipelineInfo.graphicsPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT,
                        0, sizeof(Matrix4D), &matrixToUpload);
 
-    vkCmdDraw(commandBuffer, vertexBufferInfo.vertexCount, 1, 0, 0);
+    // bind vertex buffer b4 drawing
+    // bind vertex buffer b4 drawing
+    VkDeviceSize offsets[] = {0}; // no idea what this is doing #JOHN or when I would actually use it
+    vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBufferInfo.vertexBuffer, offsets);
+    vkCmdBindIndexBuffer(commandBuffer, vertexBufferInfo.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+    vkCmdDrawIndexed(commandBuffer, vertexBufferInfo.indexCount, 1, 0, 0, 0);
+    // vkCmdDraw(commandBuffer, vertexBufferInfo.vertexCount, 1, 0, 0);
 
     vkCmdEndRendering(commandBuffer);
 

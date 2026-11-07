@@ -27,9 +27,17 @@ CPUMeshData ParseCpuMeshData(const cgltf_data *data)
     // assume triangles only for now
     assert(primitiveToLoad->type == cgltf_primitive_type_triangles);
 
-    // assume no indices for now
-    assert(primitiveToLoad->indices == nullptr);
+    // index loading
+    {
+        // TODO: GENERATE DEFAULT INDICES IF NOT PROVIDED. DON'T WANT TO HANDLE SEPARATE FORMAT
+        assert(primitiveToLoad->indices != nullptr);
+    }
 
+    cgltf_size numIndices = cgltf_accessor_unpack_indices(primitiveToLoad->indices, nullptr, sizeof(uint32_t), 0);
+    loadedModel.indices.resize(numIndices);
+    cgltf_accessor_unpack_indices(primitiveToLoad->indices, loadedModel.indices.data(), sizeof(uint32_t), numIndices);
+
+    // position loading
     cgltf_attribute *positionAttribute = nullptr;
     cgltf_size attributeCount = primitiveToLoad->attributes_count;
     for (int i = 0; i < attributeCount; i++)
@@ -61,7 +69,7 @@ CPUMeshData ParseCpuMeshData(const cgltf_data *data)
     return loadedModel;
 }
 
-CPUMeshData loadMeshPositions(const char* filePath)
+CPUMeshData loadMeshPositions(const char *filePath)
 {
     CPUMeshData cpu_mesh_data;
 

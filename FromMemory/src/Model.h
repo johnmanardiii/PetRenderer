@@ -9,6 +9,8 @@
 #include <vector>
 #include "Vector3D.h"
 
+#include <cstdint>
+
 /*
  * #JOHN - the point of this for now is to abstract out the main loop from "scene specific things" so that I can
  * better read vulkan engine because I can't imagine doing model loading alongside everything else right now
@@ -18,6 +20,7 @@ struct CPUMeshData
 {
     std::string name;
     std::vector<Vector3D> positions;
+    std::vector<uint32_t> indices;
 };
 
 CPUMeshData loadMeshPositions(const char* filePath);
