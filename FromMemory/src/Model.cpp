@@ -5,13 +5,14 @@
 #include "Model.h"
 
 // #JOHN - remove this once you abstract it
+#include "VulkanUtil.h"
 #include "cgltf.h"
 #include <cassert>
 
-CPUMeshData ParseCpuMeshData(const cgltf_data *data)
+CPUMesh ParseCpuMeshData(const cgltf_data *data)
 {
     // #JOHN - for now, this isn't generalizable... but that's ok
-    CPUMeshData loadedModel;
+    CPUMesh loadedModel;
 
     // for now, going to assume just one mesh, and then parse the first one
     assert(data->meshes_count == 1);
@@ -69,9 +70,9 @@ CPUMeshData ParseCpuMeshData(const cgltf_data *data)
     return loadedModel;
 }
 
-CPUMeshData loadMeshPositions(const char *filePath)
+CPUMesh LoadCPUMeshDataFromPath(const char *filePath)
 {
-    CPUMeshData cpu_mesh_data;
+    CPUMesh cpu_mesh_data;
 
     cgltf_options options = {};
     cgltf_data *data = NULL;
@@ -105,4 +106,65 @@ CPUMeshData loadMeshPositions(const char *filePath)
     }
 
     return cpu_mesh_data;
+}
+
+
+GPUMesh LoadGPUMeshFromPath(VmaAllocator vmaAllocator, const char *filePath)
+{
+    CPUMesh cpuData = LoadCPUMeshDataFromPath(filePath);
+
+    // #JOHN - todo: move this to dedicated gpu local memory as part of a larger system
+    // was reading over this: https://gpuopen-librariesandsdks.github.io/VulkanMemoryAllocator/html/struct_vma_allocation_create_info.html
+    VmaAllocationCreateInfo vertexAllocCreateInfo = {
+        .flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
+        .usage = VMA_MEMORY_USAGE_AUTO
+    };
+
+    size_t positionDataSize = sizeof(Vector3D) * cpuData.positions.size();
+    VkBufferCreateInfo vertex_buffer_create_info =
+    {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+        .size = positionDataSize,
+        .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, // #JOHN probably want some other ones I can't think of rn
+        .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+    };
+
+    // #JOHN - this should probably be all constructed at once and failure should be handled better but yolo for now
+    GPUMesh gpuMesh;
+
+    vkchk(vmaCreateBuffer(vmaAllocator, &vertex_buffer_create_info, &vertexAllocCreateInfo, &gpuMesh.vertexBuffer,
+                          &gpuMesh.vertexBufferAlloc, &gpuMesh.vertexBufferAllocInfo));
+
+    memcpy(gpuMesh.vertexBufferAllocInfo.pMappedData, cpuData.positions.data(), positionDataSize);
+
+    VmaAllocationCreateInfo indexAllocCreateInfo = {
+        .flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
+        .usage = VMA_MEMORY_USAGE_AUTO
+    };
+
+    // #JOHN - should probably make a types file that specifies we are using uint32 for the index type
+    size_t indexDataSize = sizeof(uint32_t) * cpuData.indices.size();
+    VkBufferCreateInfo index_buffer_create_info =
+    {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+        .size = indexDataSize,
+        .usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+        .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+    };
+
+    vkchk(vmaCreateBuffer(vmaAllocator, &index_buffer_create_info, &indexAllocCreateInfo, &gpuMesh.indexBuffer,
+                          &gpuMesh.indexBufferAlloc, &gpuMesh.indexBufferAllocInfo));
+
+    memcpy(gpuMesh.indexBufferAllocInfo.pMappedData, cpuData.indices.data(), indexDataSize);
+
+    gpuMesh.indexCount = cpuData.indices.size();
+
+    return gpuMesh;
+}
+
+
+void DestroyGpuMesh(VmaAllocator vmaAllocator, GPUMesh &mesh)
+{
+    vmaDestroyBuffer(vmaAllocator, mesh.vertexBuffer, mesh.vertexBufferAlloc);
+    vmaDestroyBuffer(vmaAllocator, mesh.indexBuffer, mesh.indexBufferAlloc);
 }

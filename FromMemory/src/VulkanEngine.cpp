@@ -121,9 +121,9 @@ bool VulkanEngine::init()
 
     deletionQueue.Register([this] { vkDestroySemaphore(gpuContext.device, globalTimelineSemaphore, nullptr); });
 
-    vertexBufferInfo = CreateBasicVertexBuffer(vmaAllocator);
+    exampleMesh = LoadGPUMeshFromPath(vmaAllocator, "../models/DamagedHelmet.glb");
 
-    deletionQueue.Register([this] { DestroyBasicVertexBuffer(vmaAllocator, vertexBufferInfo); });
+    deletionQueue.Register([this] { DestroyGpuMesh(vmaAllocator, exampleMesh); });
 
     app.LoadModels();
 
@@ -221,7 +221,6 @@ void VulkanEngine::RenderToOffscreenImage(VkCommandBuffer commandBuffer)
     vkCmdBeginRendering(commandBuffer, &rendering_info);
 
     // set dynamic viewport state.
-    // #JOHN - weirdly... I am forgetting how the depth buffer works down to the NDC space here...
     VkViewport viewport = {.x = 0.0f,
                            .y = 0.0f,
                            .width = static_cast<float>(offscreenRenderImageInfo.extent.width),
@@ -233,25 +232,17 @@ void VulkanEngine::RenderToOffscreenImage(VkCommandBuffer commandBuffer)
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
     // draw here
-    // (upload rotation matrix as push constant)
     float aspectRatio = offscreenRenderImageInfo.extent.width / offscreenRenderImageInfo.extent.height;
-    // Matrix4D matrixToUpload = MakeFrustumProjection(deg2rad(60.0f), aspectRatio, .1f, 100.0f) *
-    // Matrix4D::Translate({0, 0, 3}) * Matrix4D::MakeRotationY(elapsedTime);
-    // Matrix4D matrixToUpload = MakeRevInfiniteProjection(deg2rad(60.0f), aspectRatio, .1f) *
-    //                           Matrix4D::Translate({0, 0, 6}) * Matrix4D::MakeRotationY(elapsedTime) *
-    //                           Matrix4D::MakeRotationZ(deg2rad(180)) * Matrix4D::Scale(1.02);
     Matrix4D matrixToUpload = MakeRevInfiniteProjection(deg2rad(60.0f), aspectRatio, .1f) *
                               Matrix4D::Translate({0, 0, 6}) * Matrix4D::MakeRotationY(elapsedTime);
     vkCmdPushConstants(commandBuffer, babysFirstGraphicsPipelineInfo.graphicsPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT,
                        0, sizeof(Matrix4D), &matrixToUpload);
 
     // bind vertex buffer b4 drawing
-    // bind vertex buffer b4 drawing
     VkDeviceSize offsets[] = {0}; // no idea what this is doing #JOHN or when I would actually use it
-    vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBufferInfo.vertexBuffer, offsets);
-    vkCmdBindIndexBuffer(commandBuffer, vertexBufferInfo.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-    vkCmdDrawIndexed(commandBuffer, vertexBufferInfo.indexCount, 1, 0, 0, 0);
-    // vkCmdDraw(commandBuffer, vertexBufferInfo.vertexCount, 1, 0, 0);
+    vkCmdBindVertexBuffers(commandBuffer, 0, 1, &exampleMesh.vertexBuffer, offsets);
+    vkCmdBindIndexBuffer(commandBuffer, exampleMesh.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+    vkCmdDrawIndexed(commandBuffer, exampleMesh.indexCount, 1, 0, 0, 0);
 
     vkCmdEndRendering(commandBuffer);
 

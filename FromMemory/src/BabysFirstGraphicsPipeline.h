@@ -27,23 +27,4 @@ BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo(GpuContext& g
 
 void DestroyBabysFirstGraphicsPipelineInfo(GpuContext& gpuContext, BabyFirstGraphicsPipelineInfo& pipeline_info);
 
-// we are going to put this alongside here for now, even though it has a different lifetime than the pipeline itself
-
-struct StuffINeedToTrackForAVertexIndexBuffer
-{
-    VkBuffer vertexBuffer;
-    VmaAllocation vertexBufferAlloc;
-    VmaAllocationInfo vertexBufferAllocInfo;
-
-    VkBuffer indexBuffer;
-    VmaAllocation indexBufferAlloc;
-    VmaAllocationInfo indexBufferAllocInfo;
-
-    uint32_t indexCount;
-};
-
-StuffINeedToTrackForAVertexIndexBuffer CreateBasicVertexBuffer(VmaAllocator vmaAllocator);
-
-void DestroyBasicVertexBuffer(VmaAllocator vmaAllocator, StuffINeedToTrackForAVertexIndexBuffer& vertexInfo);
-
 #endif //BABYSFIRSTGRAPHICSPIPELINE_H

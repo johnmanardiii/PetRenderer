@@ -13,6 +13,7 @@
 #include "DescriptorAllocator.h"
 #include "FrameInFlightStructures.h"
 #include "GpuContext.h"
+#include "Model.h"
 #include "OffscreenRenderImage.h"
 #include "Platform.h"
 
@@ -73,7 +74,7 @@ private:
     BabyFirstGraphicsPipelineInfo babysFirstGraphicsPipelineInfo;
 
     // #JOHN - this doesn't belong here but need to track it for now
-    StuffINeedToTrackForAVertexIndexBuffer vertexBufferInfo;
+    GPUMesh exampleMesh;
 
     ScopedFunctionalQueue deletionQueue;
 
