@@ -28,7 +28,7 @@ BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo(GpuContext &g
     VkPushConstantRange push_constant_range{};
     push_constant_range.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
     push_constant_range.offset = 0;
-    push_constant_range.size = sizeof(Matrix4D);
+    push_constant_range.size = sizeof(GPUPushConstants);
 
     VkPipelineLayoutCreateInfo pipeline_layout_create_info =
     {
@@ -43,7 +43,7 @@ BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo(GpuContext &g
 
     // create the shaders we are going to use (vert and frag for now)
     VkShaderModule vertexShaderModule;
-    if (!LoadShader("../shaders/vertex_buffer_triangle/vertex_buffer_triangle.vert.spv", gpuContext.device,
+    if (!LoadShader("../shaders/push_constant_triangle/push_constant_triangle.vert.spv", gpuContext.device,
                     &vertexShaderModule))
     {
         assert(false);
@@ -58,7 +58,7 @@ BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo(GpuContext &g
 
     // fragment shader create info
     VkShaderModule fragmentShaderModule;
-    if (!LoadShader("../shaders/vertex_buffer_triangle/vertex_buffer_triangle.frag.spv", gpuContext.device,
+    if (!LoadShader("../shaders/push_constant_triangle/push_constant_triangle.frag.spv", gpuContext.device,
                     &fragmentShaderModule))
     {
         assert(false);
@@ -78,25 +78,8 @@ BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo(GpuContext &g
         fragmentStageCreateInfo
     };
 
-    VkVertexInputBindingDescription binding_description{};
-    binding_description.binding = 0;
-    binding_description.stride = sizeof(Vector3D);
-    binding_description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-    VkVertexInputAttributeDescription attribute_description =
-    {
-        .location = 0, // #JOHN - still not fully sure how to appropriatly connect this to slang
-        .binding = 0,
-        .format = VK_FORMAT_R32G32B32_SFLOAT,
-        .offset = offsetof(Vector3D, x)
-    };
-
     VkPipelineVertexInputStateCreateInfo vertexInputState = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-        .vertexBindingDescriptionCount = 1,
-        .pVertexBindingDescriptions = &binding_description,
-        .vertexAttributeDescriptionCount = 1,
-        .pVertexAttributeDescriptions = &attribute_description
     };
 
     VkPipelineInputAssemblyStateCreateInfo inputAssemblyState = {

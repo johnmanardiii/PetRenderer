@@ -5,6 +5,7 @@
 #ifndef BABYSFIRSTGRAPHICSPIPELINE_H
 #define BABYSFIRSTGRAPHICSPIPELINE_H
 #include "GpuContext.h"
+#include "Matrix4D.h"
 #include "vk_mem_alloc.h"
 
 
@@ -16,6 +17,13 @@
  */
 
 struct OffscreenRenderImageInfo;
+
+// #JOHN - this should be generated from slang and also not in this file more of a rendering thing than model thing
+struct GPUPushConstants
+{
+    Matrix4D MVP;
+    VkDeviceAddress vertexBufferAddress;
+};
 
 struct BabyFirstGraphicsPipelineInfo
 {

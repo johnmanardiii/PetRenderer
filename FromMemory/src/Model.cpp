@@ -5,6 +5,7 @@
 #include "Model.h"
 
 // #JOHN - remove this once you abstract it
+#include "VulkanDebugUtil.h"
 #include "VulkanUtil.h"
 #include "cgltf.h"
 #include <cassert>
@@ -109,14 +110,14 @@ CPUMesh LoadCPUMeshDataFromPath(const char *filePath)
 }
 
 
-GPUMesh LoadGPUMeshFromPath(VmaAllocator vmaAllocator, const char *filePath)
+GPUMesh LoadGPUMeshFromPath(VmaAllocator vmaAllocator, VkDevice device, const char *filePath)
 {
     CPUMesh cpuData = LoadCPUMeshDataFromPath(filePath);
 
     // #JOHN - todo: move this to dedicated gpu local memory as part of a larger system
     // was reading over this: https://gpuopen-librariesandsdks.github.io/VulkanMemoryAllocator/html/struct_vma_allocation_create_info.html
     VmaAllocationCreateInfo vertexAllocCreateInfo = {
-        .flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
+        .flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT,
         .usage = VMA_MEMORY_USAGE_AUTO
     };
 
@@ -125,7 +126,7 @@ GPUMesh LoadGPUMeshFromPath(VmaAllocator vmaAllocator, const char *filePath)
     {
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
         .size = positionDataSize,
-        .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, // #JOHN probably want some other ones I can't think of rn
+        .usage = VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, // #JOHN probably want some other ones I can't think of rn
         .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
     };
 
@@ -136,6 +137,12 @@ GPUMesh LoadGPUMeshFromPath(VmaAllocator vmaAllocator, const char *filePath)
                           &gpuMesh.vertexBufferAlloc, &gpuMesh.vertexBufferAllocInfo));
 
     memcpy(gpuMesh.vertexBufferAllocInfo.pMappedData, cpuData.positions.data(), positionDataSize);
+
+    VkBufferDeviceAddressInfo vertexBuffDeviceAddrInfo {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
+        .buffer = gpuMesh.vertexBuffer
+    };
+    gpuMesh.vertexBufferAddress = vkGetBufferDeviceAddress(device, &vertexBuffDeviceAddrInfo);
 
     VmaAllocationCreateInfo indexAllocCreateInfo = {
         .flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
@@ -158,6 +165,13 @@ GPUMesh LoadGPUMeshFromPath(VmaAllocator vmaAllocator, const char *filePath)
     memcpy(gpuMesh.indexBufferAllocInfo.pMappedData, cpuData.indices.data(), indexDataSize);
 
     gpuMesh.indexCount = cpuData.indices.size();
+
+
+    std::string indexBufferName = fmt::sprintf("Index Buffer for %s", filePath);
+    DebugSetName(device, VK_OBJECT_TYPE_BUFFER, gpuMesh.indexBuffer, indexBufferName.c_str());
+
+    std::string vertexBufferName = fmt::sprintf("Vertex Buffer for %s", filePath);
+    DebugSetName(device, VK_OBJECT_TYPE_BUFFER, gpuMesh.vertexBuffer, vertexBufferName.c_str());
 
     return gpuMesh;
 }

@@ -5,6 +5,7 @@
 #ifndef PETRENDERER_MODEL_H
 #define PETRENDERER_MODEL_H
 
+#include "Matrix4D.h"
 #include "Vector3D.h"
 #include "vk_mem_alloc.h"
 #include <cstdint>
@@ -28,18 +29,22 @@ struct CPUMesh
 // with the delete funciton currently located in the pipeline file.
 struct GPUMesh
 {
+    VkDeviceAddress vertexBufferAddress;
     VkBuffer vertexBuffer;
     VmaAllocation vertexBufferAlloc;
+
+    // #JOHN - do I need the alloc info?
     VmaAllocationInfo vertexBufferAllocInfo;
 
     VkBuffer indexBuffer;
     VmaAllocation indexBufferAlloc;
+    // #JOHN - do I need the alloc info?
     VmaAllocationInfo indexBufferAllocInfo;
 
     uint32_t indexCount;
 };
 
-GPUMesh LoadGPUMeshFromPath(VmaAllocator vmaAllocator, const char *filePath);
+GPUMesh LoadGPUMeshFromPath(VmaAllocator vmaAllocator, VkDevice device, const char *filePath);
 
 // #JOHN - ideally this would be tied to the object and deferred deleted
 void DestroyGpuMesh(VmaAllocator vmaAllocator, GPUMesh& mesh);

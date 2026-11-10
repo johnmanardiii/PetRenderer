@@ -1,0 +1,115 @@
+; SPIR-V
+; Version: 1.5
+; Generator: Khronos Slang Compiler; 0
+; Bound: 108
+; Schema: 0
+OpCapability Int64
+OpCapability PhysicalStorageBufferAddresses
+OpCapability DrawParameters
+OpCapability Shader
+OpExtension "SPV_KHR_physical_storage_buffer"
+OpMemoryModel PhysicalStorageBuffer64 GLSL450
+OpEntryPoint Vertex %vertexMain "main" %gl_Position %matAndVertexBuff_MVP %matAndVertexBuff_vertexBuffer %gl_InstanceIndex %gl_BaseInstance
+
+; Debug Information
+OpSource Slang 1
+OpName %matAndVertexBuff_vertexBuffer "matAndVertexBuff.vertexBuffer"   ; id %17
+OpName %Vertex_natural "Vertex_natural"                                 ; id %18
+OpMemberName %Vertex_natural 0 "pos"
+OpName %_MatrixStorage_float4x4_ColMajornatural "_MatrixStorage_float4x4_ColMajornatural"   ; id %37
+OpMemberName %_MatrixStorage_float4x4_ColMajornatural 0 "data"
+OpName %matAndVertexBuff_MVP "matAndVertexBuff.MVP"     ; id %42
+OpName %vertexMain "vertexMain"                         ; id %2
+
+; Annotations
+OpDecorate %matAndVertexBuff_vertexBuffer Location 4
+OpDecorate %_ptr_PhysicalStorageBuffer_Vertex_natural ArrayStride 12
+OpDecorate %gl_BaseInstance BuiltIn BaseInstance
+OpDecorate %gl_InstanceIndex BuiltIn InstanceIndex
+OpMemberDecorate %Vertex_natural 0 Offset 0
+OpDecorate %_arr_v4float_int_4 ArrayStride 16
+OpMemberDecorate %_MatrixStorage_float4x4_ColMajornatural 0 Offset 0
+OpDecorate %matAndVertexBuff_MVP Location 0
+OpDecorate %gl_Position BuiltIn Position
+
+; Types, variables and constants
+%void = OpTypeVoid
+%3 = OpTypeFunction %void
+%float = OpTypeFloat 32
+%v4float = OpTypeVector %float 4
+%v3float = OpTypeVector %float 3
+%ulong = OpTypeInt 64 0
+%_ptr_Input_ulong = OpTypePointer Input %ulong
+OpTypeForwardPointer %_ptr_PhysicalStorageBuffer_Vertex_natural PhysicalStorageBuffer
+%int = OpTypeInt 32 1
+%_ptr_Input_int = OpTypePointer Input %int
+%uint = OpTypeInt 32 0
+%Vertex_natural = OpTypeStruct %v3float
+%int_4 = OpConstant %int 4
+%_arr_v4float_int_4 = OpTypeArray %v4float %int_4   ; ArrayStride 16
+%_MatrixStorage_float4x4_ColMajornatural = OpTypeStruct %_arr_v4float_int_4
+%_ptr_Input__MatrixStorage_float4x4_ColMajornatural = OpTypePointer Input %_MatrixStorage_float4x4_ColMajornatural
+%mat4v4float = OpTypeMatrix %v4float 4
+%float_1 = OpConstant %float 1
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+%_ptr_PhysicalStorageBuffer_Vertex_natural = OpTypePointer PhysicalStorageBuffer %Vertex_natural    ; ArrayStride 12
+%matAndVertexBuff_vertexBuffer = OpVariable %_ptr_Input_ulong Input                                 ; Location 4
+%gl_BaseInstance = OpVariable %_ptr_Input_int Input                                                 ; BuiltIn BaseInstance
+%gl_InstanceIndex = OpVariable %_ptr_Input_int Input                                                ; BuiltIn InstanceIndex
+%matAndVertexBuff_MVP = OpVariable %_ptr_Input__MatrixStorage_float4x4_ColMajornatural Input        ; Location 0
+%gl_Position = OpVariable %_ptr_Output_v4float Output                                               ; BuiltIn Position
+%uint_0 = OpConstant %uint 0
+%_ptr_Input__arr_v4float_int_4 = OpTypePointer Input %_arr_v4float_int_4
+%_ptr_Input_v4float = OpTypePointer Input %v4float
+%uint_1 = OpConstant %uint 1
+%uint_2 = OpConstant %uint 2
+%uint_3 = OpConstant %uint 3
+%_ptr_PhysicalStorageBuffer_v3float = OpTypePointer PhysicalStorageBuffer %v3float
+
+; Function vertexMain
+%vertexMain = OpFunction %void None %3
+%4 = OpLabel
+%15 = OpLoad %ulong %matAndVertexBuff_vertexBuffer
+%20 = OpConvertUToPtr %_ptr_PhysicalStorageBuffer_Vertex_natural %15
+%22 = OpLoad %int %gl_BaseInstance
+%25 = OpLoad %int %gl_InstanceIndex
+%27 = OpISub %int %25 %22
+%29 = OpBitcast %uint %27
+%30 = OpPtrAccessChain %_ptr_PhysicalStorageBuffer_Vertex_natural %20 %29
+%106 = OpAccessChain %_ptr_PhysicalStorageBuffer_v3float %30 %uint_0
+%107 = OpLoad %v3float %106 Aligned 4
+%91 = OpAccessChain %_ptr_Input__arr_v4float_int_4 %matAndVertexBuff_MVP %uint_0
+%94 = OpAccessChain %_ptr_Input_v4float %91 %uint_0
+%95 = OpLoad %v4float %94
+%97 = OpAccessChain %_ptr_Input_v4float %91 %uint_1
+%98 = OpLoad %v4float %97
+%100 = OpAccessChain %_ptr_Input_v4float %91 %uint_2
+%101 = OpLoad %v4float %100
+%103 = OpAccessChain %_ptr_Input_v4float %91 %uint_3
+%104 = OpLoad %v4float %103
+%45 = OpCompositeExtract %float %95 0
+%46 = OpCompositeExtract %float %95 1
+%47 = OpCompositeExtract %float %95 2
+%48 = OpCompositeExtract %float %95 3
+%50 = OpCompositeExtract %float %98 0
+%51 = OpCompositeExtract %float %98 1
+%52 = OpCompositeExtract %float %98 2
+%53 = OpCompositeExtract %float %98 3
+%55 = OpCompositeExtract %float %101 0
+%56 = OpCompositeExtract %float %101 1
+%57 = OpCompositeExtract %float %101 2
+%58 = OpCompositeExtract %float %101 3
+%60 = OpCompositeExtract %float %104 0
+%61 = OpCompositeExtract %float %104 1
+%62 = OpCompositeExtract %float %104 2
+%63 = OpCompositeExtract %float %104 3
+%64 = OpCompositeConstruct %v4float %45 %50 %55 %60
+%65 = OpCompositeConstruct %v4float %46 %51 %56 %61
+%66 = OpCompositeConstruct %v4float %47 %52 %57 %62
+%67 = OpCompositeConstruct %v4float %48 %53 %58 %63
+%69 = OpCompositeConstruct %mat4v4float %64 %65 %66 %67
+%73 = OpCompositeConstruct %v4float %107 %float_1
+%75 = OpVectorTimesMatrix %v4float %73 %69
+OpStore %gl_Position %75
+OpReturn
+OpFunctionEnd

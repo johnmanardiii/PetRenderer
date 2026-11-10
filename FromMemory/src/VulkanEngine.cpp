@@ -39,7 +39,7 @@ VulkanEngine *VulkanEngine::Create()
     }
 
     VmaAllocatorCreateInfo allocatorCreateInfo = {};
-    allocatorCreateInfo.flags = VMA_ALLOCATOR_CREATE_EXT_MEMORY_BUDGET_BIT;
+    allocatorCreateInfo.flags = VMA_ALLOCATOR_CREATE_EXT_MEMORY_BUDGET_BIT | VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
     allocatorCreateInfo.vulkanApiVersion = VK_API_VERSION_1_3; // #JOHN - this should be specified in a single place
     allocatorCreateInfo.physicalDevice = gpuContext->selectedPhysicalDeviceInfo.physicalDevice;
     allocatorCreateInfo.device = gpuContext->device;
@@ -121,7 +121,7 @@ bool VulkanEngine::init()
 
     deletionQueue.Register([this] { vkDestroySemaphore(gpuContext.device, globalTimelineSemaphore, nullptr); });
 
-    exampleMesh = LoadGPUMeshFromPath(vmaAllocator, "../models/DamagedHelmet.glb");
+    exampleMesh = LoadGPUMeshFromPath(vmaAllocator, gpuContext.device, "../models/DamagedHelmet.glb");
 
     deletionQueue.Register([this] { DestroyGpuMesh(vmaAllocator, exampleMesh); });
 
@@ -235,12 +235,10 @@ void VulkanEngine::RenderToOffscreenImage(VkCommandBuffer commandBuffer)
     float aspectRatio = offscreenRenderImageInfo.extent.width / offscreenRenderImageInfo.extent.height;
     Matrix4D matrixToUpload = MakeRevInfiniteProjection(deg2rad(60.0f), aspectRatio, .1f) *
                               Matrix4D::Translate({0, 0, 6}) * Matrix4D::MakeRotationY(elapsedTime);
+    GPUPushConstants push_constants {matrixToUpload, exampleMesh.vertexBufferAddress};
     vkCmdPushConstants(commandBuffer, babysFirstGraphicsPipelineInfo.graphicsPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT,
-                       0, sizeof(Matrix4D), &matrixToUpload);
+                       0, sizeof(GPUPushConstants), &push_constants);
 
-    // bind vertex buffer b4 drawing
-    VkDeviceSize offsets[] = {0}; // no idea what this is doing #JOHN or when I would actually use it
-    vkCmdBindVertexBuffers(commandBuffer, 0, 1, &exampleMesh.vertexBuffer, offsets);
     vkCmdBindIndexBuffer(commandBuffer, exampleMesh.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
     vkCmdDrawIndexed(commandBuffer, exampleMesh.indexCount, 1, 0, 0, 0);
 
