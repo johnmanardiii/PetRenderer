@@ -12,16 +12,17 @@
 #include <string>
 #include <vector>
 
-/*
- * #JOHN - the point of this for now is to abstract out the main loop from "scene specific things" so that I can
- * better read vulkan engine because I can't imagine doing model loading alongside everything else right now
- *
- */
-struct CPUMesh
+
+
+// maybe needs a more specific name yolo
+// maybe in the future we would want some shared definition between shaders and cpp
+// #JOHN - come back to this after profiling & shadows
+// https://learn.arm.com/learning-paths/mobile-graphics-and-gaming/optimizing-vertex-efficiency/vme-learning-path/ Real-Time Rendering, 4th ed., §16.4.5, “Vertex and Index Buffers/Arrays 
+//https://github.com/zeux/meshoptimizer vertex fetch mechanics
+struct Vertex
 {
-    std::string name;
-    std::vector<Vector3D> positions;
-    std::vector<uint32_t> indices;
+    Vector3D pos;
+    Vector3D norm;
 };
 
 // need to move mesh loading into a simple "hey just give path and I'll give you some gpu blocks to use"

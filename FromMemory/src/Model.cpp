@@ -10,10 +10,23 @@
 #include "cgltf.h"
 #include <cassert>
 
-CPUMesh ParseCpuMeshData(const cgltf_data *data)
+/*
+ * #JOHN - the point of this for now is to abstract out the main loop from "scene specific things" so that I can
+ * better read vulkan engine because I can't imagine doing model loading alongside everything else right now
+ *
+ */
+struct LoadedMeshData
+{
+    std::string name;
+    std::vector<Vector3D> positions;
+    std::vector<Vector3D> normals;
+    std::vector<uint32_t> indices;
+};
+
+LoadedMeshData ParseCpuMeshData(const cgltf_data *data)
 {
     // #JOHN - for now, this isn't generalizable... but that's ok
-    CPUMesh loadedModel;
+    LoadedMeshData loadedModel;
 
     // for now, going to assume just one mesh, and then parse the first one
     assert(data->meshes_count == 1);
@@ -41,13 +54,17 @@ CPUMesh ParseCpuMeshData(const cgltf_data *data)
 
     // position loading
     cgltf_attribute *positionAttribute = nullptr;
+    cgltf_attribute *normalAttribute = nullptr;
     cgltf_size attributeCount = primitiveToLoad->attributes_count;
     for (int i = 0; i < attributeCount; i++)
     {
         if (primitiveToLoad->attributes[i].type == cgltf_attribute_type_position)
         {
             positionAttribute = &primitiveToLoad->attributes[i];
-            break;
+        }
+        else if (primitiveToLoad->attributes[i].type == cgltf_attribute_type_normal)
+        {
+            normalAttribute = &primitiveToLoad->attributes[i];
         }
     }
     assert(positionAttribute != nullptr);
@@ -59,7 +76,6 @@ CPUMesh ParseCpuMeshData(const cgltf_data *data)
     assert(posAccessor->offset == 0);
     assert(posAccessor->stride == sizeof(Vector3D));
 
-    cgltf_float *startAddress = nullptr;
     cgltf_size numPosFloats = cgltf_accessor_unpack_floats(posAccessor, nullptr, 0);
     assert(numPosFloats % 3 == 0);
     assert(numPosFloats / 3 == posAccessor->count);
@@ -68,12 +84,33 @@ CPUMesh ParseCpuMeshData(const cgltf_data *data)
 
     cgltf_accessor_unpack_floats(posAccessor, reinterpret_cast<float *>(loadedModel.positions.data()), numPosFloats);
 
+    // load normals (honestly a lot of the same code as the position if there is another one then you should abstract it) set the normal data to the same count as position
+    loadedModel.normals.resize(posAccessor->count);
+    if (normalAttribute != nullptr)
+    {
+        // load the normals from the attribute
+        cgltf_accessor *normAccessor = normalAttribute->data;
+        assert(normAccessor->type == cgltf_type_vec3);
+        assert(normAccessor->offset == 0);
+        assert(normAccessor->stride == sizeof(Vector3D));
+        cgltf_size numNormFloats = cgltf_accessor_unpack_floats(normAccessor, nullptr, 0);
+        assert(numNormFloats == numPosFloats);
+
+        cgltf_accessor_unpack_floats(normAccessor, reinterpret_cast<float *>(loadedModel.normals.data()), numNormFloats);
+    }
+    else
+    {
+        // initialize the normals to 0
+        Vector3D zero{0.0f, 0.0f, 0.0f};
+        std::fill(loadedModel.normals.begin(), loadedModel.normals.end(), zero);
+    }
+
     return loadedModel;
 }
 
-CPUMesh LoadCPUMeshDataFromPath(const char *filePath)
+LoadedMeshData LoadCPUMeshDataFromPath(const char *filePath)
 {
-    CPUMesh cpu_mesh_data;
+    LoadedMeshData cpu_mesh_data;
 
     cgltf_options options = {};
     cgltf_data *data = NULL;
@@ -109,10 +146,24 @@ CPUMesh LoadCPUMeshDataFromPath(const char *filePath)
     return cpu_mesh_data;
 }
 
+std::vector<Vertex> CreateInterleavedVertexList(const LoadedMeshData& loadedMeshData)
+{
+    std::vector<Vertex> result;
+    result.resize(loadedMeshData.positions.size());
+    for (size_t i = 0; i < loadedMeshData.positions.size(); i++)
+    {
+        result[i] = {loadedMeshData.positions[i], loadedMeshData.normals[i]};
+    }
+
+    return result;
+}
 
 GPUMesh LoadGPUMeshFromPath(VmaAllocator vmaAllocator, VkDevice device, const char *filePath)
 {
-    CPUMesh cpuData = LoadCPUMeshDataFromPath(filePath);
+    LoadedMeshData cpuData = LoadCPUMeshDataFromPath(filePath);
+
+    // intentionally interleave the vertex attributes for learning purposes #JOHN - come back to this and maybe break it up
+    std::vector<Vertex> interleavedVertexData = CreateInterleavedVertexList(cpuData);
 
     // #JOHN - todo: move this to dedicated gpu local memory as part of a larger system
     // was reading over this: https://gpuopen-librariesandsdks.github.io/VulkanMemoryAllocator/html/struct_vma_allocation_create_info.html
@@ -121,7 +172,7 @@ GPUMesh LoadGPUMeshFromPath(VmaAllocator vmaAllocator, VkDevice device, const ch
         .usage = VMA_MEMORY_USAGE_AUTO
     };
 
-    size_t positionDataSize = sizeof(Vector3D) * cpuData.positions.size();
+    size_t positionDataSize = sizeof(Vertex) * interleavedVertexData.size();
     VkBufferCreateInfo vertex_buffer_create_info =
     {
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
@@ -136,7 +187,7 @@ GPUMesh LoadGPUMeshFromPath(VmaAllocator vmaAllocator, VkDevice device, const ch
     vkchk(vmaCreateBuffer(vmaAllocator, &vertex_buffer_create_info, &vertexAllocCreateInfo, &gpuMesh.vertexBuffer,
                           &gpuMesh.vertexBufferAlloc, &gpuMesh.vertexBufferAllocInfo));
 
-    memcpy(gpuMesh.vertexBufferAllocInfo.pMappedData, cpuData.positions.data(), positionDataSize);
+    memcpy(gpuMesh.vertexBufferAllocInfo.pMappedData, interleavedVertexData.data(), positionDataSize);
 
     VkBufferDeviceAddressInfo vertexBuffDeviceAddrInfo {
         .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
