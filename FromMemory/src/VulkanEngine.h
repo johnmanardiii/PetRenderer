@@ -65,7 +65,7 @@ private:
     uint64_t nextSubmitValue = 1;
 
     // #JOHN - this should not be an optional, just need to convert out of swapchain for now.
-    OffscreenRenderImageInfo offscreenRenderImageInfo;
+    AttachmentImageInfo offscreenRenderImageInfo;
 
     // random rendering stuff for the compute shader
     DescriptorInformation descriptorInfo;

@@ -16,7 +16,7 @@
 #include "cgltf.h"
 
 BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo(GpuContext &gpuContext,
-                                                                   const OffscreenRenderImageInfo &
+                                                                   const AttachmentImageInfo &
                                                                    offscreen_render_image_info)
 {
     // create the layout for the pipeline
@@ -132,7 +132,9 @@ BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo(GpuContext &g
     VkPipelineDepthStencilStateCreateInfo depth_stencil_state_create_info =
     {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
-        .depthTestEnable = VK_FALSE,
+        .depthTestEnable = VK_TRUE,
+        .depthWriteEnable = VK_TRUE,
+        .depthCompareOp = VK_COMPARE_OP_GREATER,
         .stencilTestEnable = VK_FALSE
     };
 
@@ -159,7 +161,7 @@ BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo(GpuContext &g
         .viewMask = 0,
         .colorAttachmentCount = 1,
         .pColorAttachmentFormats = &colorAttachmentFormat,
-        .depthAttachmentFormat = VK_FORMAT_UNDEFINED,
+        .depthAttachmentFormat = VK_FORMAT_D32_SFLOAT,  // lowkey would need to be determined up front and then passed to both image creation and this in an ideal situation rather than hardcoded. also kind of sus if I want to change this.
         .stencilAttachmentFormat = VK_FORMAT_UNDEFINED
     };
 

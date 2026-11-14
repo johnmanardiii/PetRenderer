@@ -18,25 +18,32 @@
  */
 
 // #JOHN - eventually this could be abstracted into whatever image but for now its offscreen image
-struct OffscreenRenderImageInfo
+struct AttachmentImageInfo
 {
     VkExtent2D extent;
+
     VkImageView offscreenImageView = VK_NULL_HANDLE;
     VkImage offscreenImage = VK_NULL_HANDLE;
     VkFormat offscreenImageFormat;
-    VmaAllocation allocation = VK_NULL_HANDLE;
+    VmaAllocation offscreenImageAllocation = VK_NULL_HANDLE;
+
+    // Going to shove in depth buffer stuff into this because honestly it kind of makes sense.
+    VkImageView depthAttachmentImageView = VK_NULL_HANDLE;
+    VkImage depthAttachmentImage = VK_NULL_HANDLE;
+    VkFormat depthAttachmentFormat;
+    VmaAllocation depthAttachmentAllocation = VK_NULL_HANDLE;
 };
 
 // #JOHN this used to be a RAII class but then I was getting annoyed at the move / copy behavior by default and realized
 // i didn't need it and that if I didn't need it, I might as well use free funcitons. I can see though how if I wanted
 // to construct that it could maybe be useful./
 // oh woah big fan of how this is pass around by value... hole mole
-OffscreenRenderImageInfo createOffscreenRenderImageInfo(VkDevice device, VkExtent2D swapchainExtent,
+AttachmentImageInfo createAttachmentImageInfo(VkDevice device, VkExtent2D swapchainExtent,
                                                         VmaAllocator allocator, VkFormat offscreenImageFormat);
 
-void DestroyOffscreenRenderImageInfo(VkDevice device, OffscreenRenderImageInfo &offscreenRenderImageInfo, VmaAllocator allocator);
+void DestroyAttachmentImageInfo(VkDevice device, AttachmentImageInfo &offscreenRenderImageInfo, VmaAllocator allocator);
 
-void UpdateOffscreenRenderImageDescriptorSet(VkDevice device, OffscreenRenderImageInfo &offscreenRenderImageInfo,
+void UpdateAttachmentImageDescriptorSet(VkDevice device, AttachmentImageInfo &offscreenRenderImageInfo,
                                              VkDescriptorSet descriptorSet);
 
 #endif // CREATEOFFSCREENRENDERIMAGE_H

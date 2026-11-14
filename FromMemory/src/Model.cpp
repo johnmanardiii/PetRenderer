@@ -152,7 +152,7 @@ std::vector<Vertex> CreateInterleavedVertexList(const LoadedMeshData& loadedMesh
     result.resize(loadedMeshData.positions.size());
     for (size_t i = 0; i < loadedMeshData.positions.size(); i++)
     {
-        result[i] = {loadedMeshData.positions[i], loadedMeshData.normals[i]};
+        result[i] = {loadedMeshData.positions[i], 0.0f, loadedMeshData.normals[i], 0.0f};
     }
 
     return result;

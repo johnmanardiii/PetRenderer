@@ -85,15 +85,15 @@ bool VulkanEngine::init()
     VkExtent2D initialOffscreenRenderImage = {.width = static_cast<uint32_t>(width),
                                               .height = static_cast<uint32_t>(height)};
 
-    offscreenRenderImageInfo = createOffscreenRenderImageInfo(gpuContext.device, initialOffscreenRenderImage,
+    offscreenRenderImageInfo = createAttachmentImageInfo(gpuContext.device, initialOffscreenRenderImage,
                                                               vmaAllocator, VK_FORMAT_R16G16B16A16_SFLOAT);
 
     deletionQueue.Register(
-        [this] { DestroyOffscreenRenderImageInfo(gpuContext.device, offscreenRenderImageInfo, vmaAllocator); });
+        [this] { DestroyAttachmentImageInfo(gpuContext.device, offscreenRenderImageInfo, vmaAllocator); });
 
     // #JOHN - manually do this for now, just because things are messy, don't submit until a design has been worked out
     // for this
-    UpdateOffscreenRenderImageDescriptorSet(gpuContext.device, offscreenRenderImageInfo, descriptorInfo.descriptorSet);
+    UpdateAttachmentImageDescriptorSet(gpuContext.device, offscreenRenderImageInfo, descriptorInfo.descriptorSet);
 
     deletionQueue.Register([this] { DestroyDescriptorInformation(gpuContext.device, descriptorInfo); });
 
@@ -203,6 +203,24 @@ void VulkanEngine::RenderToOffscreenImage(VkCommandBuffer commandBuffer)
         .image = offscreenRenderImageInfo.offscreenImage,
     });
 
+    // #JOHN - this should only really happen once at the beginning... but since I don't really have a convenient "startup command buffer'
+    // I am going to transition the depth attachment to depth optimal at the top of every frame (needs cleanup)
+    TransitionVkImageFormat({
+        .cmd = commandBuffer,
+        .srcStageMask =
+            VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT_KHR | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT_KHR,
+        .srcAccessMask =
+            VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT_KHR | VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT_KHR,
+        .dstStageMask =
+            VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT_KHR | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT_KHR,
+        .dstAccessMask =
+            VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT_KHR | VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT_KHR,
+        .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+        .newLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+        .image = offscreenRenderImageInfo.depthAttachmentImage,
+        .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT, 
+    });
+
     // bind the graphics pipeline
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, babysFirstGraphicsPipelineInfo.graphicsPipeline);
 
@@ -212,11 +230,22 @@ void VulkanEngine::RenderToOffscreenImage(VkCommandBuffer commandBuffer)
         .imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
         .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD, // even tho we don't really need to know this
         .storeOp = VK_ATTACHMENT_STORE_OP_STORE};
+    VkRenderingAttachmentInfo depthAttachmentInfo = {
+        .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+        .imageView = offscreenRenderImageInfo.depthAttachmentImageView,
+        .imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+        // #john - what are the load ops and store ops again durrrr
+        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR, // even tho we don't really need to know this
+        .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,    // discard depth after this pass
+        .clearValue = {0.0f},
+    };
     VkRenderingInfo rendering_info = {.sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
                                       .renderArea = {{0, 0}, {offscreenRenderImageInfo.extent}},
                                       .layerCount = 1,
                                       .colorAttachmentCount = 1,
-                                      .pColorAttachments = &color_attachment_info};
+                                      .pColorAttachments = &color_attachment_info,
+                                      .pDepthAttachment = &depthAttachmentInfo,
+    };
 
     vkCmdBeginRendering(commandBuffer, &rendering_info);
 
@@ -442,10 +471,10 @@ void VulkanEngine::ResizeOffscreenRenderTarget()
     // currently waits on idle before doing anything, which means that old resources aren't in use and can be destroyed
     // before creation. The real pattern for these swapchain resources you want is more like:
     // swapchain resize -> create new ones -> mark old ones as retired -> top of frame where no longer in use delete
-    DestroyOffscreenRenderImageInfo(gpuContext.device, offscreenRenderImageInfo, vmaAllocator);
+    DestroyAttachmentImageInfo(gpuContext.device, offscreenRenderImageInfo, vmaAllocator);
 
     // maybe this should be stored in something idk. (repeated format is red flag-y)
-    offscreenRenderImageInfo = createOffscreenRenderImageInfo(gpuContext.device, swapchainResources.GetExtent(),
+    offscreenRenderImageInfo = createAttachmentImageInfo(gpuContext.device, swapchainResources.GetExtent(),
                                                               vmaAllocator, VK_FORMAT_R16G16B16A16_SFLOAT);
-    UpdateOffscreenRenderImageDescriptorSet(gpuContext.device, offscreenRenderImageInfo, descriptorInfo.descriptorSet);
+    UpdateAttachmentImageDescriptorSet(gpuContext.device, offscreenRenderImageInfo, descriptorInfo.descriptorSet);
 }

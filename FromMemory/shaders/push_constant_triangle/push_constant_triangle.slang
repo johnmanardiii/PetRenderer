@@ -5,7 +5,9 @@
 struct Vertex
 {
     float3 pos;
+    float u;
     float3 norm;
+    float v;
 };
 
 // push constants

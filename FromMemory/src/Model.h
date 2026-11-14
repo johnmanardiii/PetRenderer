@@ -22,7 +22,9 @@
 struct Vertex
 {
     Vector3D pos;
+    float u;    // was complaining about alignment so I am going to shove this here
     Vector3D norm;
+    float v;    // and why not this while I'm here.
 };
 
 // need to move mesh loading into a simple "hey just give path and I'll give you some gpu blocks to use"

@@ -16,7 +16,7 @@
  *  Trying not to take myself too seriously and just get a triangle on screen here
  */
 
-struct OffscreenRenderImageInfo;
+struct AttachmentImageInfo;
 
 // #JOHN - this should be generated from slang and also not in this file more of a rendering thing than model thing
 struct GPUPushConstants
@@ -31,7 +31,7 @@ struct BabyFirstGraphicsPipelineInfo
     VkPipeline graphicsPipeline;
 };
 
-BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo(GpuContext& gpuContext, const OffscreenRenderImageInfo& offscreen_render_image_info);
+BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo(GpuContext& gpuContext, const AttachmentImageInfo& offscreen_render_image_info);
 
 void DestroyBabysFirstGraphicsPipelineInfo(GpuContext& gpuContext, BabyFirstGraphicsPipelineInfo& pipeline_info);
 
