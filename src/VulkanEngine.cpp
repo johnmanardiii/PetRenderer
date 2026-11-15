@@ -16,7 +16,6 @@
 #include "VulkanUtil.h"
 
 #include <array>
-#include <fmt/printf.h>
 
 VulkanEngine *VulkanEngine::Create()
 {

@@ -10,6 +10,8 @@
 #include "cgltf.h"
 #include <cassert>
 #include <SDL3/SDL_iostream.h>
+#include <fmt/format.h>
+#include <fmt/printf.h>
 
 /*
  * #JOHN - the point of this for now is to abstract out the main loop from "scene specific things" so that I can

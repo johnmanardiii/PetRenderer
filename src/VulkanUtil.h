@@ -6,7 +6,6 @@
 #define VULKAN_UTIL_PR_H
 
 #include "SDL3/SDL_log.h"
-#include <fmt/printf.h>
 #include <volk.h>
 #include <vulkan/vk_enum_string_helper.h>
 #include <utility>

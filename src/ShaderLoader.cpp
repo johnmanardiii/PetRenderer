@@ -7,8 +7,8 @@
 #include "VulkanUtil.h"
 
 #include <SDL3/SDL_iostream.h>
-#include <fmt/printf.h>
 #include <fmt/format.h>
+#include "SDL3/SDL_log.h"
 
 bool LoadShader(const char *filePath, VkDevice device, VkShaderModule *shaderModule)
 {
@@ -18,7 +18,7 @@ bool LoadShader(const char *filePath, VkDevice device, VkShaderModule *shaderMod
     void *data = SDL_LoadFile(shaderPath.c_str(), &bitesRead);
     if (!data)
     {
-        fmt::print(stderr, "Failed to load shader file {}\n", shaderPath);
+        SDL_Log("Failed to load shader file %s\n", shaderPath.c_str());
         return false;
     }
 

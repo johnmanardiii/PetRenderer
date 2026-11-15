@@ -11,7 +11,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL DebugCreateInstanceCallback(VkDebugUtilsMessageSe
                                                            const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData,
                                                            void *pUserData)
 {
-    fmt::print("DebugCreateInstanceCallback: {}\n", pCallbackData->pMessage);
+    SDL_Log("DebugCreateInstanceCallback: %s\n", pCallbackData->pMessage);
 
     return VK_FALSE;
 }
@@ -174,9 +174,14 @@ static bool HasSwapChainExtension(VkPhysicalDevice device)
     std::vector<VkExtensionProperties> extensions(extensionCount);
     vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, extensions.data());
 
-    return std::ranges::find_if(extensions, [](const VkExtensionProperties &extension) {
-        return strcmp(extension.extensionName, "VK_KHR_swapchain") == 0;
-    }) != extensions.end();
+    for (VkExtensionProperties& extensionProperties : extensions)
+    {
+        if (strcmp(extensionProperties.extensionName, "VK_KHR_swapchain") == 0)
+        {
+            return true;
+        }
+    }
+    return false;
 }
 
 std::optional<PhysicalDeviceInfo> selectPhysicalDevice(VkInstance instance, VkSurfaceKHR surface)

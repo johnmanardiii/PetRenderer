@@ -9,7 +9,6 @@
 #include "ScopedFunctionalQueue.h"
 #include "VulkanDebugUtil.h"
 #include "VulkanInit.h"
-#include "fmt/printf.h"
 #include "volk.h"
 
 static_assert(std::is_move_constructible<GpuContext>());
