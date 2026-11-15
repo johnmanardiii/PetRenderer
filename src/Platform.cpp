@@ -5,6 +5,7 @@
 #include "fmt/printf.h"
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
+#include "SDL3/SDL_log.h"
 
 static_assert(std::is_move_constructible<Platform>());
 
@@ -13,7 +14,7 @@ std::optional<Platform> CreatePlatform(int width, int height, FunctionalQueue& d
 {
     if (!SDL_Init(SDL_INIT_VIDEO))
     {
-        fmt::printf("Failed to initialize GLFW\n");
+        SDL_Log("Failed to initialize GLFW\n");
         return std::nullopt;
     }
 
@@ -21,7 +22,7 @@ std::optional<Platform> CreatePlatform(int width, int height, FunctionalQueue& d
 
     if (!SDL_Vulkan_LoadLibrary(nullptr))
     {
-        fmt::printf("Failed to initialize SDL_Vulkan_LoadLibrary: %s\n", SDL_GetError());
+        SDL_Log("Failed to initialize SDL_Vulkan_LoadLibrary: %s\n", SDL_GetError());
         return std::nullopt;
     }
 
@@ -31,7 +32,7 @@ std::optional<Platform> CreatePlatform(int width, int height, FunctionalQueue& d
     SDL_Window *window = SDL_CreateWindow("Pet Renderer", width, height, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
     if (!window)
     {
-        fmt::printf("Failed to create window: %s\n", SDL_GetError());
+        SDL_Log("Failed to create window: %s\n", SDL_GetError());
         return std::nullopt;
     }
 

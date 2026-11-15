@@ -10,6 +10,7 @@
 #include <vulkan/vk_enum_string_helper.h>
 #include <utility>
 #include <cassert>
+#include <cstdlib>
 
 // macro so I don't have to check the VkResult every single time
 inline void vkchk(VkResult result)

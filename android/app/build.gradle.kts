@@ -31,7 +31,7 @@ android {
         }
     }
 
-    sourceSets["main"].assets.srcDir("../../assets")
+    sourceSets["main"].assets.directories.add("../../assets")
 
     buildTypes {
         release {

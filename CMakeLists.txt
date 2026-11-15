@@ -19,7 +19,13 @@ set(CMAKE_CXX_STANDARD 23)
 
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-add_executable(PetRenderer)
+if (ANDROID)
+    add_library(PetRenderer SHARED)
+    set_target_properties(PetRenderer PROPERTIES OUTPUT_NAME main)
+else()
+    add_executable(PetRenderer)
+endif()
+
 
 add_subdirectory(third_party)
 

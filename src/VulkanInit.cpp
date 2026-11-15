@@ -4,7 +4,7 @@
 
 #include "VulkanInit.h"
 #include "VulkanUtil.h"
-#include "fmt/printf.h"
+#include "SDL3/SDL_log.h"
 
 VKAPI_ATTR VkBool32 VKAPI_CALL DebugCreateInstanceCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
                                                            VkDebugUtilsMessageTypeFlagsEXT messageTypes,
@@ -30,7 +30,7 @@ VkInstance CreateInstance(std::vector<std::string> requiredLayers,
         || VK_API_VERSION_MINOR(instanceApiVersion) < 3)
     {
         // we need instance version at least 1.3 guaranteed
-        fmt::printf("Application requires instance version at least 1.3.\n");
+        SDL_Log("Application requires instance version at least 1.3.\n");
         return VK_NULL_HANDLE;
     }
 
@@ -61,7 +61,7 @@ VkInstance CreateInstance(std::vector<std::string> requiredLayers,
 
     if (presentDesiredLayers.size() != requiredLayers.size())
     {
-        fmt::printf("Failed to retrieve present desired layers.\n");
+        SDL_Log("Failed to retrieve present desired layers.\n");
         return VK_NULL_HANDLE;
     }
 
@@ -106,7 +106,7 @@ VkInstance CreateInstance(std::vector<std::string> requiredLayers,
         if (!bFound)
         {
             // dependent on the above break but it should be chill
-            fmt::printf("Failed to retrieve debug extension names.\n");
+            SDL_Log("Failed to retrieve debug extension names.\n");
             return VK_NULL_HANDLE;
         }
     }
@@ -249,7 +249,7 @@ std::optional<PhysicalDeviceInfo> selectPhysicalDevice(VkInstance instance, VkSu
                 if (queueFamilyProperties[queueFamilyIndex].queueFamilyProperties.queueFlags & VK_QUEUE_GRAPHICS_BIT)
                 {
                     // this device is good enough for me:
-                    fmt::printf("Found device %s with a queue that supports graphics and presentation, good enough"
+                    SDL_Log("Found device %s with a queue that supports graphics and presentation, good enough"
                                 " for me.\n",
                                 physicalDeviceProperties.properties.deviceName);
                     info = {.physicalDevice = device, .graphicsPresentQueueFamilyIndex = queueFamilyIndex};

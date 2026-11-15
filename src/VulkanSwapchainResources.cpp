@@ -6,7 +6,7 @@
 
 #include "VulkanDebugUtil.h"
 #include "VulkanUtil.h"
-
+#include "SDL3/SDL_log.h"
 #include <array>
 #include <cassert>
 #include <vector>
@@ -106,7 +106,7 @@ std::optional<SwapchainInfo> CreateSwapchain(VkDevice device, VkPhysicalDevice p
 
     if (!selectedPresentMode)
     {
-        fmt::printf("desired present mode not found, refusing to create swapchain.\n");
+        SDL_Log("desired present mode not found, refusing to create swapchain.\n");
         return std::nullopt;
     }
 
@@ -197,7 +197,7 @@ std::optional<SwapchainInfo> CreateSwapchain(VkDevice device, VkPhysicalDevice p
     if (surfaceTransform != VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR ||
         (surfaceCapabilities.surfaceCapabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR) == 0)
     {
-        fmt::printf("Engine currently only supports identity pretransform and will handle rotation later if needed");
+        SDL_Log("Engine currently only supports identity pretransform and will handle rotation later if needed");
         std::abort();
         return std::nullopt;
     }
@@ -340,7 +340,7 @@ std::optional<AcquiredSwapchainImageInfo> VulkanSwapchainResources::AcquireNextI
     {
         if (!Recreate())
         {
-            fmt::printf("Failed to recreate swapchain");
+            SDL_Log("Failed to recreate swapchain");
             std::abort();
         }
         bNeedsRebuild = false;
