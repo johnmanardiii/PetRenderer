@@ -21,7 +21,7 @@ std::optional<GpuContext> CreateGpuContext(const Platform &platform, FunctionalQ
     requiredExtensions.push_back(VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME);
     requiredExtensions.push_back(VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME);
 
-    VkInstance instance = CreateInstance({"VK_LAYER_KHRONOS_validation"}, requiredExtensions);
+    VkInstance instance = CreateInstance(true, requiredExtensions);
 
     if (!instance)
     {

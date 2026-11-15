@@ -17,7 +17,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL DebugCreateInstanceCallback(VkDebugUtilsMessageSe
 }
 
 
-VkInstance CreateInstance(std::vector<std::string> requiredLayers,
+VkInstance CreateInstance(bool bEnableValidation,
                           const std::vector<const char *> &requiredExtensions)
 {
     // ensure that this device supports at least a 1.3 vulkan instance version (hard requirement for now that the
@@ -48,22 +48,22 @@ VkInstance CreateInstance(std::vector<std::string> requiredLayers,
     std::vector<const char *> presentDesiredLayers;
     // this double loop is pissing me off and #JOHN I want it to be "set-like"
     // but I really shouldn't care because it is so small.
-    for (VkLayerProperties &layerInfo : availableLayers)
+    if (bEnableValidation)
     {
-        for (const std::string &layerName : requiredLayers)
+        for (VkLayerProperties &layerInfo : availableLayers)
         {
-            if (layerInfo.layerName == layerName)
+            if (strcmp(layerInfo.layerName, "VK_LAYER_KHRONOS_validation") == 0)
             {
-                presentDesiredLayers.push_back(layerName.c_str());
+                presentDesiredLayers.push_back("VK_LAYER_KHRONOS_validation");
             }
         }
-    }
 
-    if (presentDesiredLayers.size() != requiredLayers.size())
-    {
-        SDL_Log("Failed to retrieve present desired layers.\n");
-        return VK_NULL_HANDLE;
+        if (presentDesiredLayers.empty())
+        {
+            SDL_Log("Validation Requested but validation layer not found.\n");
+        }
     }
+    
 
     // #JOHN figure out extensions that we want
     uint32_t instanceExtensionCount = 0;
@@ -84,11 +84,6 @@ VkInstance CreateInstance(std::vector<std::string> requiredLayers,
         // append to total list of available extensions
         availableExtensions.insert(availableExtensions.end(), layerExtensions.begin(), layerExtensions.end());
     }
-
-    // de-duplicate required extensions
-    std::sort(requiredLayers.begin(), requiredLayers.end());
-    auto ret = std::ranges::unique(requiredLayers);
-    requiredLayers.erase(ret.begin(), ret.end());
 
     // return early if not all extensions in the required extensions are present
     for (const auto &extensionName : requiredExtensions)
