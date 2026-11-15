@@ -10,6 +10,7 @@
 #include "Matrix4D.h"
 #include "OffscreenRenderImage.h"
 #include "SDL3/SDL_timer.h"
+#include "SDL3/SDL_log.h"
 #include "VulkanDebugUtil.h"
 #include "VulkanSwapchainResources.h"
 #include "VulkanUtil.h"
@@ -149,7 +150,7 @@ void VulkanEngine::OnWindowSizeChanged()
     }
     else
     {
-        fmt::printf("Failed to get window size: %s\n", SDL_GetError());
+        SDL_Log("Failed to get window size: %s\n", SDL_GetError());
         std::abort();
     }
 }

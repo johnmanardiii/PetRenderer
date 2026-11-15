@@ -5,6 +5,7 @@
 #ifndef VULKAN_UTIL_PR_H
 #define VULKAN_UTIL_PR_H
 
+#include "SDL3/SDL_log.h"
 #include <fmt/printf.h>
 #include <volk.h>
 #include <vulkan/vk_enum_string_helper.h>
@@ -23,7 +24,7 @@ inline void vkchk(VkResult result)
     // #JOHN maybe add "file" "line" to this thing...
     if (result < 0)
     {
-        fmt::printf("Error: %s when executing vulkan command", string_VkResult(result));
+        SDL_Log("Error: %s when executing vulkan command", string_VkResult(result));
         std::abort();
     }
 }
