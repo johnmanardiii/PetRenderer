@@ -125,8 +125,6 @@ bool VulkanEngine::init()
 
     deletionQueue.Register([this] { DestroyGpuMesh(vmaAllocator, exampleMesh); });
 
-    app.LoadModels();
-
     return true;
 }
 
