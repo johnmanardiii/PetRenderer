@@ -9,6 +9,7 @@
 #include "VulkanUtil.h"
 #include "cgltf.h"
 #include <cassert>
+#include <SDL3/SDL_iostream.h>
 
 /*
  * #JOHN - the point of this for now is to abstract out the main loop from "scene specific things" so that I can
@@ -114,7 +115,18 @@ LoadedMeshData LoadCPUMeshDataFromPath(const char *filePath)
 
     cgltf_options options = {};
     cgltf_data *data = NULL;
-    cgltf_result result = cgltf_parse_file(&options, filePath, &data);
+
+    // #JOHN - this should really be a shared function now that it is repeated across both load shader and here
+    size_t bitesRead;
+    std::string modelPath = fmt::format("{}{}", ASSET_ROOT, filePath);
+    void *biteData = SDL_LoadFile(modelPath.c_str(), &bitesRead);
+
+    if (!biteData)
+    {
+        fmt::print(stderr, "Failed to load Model file {}\n", modelPath);
+        return cpu_mesh_data; // #JOHN - might need a failure return...
+    }
+    cgltf_result result = cgltf_parse(&options, biteData, bitesRead, &data);
 
     // john - this guide is kinda good tho: https://www.khronos.org/files/gltf20-reference-guide.pdf
     // plan: get straight positions + indices in

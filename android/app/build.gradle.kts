@@ -22,6 +22,17 @@ android {
         // https://developer.android.com/ndk/guides/abis.html#sa
         // if you need to build for a different abi then you would need to add it here...
         ndk { abiFilters += "arm64-v8a"}
+
+        // https://stackoverflow.com/questions/75870769/why-am-i-getting-java-lang-unsatisfiedlinkerror-dlopen-failed-library-libc
+        // idk man the layer library needs the cpp standard library or something
+        // https://developer.android.com/ndk/guides/graphics/validation-layer#vl-external
+        // also apparently we don't even need to do this so maybe in the future I take that .so file
+        // out and like turn it off
+        externalNativeBuild {
+            cmake {
+                arguments += "-DANDROID_STL=c++_shared"
+            }
+        }
     }
 
     externalNativeBuild {

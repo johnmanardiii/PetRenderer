@@ -15,7 +15,7 @@ PipelineObjects CreatePipelineObjects(VkDevice device, VkDescriptorSetLayout des
     // #JOHN - crazzzyyyy how we hardcoding the shader but yolo
     VkShaderModule shaderModule = VK_NULL_HANDLE;
     // Uhhh the working directory shall be ...
-    if (!LoadShader("../shaders/gradient/gradient.comp.spv", device, &shaderModule))
+    if (!LoadShader("shaders/gradient/gradient.comp.spv", device, &shaderModule))
     {
         assert(false);
     }

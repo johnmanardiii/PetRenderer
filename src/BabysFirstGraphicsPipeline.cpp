@@ -43,7 +43,7 @@ BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo(GpuContext &g
 
     // create the shaders we are going to use (vert and frag for now)
     VkShaderModule vertexShaderModule;
-    if (!LoadShader("../shaders/push_constant_triangle/push_constant_triangle.vert.spv", gpuContext.device,
+    if (!LoadShader("shaders/push_constant_triangle/push_constant_triangle.vert.spv", gpuContext.device,
                     &vertexShaderModule))
     {
         assert(false);
@@ -58,7 +58,7 @@ BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo(GpuContext &g
 
     // fragment shader create info
     VkShaderModule fragmentShaderModule;
-    if (!LoadShader("../shaders/push_constant_triangle/push_constant_triangle.frag.spv", gpuContext.device,
+    if (!LoadShader("shaders/push_constant_triangle/push_constant_triangle.frag.spv", gpuContext.device,
                     &fragmentShaderModule))
     {
         assert(false);

@@ -8,14 +8,17 @@
 
 #include <SDL3/SDL_iostream.h>
 #include <fmt/printf.h>
+#include <fmt/format.h>
 
 bool LoadShader(const char *filePath, VkDevice device, VkShaderModule *shaderModule)
 {
     size_t bitesRead;
-    void* data = SDL_LoadFile(filePath, &bitesRead);
+    // #JOHN - ideally i would do this without allocations...
+    std::string shaderPath = fmt::format("{}{}", ASSET_ROOT, filePath);
+    void *data = SDL_LoadFile(shaderPath.c_str(), &bitesRead);
     if (!data)
     {
-        fmt::print(stderr, "Failed to load shader file {}\n", filePath);
+        fmt::print(stderr, "Failed to load shader file {}\n", shaderPath);
         return false;
     }
 

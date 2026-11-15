@@ -122,7 +122,7 @@ bool VulkanEngine::init()
 
     deletionQueue.Register([this] { vkDestroySemaphore(gpuContext.device, globalTimelineSemaphore, nullptr); });
 
-    exampleMesh = LoadGPUMeshFromPath(vmaAllocator, gpuContext.device, "../models/DamagedHelmet.glb");
+    exampleMesh = LoadGPUMeshFromPath(vmaAllocator, gpuContext.device, "/models/DamagedHelmet.glb");
 
     deletionQueue.Register([this] { DestroyGpuMesh(vmaAllocator, exampleMesh); });
 

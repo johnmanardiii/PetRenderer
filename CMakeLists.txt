@@ -30,3 +30,13 @@ endif()
 add_subdirectory(third_party)
 
 add_subdirectory(src)
+
+
+# funny business needed to get the file references to act the same on android as they do on desktop
+# where on desktop we want to set this path as an env variable and on android SDL handles translating
+# the assets folder to be ./
+if (ANDROID)
+target_compile_definitions(PetRenderer PRIVATE ASSET_ROOT="")
+else()
+    target_compile_definitions(PetRenderer PRIVATE ASSET_ROOT="${CMAKE_SOURCE_DIR}/assets/")
+endif()
