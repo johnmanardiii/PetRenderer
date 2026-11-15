@@ -1,8 +1,9 @@
-# Writing Vulkan code from memory
+# Vulkan For Funsies Renderer
 
-* this project is me trying to use only the spec to write a vulkan program after reading vkguide. no AI, no tutorial
-  code.
+* this project is me trying to use only the spec to write a vulkan program after initially reading vkguide and then jumping off from there. no AI generated code but I'm ngl I eventually started asking AI questions when I ran into looking into resources and better understanding syncronization issues but its a hard-and-fast rule that none of the code itself be written by AI.
+* started off trying not to use libraries, but then gave in to using VMA, volk, cgltf, and imgui because they were too useful to get this off the ground. Hand-rolling my own math library for fun though :)
 * The sole purpose of this project is learning.
+* model glb files are from Khronos sample assets (https://github.com/KhronosGroup/glTF-Sample-Assets). 
 
 # Dependencies:
 If running on Linux, please install the depedencies for SDL3: https://wiki.libsdl.org/SDL3/README-linux
