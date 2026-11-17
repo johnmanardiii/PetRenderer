@@ -32,7 +32,6 @@ struct Vertex
 // with the delete funciton currently located in the pipeline file.
 struct GPUMesh
 {
-    VkDeviceAddress vertexBufferAddress;
     VkBuffer vertexBuffer;
     VmaAllocation vertexBufferAlloc;
 

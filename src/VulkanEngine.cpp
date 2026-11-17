@@ -9,8 +9,8 @@
 #include "CustomMath.h"
 #include "Matrix4D.h"
 #include "OffscreenRenderImage.h"
-#include "SDL3/SDL_timer.h"
 #include "SDL3/SDL_log.h"
+#include "SDL3/SDL_timer.h"
 #include "VulkanDebugUtil.h"
 #include "VulkanSwapchainResources.h"
 #include "VulkanUtil.h"
@@ -39,7 +39,8 @@ VulkanEngine *VulkanEngine::Create()
     }
 
     VmaAllocatorCreateInfo allocatorCreateInfo = {};
-    allocatorCreateInfo.flags = VMA_ALLOCATOR_CREATE_EXT_MEMORY_BUDGET_BIT | VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
+    allocatorCreateInfo.flags =
+        VMA_ALLOCATOR_CREATE_EXT_MEMORY_BUDGET_BIT | VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
     allocatorCreateInfo.vulkanApiVersion = VK_API_VERSION_1_3; // #JOHN - this should be specified in a single place
     allocatorCreateInfo.physicalDevice = gpuContext->selectedPhysicalDeviceInfo.physicalDevice;
     allocatorCreateInfo.device = gpuContext->device;
@@ -77,27 +78,34 @@ bool VulkanEngine::init()
 
     // #JOHN this doesn't belong directly in the engine, but rather whatever represents our "draw passes" and this goes
     // into the "compute shader draws a picture with 16x16 lines" logic
-    AllocateDescriptorInfo(gpuContext.device, descriptorInfo);
+    AttachmentImageAllocateDescriptorInfo(gpuContext.device, attachmentImageDescriptorInfo);
 
-    pipelineObjects = CreatePipelineObjects(gpuContext.device, descriptorInfo.descriptorSetLayout);
+    pipelineObjects = CreatePipelineObjects(gpuContext.device, attachmentImageDescriptorInfo.descriptorSetLayout);
     deletionQueue.Register([this] { DestroyPipelineObjects(gpuContext.device, pipelineObjects); });
 
     VkExtent2D initialOffscreenRenderImage = {.width = static_cast<uint32_t>(width),
                                               .height = static_cast<uint32_t>(height)};
 
-    offscreenRenderImageInfo = createAttachmentImageInfo(gpuContext.device, initialOffscreenRenderImage,
-                                                              vmaAllocator, VK_FORMAT_R16G16B16A16_SFLOAT);
+    offscreenRenderImageInfo = createAttachmentImageInfo(gpuContext.device, initialOffscreenRenderImage, vmaAllocator,
+                                                         VK_FORMAT_R16G16B16A16_SFLOAT);
 
     deletionQueue.Register(
         [this] { DestroyAttachmentImageInfo(gpuContext.device, offscreenRenderImageInfo, vmaAllocator); });
 
     // #JOHN - manually do this for now, just because things are messy, don't submit until a design has been worked out
     // for this
-    UpdateAttachmentImageDescriptorSet(gpuContext.device, offscreenRenderImageInfo, descriptorInfo.descriptorSet);
+    UpdateAttachmentImageDescriptorSet(gpuContext.device, offscreenRenderImageInfo,
+                                       attachmentImageDescriptorInfo.descriptorSet);
 
-    deletionQueue.Register([this] { DestroyDescriptorInformation(gpuContext.device, descriptorInfo); });
+    deletionQueue.Register(
+        [this] { AttachmentImageDestroyDescriptorInformation(gpuContext.device, attachmentImageDescriptorInfo); });
 
-    babysFirstGraphicsPipelineInfo = CreateBabysFirstGraphicsPipelineInfo(gpuContext, offscreenRenderImageInfo);
+    exampleMesh = LoadGPUMeshFromPath(vmaAllocator, gpuContext.device, "/models/DamagedHelmet.glb");
+
+    BigMeshBufferAllocateDescriptorInfo(gpuContext.device, mesh_buffer_descriptor_information);
+
+    babysFirstGraphicsPipelineInfo =
+        CreateBabysFirstGraphicsPipelineInfo(gpuContext, offscreenRenderImageInfo, mesh_buffer_descriptor_information);
     deletionQueue.Register(
         [this] { DestroyBabysFirstGraphicsPipelineInfo(gpuContext, babysFirstGraphicsPipelineInfo); });
 
@@ -121,7 +129,23 @@ bool VulkanEngine::init()
 
     deletionQueue.Register([this] { vkDestroySemaphore(gpuContext.device, globalTimelineSemaphore, nullptr); });
 
-    exampleMesh = LoadGPUMeshFromPath(vmaAllocator, gpuContext.device, "/models/DamagedHelmet.glb");
+    // #JOHN - this management and "post upload" work should really be moved out of this "engine" thing
+    // honestly move this into the allocate please it is very ugly and you are already assuming it happens once #JOHN
+    VkDescriptorBufferInfo buffer_info = {
+        .buffer = exampleMesh.vertexBuffer,
+        .range = VK_WHOLE_SIZE
+    };
+    VkWriteDescriptorSet writeVertexBufferToDescriptorSet{.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                                                          .dstSet = mesh_buffer_descriptor_information.descriptorSet,
+                                                          .dstBinding = 0,
+                                                          .dstArrayElement = 0,
+                                                          .descriptorCount = 1,
+                                                          .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                                                          .pBufferInfo = &buffer_info};
+    vkUpdateDescriptorSets(gpuContext.device, 1, &writeVertexBufferToDescriptorSet, 0, nullptr);
+
+    deletionQueue.Register(
+        [this] { BigMeshBufferDestroyDescriptorInformation(gpuContext.device, mesh_buffer_descriptor_information); });
 
     deletionQueue.Register([this] { DestroyGpuMesh(vmaAllocator, exampleMesh); });
 
@@ -183,7 +207,7 @@ void VulkanEngine::RenderToOffscreenImage(VkCommandBuffer commandBuffer)
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipelineObjects.pipeline);
 
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipelineObjects.layout, 0, 1,
-                            &descriptorInfo.descriptorSet, 0, nullptr);
+                            &attachmentImageDescriptorInfo.descriptorSet, 0, nullptr);
 
     // #JOHN - this should be.... the size of the offscreen render target actually like the image itself...
     auto [width, height] = offscreenRenderImageInfo.extent;
@@ -201,8 +225,9 @@ void VulkanEngine::RenderToOffscreenImage(VkCommandBuffer commandBuffer)
         .image = offscreenRenderImageInfo.offscreenImage,
     });
 
-    // #JOHN - this should only really happen once at the beginning... but since I don't really have a convenient "startup command buffer'
-    // I am going to transition the depth attachment to depth optimal at the top of every frame (needs cleanup)
+    // #JOHN - this should only really happen once at the beginning... but since I don't really have a convenient
+    // "startup command buffer' I am going to transition the depth attachment to depth optimal at the top of every frame
+    // (needs cleanup)
     TransitionVkImageFormat({
         .cmd = commandBuffer,
         .srcStageMask =
@@ -216,7 +241,7 @@ void VulkanEngine::RenderToOffscreenImage(VkCommandBuffer commandBuffer)
         .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
         .newLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
         .image = offscreenRenderImageInfo.depthAttachmentImage,
-        .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT, 
+        .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
     });
 
     // bind the graphics pipeline
@@ -233,16 +258,17 @@ void VulkanEngine::RenderToOffscreenImage(VkCommandBuffer commandBuffer)
         .imageView = offscreenRenderImageInfo.depthAttachmentImageView,
         .imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
         // #john - what are the load ops and store ops again durrrr
-        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR, // even tho we don't really need to know this
-        .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,    // discard depth after this pass
+        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,       // even tho we don't really need to know this
+        .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE, // discard depth after this pass
         .clearValue = {0.0f},
     };
-    VkRenderingInfo rendering_info = {.sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
-                                      .renderArea = {{0, 0}, {offscreenRenderImageInfo.extent}},
-                                      .layerCount = 1,
-                                      .colorAttachmentCount = 1,
-                                      .pColorAttachments = &color_attachment_info,
-                                      .pDepthAttachment = &depthAttachmentInfo,
+    VkRenderingInfo rendering_info = {
+        .sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
+        .renderArea = {{0, 0}, {offscreenRenderImageInfo.extent}},
+        .layerCount = 1,
+        .colorAttachmentCount = 1,
+        .pColorAttachments = &color_attachment_info,
+        .pDepthAttachment = &depthAttachmentInfo,
     };
 
     vkCmdBeginRendering(commandBuffer, &rendering_info);
@@ -262,11 +288,18 @@ void VulkanEngine::RenderToOffscreenImage(VkCommandBuffer commandBuffer)
     float aspectRatio = offscreenRenderImageInfo.extent.width / offscreenRenderImageInfo.extent.height;
     Matrix4D matrixToUpload = MakeRevInfiniteProjection(deg2rad(60.0f), aspectRatio, .1f) *
                               Matrix4D::Translate({0, 0, 6}) * Matrix4D::MakeRotationY(elapsedTime);
-    GPUPushConstants push_constants {matrixToUpload, exampleMesh.vertexBufferAddress};
+    GPUPushConstants push_constants{matrixToUpload};
     vkCmdPushConstants(commandBuffer, babysFirstGraphicsPipelineInfo.graphicsPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT,
                        0, sizeof(GPUPushConstants), &push_constants);
 
     vkCmdBindIndexBuffer(commandBuffer, exampleMesh.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+
+    // bind the descriptor set to the actual pipeline for the vertex buffer (post buffer device address sadness
+    // #android)
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                            babysFirstGraphicsPipelineInfo.graphicsPipelineLayout, 0, 1,
+                            &mesh_buffer_descriptor_information.descriptorSet, 0, nullptr);
+
     vkCmdDrawIndexed(commandBuffer, exampleMesh.indexCount, 1, 0, 0, 0);
 
     vkCmdEndRendering(commandBuffer);
@@ -473,6 +506,7 @@ void VulkanEngine::ResizeOffscreenRenderTarget()
 
     // maybe this should be stored in something idk. (repeated format is red flag-y)
     offscreenRenderImageInfo = createAttachmentImageInfo(gpuContext.device, swapchainResources.GetExtent(),
-                                                              vmaAllocator, VK_FORMAT_R16G16B16A16_SFLOAT);
-    UpdateAttachmentImageDescriptorSet(gpuContext.device, offscreenRenderImageInfo, descriptorInfo.descriptorSet);
+                                                         vmaAllocator, VK_FORMAT_R16G16B16A16_SFLOAT);
+    UpdateAttachmentImageDescriptorSet(gpuContext.device, offscreenRenderImageInfo,
+                                       attachmentImageDescriptorInfo.descriptorSet);
 }

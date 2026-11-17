@@ -6,6 +6,53 @@
 
 #include "VulkanUtil.h"
 
+// ABSOLUTELY horrendous duplication of code but its OK. - john
+void BigMeshBufferAllocateDescriptorInfo(VkDevice device, BigMeshBufferDescriptorInformation &descriptorInfo)
+{
+    // pool
+    VkDescriptorPoolSize poolSize = {.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, .descriptorCount = 1};
+
+    VkDescriptorPoolCreateInfo poolCreateInfo{};
+    poolCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    poolCreateInfo.maxSets = 1;
+    poolCreateInfo.poolSizeCount = 1;
+    poolCreateInfo.pPoolSizes = &poolSize;
+
+    vkchk(vkCreateDescriptorPool(device, &poolCreateInfo, nullptr, &descriptorInfo.descriptorPool));
+
+    // layout
+    VkDescriptorSetLayoutBinding binding{};
+    binding.binding = 0;
+    binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    binding.descriptorCount = 1;
+    binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo{};
+    descriptorSetLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    descriptorSetLayoutCreateInfo.bindingCount = 1;
+    descriptorSetLayoutCreateInfo.pBindings = &binding;
+
+    vkchk(vkCreateDescriptorSetLayout(device, &descriptorSetLayoutCreateInfo, nullptr, &descriptorInfo.descriptorSetLayout));
+
+    // actual descriptor set
+    VkDescriptorSetAllocateInfo descriptorSetAllocateInfo{};
+    descriptorSetAllocateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    descriptorSetAllocateInfo.descriptorPool = descriptorInfo.descriptorPool;
+    descriptorSetAllocateInfo.descriptorSetCount = 1;
+    descriptorSetAllocateInfo.pSetLayouts = &descriptorInfo.descriptorSetLayout;
+
+    vkchk(vkAllocateDescriptorSets(device, &descriptorSetAllocateInfo, &descriptorInfo.descriptorSet));
+}
+
+void BigMeshBufferDestroyDescriptorInformation(VkDevice device, BigMeshBufferDescriptorInformation &descriptorInfo)
+{
+    vkDestroyDescriptorPool(device, descriptorInfo.descriptorPool, nullptr);
+    vkDestroyDescriptorSetLayout(device, descriptorInfo.descriptorSetLayout, nullptr);
+
+    descriptorInfo.descriptorPool = VK_NULL_HANDLE;
+    descriptorInfo.descriptorSetLayout = VK_NULL_HANDLE;
+    descriptorInfo.descriptorSet = VK_NULL_HANDLE;
+}
+
 /*
  *
  *  #JOHN this whole file is super specific to a pipeline that has one write only storage image and isn't very flexible
@@ -67,7 +114,7 @@ VkDescriptorSet AllocateDescriptorSet(VkDevice device, VkDescriptorPool descript
     return descriptorSet;
 }
 
-void AllocateDescriptorInfo(VkDevice device, DescriptorInformation &descriptorInfo)
+void AttachmentImageAllocateDescriptorInfo(VkDevice device, AttachmentImageDescriptorInformation &descriptorInfo)
 {
     descriptorInfo.descriptorPool = CreateDescriptorPool(device);
     descriptorInfo.descriptorSetLayout = CreateDescriptorSetLayout(device);
@@ -75,7 +122,7 @@ void AllocateDescriptorInfo(VkDevice device, DescriptorInformation &descriptorIn
         AllocateDescriptorSet(device, descriptorInfo.descriptorPool, descriptorInfo.descriptorSetLayout);
 }
 
-void DestroyDescriptorInformation(VkDevice device, DescriptorInformation &descriptorInfo)
+void AttachmentImageDestroyDescriptorInformation(VkDevice device, AttachmentImageDescriptorInformation &descriptorInfo)
 {
     vkDestroyDescriptorPool(device, descriptorInfo.descriptorPool, nullptr);
     vkDestroyDescriptorSetLayout(device, descriptorInfo.descriptorSetLayout, nullptr);

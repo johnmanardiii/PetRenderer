@@ -191,7 +191,7 @@ GPUMesh LoadGPUMeshFromPath(VmaAllocator vmaAllocator, VkDevice device, const ch
     {
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
         .size = positionDataSize,
-        .usage = VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, // #JOHN probably want some other ones I can't think of rn
+        .usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, // #JOHN probably want some other ones I can't think of rn
         .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
     };
 
@@ -202,12 +202,6 @@ GPUMesh LoadGPUMeshFromPath(VmaAllocator vmaAllocator, VkDevice device, const ch
                           &gpuMesh.vertexBufferAlloc, &gpuMesh.vertexBufferAllocInfo));
 
     memcpy(gpuMesh.vertexBufferAllocInfo.pMappedData, interleavedVertexData.data(), positionDataSize);
-
-    VkBufferDeviceAddressInfo vertexBuffDeviceAddrInfo {
-        .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
-        .buffer = gpuMesh.vertexBuffer
-    };
-    gpuMesh.vertexBufferAddress = vkGetBufferDeviceAddress(device, &vertexBuffDeviceAddrInfo);
 
     VmaAllocationCreateInfo indexAllocCreateInfo = {
         .flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,

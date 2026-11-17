@@ -17,12 +17,12 @@
  */
 
 struct AttachmentImageInfo;
+struct BigMeshBufferDescriptorInformation;
 
 // #JOHN - this should be generated from slang and also not in this file more of a rendering thing than model thing
 struct GPUPushConstants
 {
     Matrix4D MVP;
-    VkDeviceAddress vertexBufferAddress;
 };
 
 struct BabyFirstGraphicsPipelineInfo
@@ -31,7 +31,7 @@ struct BabyFirstGraphicsPipelineInfo
     VkPipeline graphicsPipeline;
 };
 
-BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo(GpuContext& gpuContext, const AttachmentImageInfo& offscreen_render_image_info);
+BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo(GpuContext& gpuContext, const AttachmentImageInfo& offscreen_render_image_info, BigMeshBufferDescriptorInformation& meshBufferInfo);
 
 void DestroyBabysFirstGraphicsPipelineInfo(GpuContext& gpuContext, BabyFirstGraphicsPipelineInfo& pipeline_info);
 
