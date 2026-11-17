@@ -341,8 +341,7 @@ VkDevice CreateLogicalDevice(VkPhysicalDevice physDevice, uint32_t queueFamilyIn
     VkPhysicalDeviceVulkan12Features vk12features = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
         .pNext = &vk13Features,
-        .timelineSemaphore = VK_TRUE,
-        .bufferDeviceAddress = VK_TRUE
+        .timelineSemaphore = VK_TRUE
     };
 
     VkPhysicalDeviceVulkan11Features vk_physical_device11_features = {

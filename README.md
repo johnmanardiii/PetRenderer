@@ -13,6 +13,14 @@ Ensure that the Vulkan SDK is installed on your computer: https://vulkan.lunarg.
 steps to add the needed things to your env on linux, I had to manually add the env
 var to the cmake config since clion wasn't picking up on it.)
 
+
+## 11/17/2026 - 12:10 AM 
+* Woooooo! got it finally working. I had written some asserts myself for handling the pretransform but managed to get that part working pretty quickly. Very exciting to see it on the android. here is a quick little gif:
+
+![alt text](progress_footage\readme_files\20261117_0007561.gif)
+
+* I think up next it would be awesome to write my own little fly camera using my matrix libraries and get that connected to SDL so it works on both PC and android. gonna merge this android progress into main.
+
 ## 11/16/2026
 
 * talked with someone and I think that for now I can get away with uploading the mesh information to buffers and then just leaving it there forever. I don't think I'll need to unload mesh information for a bit but when it gets to that point I canfigure out what's up. 

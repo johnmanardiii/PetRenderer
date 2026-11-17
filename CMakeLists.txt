@@ -36,7 +36,7 @@ add_subdirectory(src)
 # where on desktop we want to set this path as an env variable and on android SDL handles translating
 # the assets folder to be ./
 if (ANDROID)
-target_compile_definitions(PetRenderer PRIVATE ASSET_ROOT="")
+    target_compile_definitions(PetRenderer PRIVATE ASSET_ROOT="")
 else()
     target_compile_definitions(PetRenderer PRIVATE ASSET_ROOT="${CMAKE_SOURCE_DIR}/assets/")
 endif()

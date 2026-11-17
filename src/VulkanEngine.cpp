@@ -39,8 +39,7 @@ VulkanEngine *VulkanEngine::Create()
     }
 
     VmaAllocatorCreateInfo allocatorCreateInfo = {};
-    allocatorCreateInfo.flags =
-        VMA_ALLOCATOR_CREATE_EXT_MEMORY_BUDGET_BIT | VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
+    allocatorCreateInfo.flags = VMA_ALLOCATOR_CREATE_EXT_MEMORY_BUDGET_BIT;
     allocatorCreateInfo.vulkanApiVersion = VK_API_VERSION_1_3; // #JOHN - this should be specified in a single place
     allocatorCreateInfo.physicalDevice = gpuContext->selectedPhysicalDeviceInfo.physicalDevice;
     allocatorCreateInfo.device = gpuContext->device;
@@ -100,7 +99,7 @@ bool VulkanEngine::init()
     deletionQueue.Register(
         [this] { AttachmentImageDestroyDescriptorInformation(gpuContext.device, attachmentImageDescriptorInfo); });
 
-    exampleMesh = LoadGPUMeshFromPath(vmaAllocator, gpuContext.device, "/models/DamagedHelmet.glb");
+    exampleMesh = LoadGPUMeshFromPath(vmaAllocator, gpuContext.device, "models/DamagedHelmet.glb");
 
     BigMeshBufferAllocateDescriptorInfo(gpuContext.device, mesh_buffer_descriptor_information);
 
@@ -118,6 +117,7 @@ bool VulkanEngine::init()
         .semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE,
         .initialValue = 0 // starts at 0 so that 1 can mean that the first one is done
     };
+
     VkSemaphoreCreateInfo globalTimelineSemaphoreCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
         .pNext = &globalTimelineSemaphoreTypeCreateInfo,
@@ -288,6 +288,7 @@ void VulkanEngine::RenderToOffscreenImage(VkCommandBuffer commandBuffer)
     float aspectRatio = offscreenRenderImageInfo.extent.width / offscreenRenderImageInfo.extent.height;
     Matrix4D matrixToUpload = MakeRevInfiniteProjection(deg2rad(60.0f), aspectRatio, .1f) *
                               Matrix4D::Translate({0, 0, 6}) * Matrix4D::MakeRotationY(elapsedTime);
+    matrixToUpload = swapchainResources.GetRequiredTransformMatrix() * matrixToUpload;
     GPUPushConstants push_constants{matrixToUpload};
     vkCmdPushConstants(commandBuffer, babysFirstGraphicsPipelineInfo.graphicsPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT,
                        0, sizeof(GPUPushConstants), &push_constants);

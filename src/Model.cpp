@@ -125,7 +125,7 @@ LoadedMeshData LoadCPUMeshDataFromPath(const char *filePath)
 
     if (!biteData)
     {
-        fmt::print(stderr, "Failed to load Model file {}\n", modelPath);
+        SDL_Log("%s\n", SDL_GetError());
         return cpu_mesh_data; // #JOHN - might need a failure return...
     }
     cgltf_result result = cgltf_parse(&options, biteData, bitesRead, &data);
@@ -182,7 +182,7 @@ GPUMesh LoadGPUMeshFromPath(VmaAllocator vmaAllocator, VkDevice device, const ch
     // #JOHN - todo: move this to dedicated gpu local memory as part of a larger system
     // was reading over this: https://gpuopen-librariesandsdks.github.io/VulkanMemoryAllocator/html/struct_vma_allocation_create_info.html
     VmaAllocationCreateInfo vertexAllocCreateInfo = {
-        .flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT,
+        .flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
         .usage = VMA_MEMORY_USAGE_AUTO
     };
 
