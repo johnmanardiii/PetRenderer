@@ -17,7 +17,7 @@ var to the cmake config since clion wasn't picking up on it.)
 ## 11/17/2026 - 12:10 AM 
 * Woooooo! got it finally working. I had written some asserts myself for handling the pretransform but managed to get that part working pretty quickly. Very exciting to see it on the android. here is a quick little gif:
 
-![alt text](progress_footage\readme_files\20261117_0007561.gif)
+![alt text](progress_footage/readme_files/20261117_0007561.gif)
 
 * I think up next it would be awesome to write my own little fly camera using my matrix libraries and get that connected to SDL so it works on both PC and android. gonna merge this android progress into main.
 
