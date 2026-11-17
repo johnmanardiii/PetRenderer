@@ -7,6 +7,7 @@
 
 #include "FunctionalQueue.h"
 #include "GpuContext.h"
+#include "Matrix4D.h"
 
 #include <SDL3/SDL_video.h>
 #include <optional>
@@ -24,6 +25,7 @@ struct SwapchainInfo
     VkFormat swapchainImageFormat;
     std::vector<VkImage> swapchainImages;
     VkExtent2D swapchainExtent;
+    VkSurfaceTransformFlagBitsKHR currentTransform; // used in MVP matrix at end
 };
 
 struct AcquiredSwapchainImageInfo
@@ -71,6 +73,8 @@ public:
     bool CreateSwapchainResources();
 
     void ReleaseSwapchainResources();
+
+    [[nodiscard]] Matrix4D GetRequiredTransformMatrix() const;
 
 private:
 

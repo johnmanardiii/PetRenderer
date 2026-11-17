@@ -10,11 +10,17 @@ struct Vertex
     float v;
 };
 
+struct VertexStructuredBuffer
+{
+    StructuredBuffer<Vertex> vertices;
+};
+
+ParameterBlock<VertexStructuredBuffer> vertexBuffer;
+
 // push constants
 struct PushConstants
 {
     matrix<float, 4, 4> MVP;
-    Vertex* vertexBuffer;
 };
 
 struct VSOutput
@@ -29,7 +35,7 @@ struct VSOutput
 VSOutput vertexMain(uint instanceID : SV_VertexID)
 {
     VSOutput output;
-    Vertex v = matAndVertexBuff.vertexBuffer[instanceID];
+    Vertex v = vertexBuffer.vertices[instanceID];
     output.Pos = mul(matAndVertexBuff.MVP, float4(v.pos, 1.0f));
     output.color = v.norm;
     return output;

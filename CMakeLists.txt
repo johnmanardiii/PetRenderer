@@ -19,14 +19,24 @@ set(CMAKE_CXX_STANDARD 23)
 
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-add_executable(PetRenderer
-        src/Matrix4D.h
-        src/CustomMath.h
-        src/Application.cpp
-        src/Application.h
-        src/Model.cpp
-        src/Model.h)
+if (ANDROID)
+    add_library(PetRenderer SHARED)
+    set_target_properties(PetRenderer PROPERTIES OUTPUT_NAME main)
+else()
+    add_executable(PetRenderer)
+endif()
+
 
 add_subdirectory(third_party)
 
 add_subdirectory(src)
+
+
+# funny business needed to get the file references to act the same on android as they do on desktop
+# where on desktop we want to set this path as an env variable and on android SDL handles translating
+# the assets folder to be ./
+if (ANDROID)
+    target_compile_definitions(PetRenderer PRIVATE ASSET_ROOT="")
+else()
+    target_compile_definitions(PetRenderer PRIVATE ASSET_ROOT="${CMAKE_SOURCE_DIR}/assets/")
+endif()

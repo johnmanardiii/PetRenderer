@@ -9,5 +9,4 @@
 
 bool LoadShader(const char *filePath, VkDevice device, VkShaderModule *shaderModule);
 
-
 #endif //SHADERLOADER_H

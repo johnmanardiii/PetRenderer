@@ -13,6 +13,27 @@ Ensure that the Vulkan SDK is installed on your computer: https://vulkan.lunarg.
 steps to add the needed things to your env on linux, I had to manually add the env
 var to the cmake config since clion wasn't picking up on it.)
 
+
+## 11/17/2026 - 12:10 AM 
+* Woooooo! got it finally working. I had written some asserts myself for handling the pretransform but managed to get that part working pretty quickly. Very exciting to see it on the android. here is a quick little gif:
+
+![alt text](progress_footage/readme_files/20261117_0007561.gif)
+
+* I think up next it would be awesome to write my own little fly camera using my matrix libraries and get that connected to SDL so it works on both PC and android. gonna merge this android progress into main.
+
+## 11/16/2026
+
+* talked with someone and I think that for now I can get away with uploading the mesh information to buffers and then just leaving it there forever. I don't think I'll need to unload mesh information for a bit but when it gets to that point I canfigure out what's up. 
+* Going to spend today converting my buffer device address vertex pulling to using an SSBO provided via a descriptor set. this is because my android handheld doesn't support int64 soooo I need to find a way to write spirv shaders that don't need it.
+* also got the feedback that the name "offscreen render target" is silly
+* starting to realize with how I set things up that there is a "gpu work that needs to be done before first frame and after everything has been uploaded for setup" that doesn't exist right now
+  * this would cover the staging buffer work that I have yet to do
+  * would cover transitioning the depth buffer attachment to depth optimal only once at the beginning
+  * would cover this one-time descriptor set update to point the descriptor to the uploaded mesh buffer
+* another todo for me is to probably take out buffer device address stuff from this project cause like... I can't really use it on one of my main targets. I should also probably give this new structured buffer a name and take a capture.
+
+# Entries below this are in reverse order heh
+
 ## 4/26/2026
 
 * decided to go with creating my swapchain images in sRGB since that made the most sense to me for what would be least

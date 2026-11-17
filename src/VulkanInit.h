@@ -17,7 +17,7 @@ struct PhysicalDeviceInfo
 };
 
 // #JOHN - figure out if I even need the required layers
-VkInstance CreateInstance(const std::vector<std::string> RequiredLayers,
+VkInstance CreateInstance(bool bEnableValidation,
                           const std::vector<const char*>& RequiredExtensions);
 
 std::optional<PhysicalDeviceInfo> selectPhysicalDevice(VkInstance instance, VkSurfaceKHR surface);

@@ -10,14 +10,14 @@
 #include "ShaderLoader.h"
 #include "Vector3D.h"
 
-
 // #JOHN - just a test to see if this is importing correctly
+#include "DescriptorAllocator.h"
 #include "Model.h"
 #include "cgltf.h"
 
-BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo(GpuContext &gpuContext,
-                                                                   const AttachmentImageInfo &
-                                                                   offscreen_render_image_info)
+BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo(
+    GpuContext &gpuContext, const AttachmentImageInfo &offscreen_render_image_info,
+    BigMeshBufferDescriptorInformation &meshBufferInfo)
 {
     // create the layout for the pipeline
 
@@ -30,53 +30,45 @@ BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo(GpuContext &g
     push_constant_range.offset = 0;
     push_constant_range.size = sizeof(GPUPushConstants);
 
-    VkPipelineLayoutCreateInfo pipeline_layout_create_info =
-    {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-        .setLayoutCount = 0,
-        .pushConstantRangeCount = 1,
-        .pPushConstantRanges = &push_constant_range
-    };
+    VkPipelineLayoutCreateInfo pipeline_layout_create_info = {.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+                                                              .setLayoutCount = 1,
+                                                              .pSetLayouts = &meshBufferInfo.descriptorSetLayout,
+                                                              .pushConstantRangeCount = 1,
+                                                              .pPushConstantRanges = &push_constant_range};
 
     VkPipelineLayout graphicsPipelineLayout;
     vkchk(vkCreatePipelineLayout(gpuContext.device, &pipeline_layout_create_info, nullptr, &graphicsPipelineLayout));
 
     // create the shaders we are going to use (vert and frag for now)
     VkShaderModule vertexShaderModule;
-    if (!LoadShader("../shaders/push_constant_triangle/push_constant_triangle.vert.spv", gpuContext.device,
+    if (!LoadShader("shaders/push_constant_triangle/push_constant_triangle.vert.spv", gpuContext.device,
                     &vertexShaderModule))
     {
         assert(false);
     }
 
-    VkPipelineShaderStageCreateInfo vertexStageCreateInfo = {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-        .stage = VK_SHADER_STAGE_VERTEX_BIT,
-        .module = vertexShaderModule,
-        .pName = "main"
-    };
+    VkPipelineShaderStageCreateInfo vertexStageCreateInfo = {.sType =
+                                                                 VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+                                                             .stage = VK_SHADER_STAGE_VERTEX_BIT,
+                                                             .module = vertexShaderModule,
+                                                             .pName = "main"};
 
     // fragment shader create info
     VkShaderModule fragmentShaderModule;
-    if (!LoadShader("../shaders/push_constant_triangle/push_constant_triangle.frag.spv", gpuContext.device,
+    if (!LoadShader("shaders/push_constant_triangle/push_constant_triangle.frag.spv", gpuContext.device,
                     &fragmentShaderModule))
     {
         assert(false);
     }
 
-    VkPipelineShaderStageCreateInfo fragmentStageCreateInfo = {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-        .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
-        .module = fragmentShaderModule,
-        .pName = "main"
-    };
+    VkPipelineShaderStageCreateInfo fragmentStageCreateInfo = {.sType =
+                                                                   VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+                                                               .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
+                                                               .module = fragmentShaderModule,
+                                                               .pName = "main"};
 
     // create the pipeline
-    VkPipelineShaderStageCreateInfo stageInfos[2] =
-    {
-        vertexStageCreateInfo,
-        fragmentStageCreateInfo
-    };
+    VkPipelineShaderStageCreateInfo stageInfos[2] = {vertexStageCreateInfo, fragmentStageCreateInfo};
 
     VkPipelineVertexInputStateCreateInfo vertexInputState = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
@@ -85,11 +77,9 @@ BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo(GpuContext &g
     VkPipelineInputAssemblyStateCreateInfo inputAssemblyState = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
         .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
-        .primitiveRestartEnable = VK_FALSE
-    };
+        .primitiveRestartEnable = VK_FALSE};
 
-    VkPipelineViewportStateCreateInfo viewportStateCreateInfo =
-    {
+    VkPipelineViewportStateCreateInfo viewportStateCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
         .viewportCount = 1,
         .pViewports = nullptr, // going to use dynamic state for viewport size
@@ -97,16 +87,11 @@ BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo(GpuContext &g
         .pScissors = nullptr // guess I am also going to make this dynamic
     };
 
-    VkDynamicState viewportDynamicStates[2] = {
-        VK_DYNAMIC_STATE_VIEWPORT,
-        VK_DYNAMIC_STATE_SCISSOR
-    };
+    VkDynamicState viewportDynamicStates[2] = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
 
-    VkPipelineDynamicStateCreateInfo dynamicStates = {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
-        .dynamicStateCount = 2, // for now
-        .pDynamicStates = viewportDynamicStates
-    };
+    VkPipelineDynamicStateCreateInfo dynamicStates = {.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
+                                                      .dynamicStateCount = 2, // for now
+                                                      .pDynamicStates = viewportDynamicStates};
 
     // up next, rasterization state and a significant amount of trips through the graphics pipeline with notes
 
@@ -116,10 +101,9 @@ BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo(GpuContext &g
         .rasterizerDiscardEnable = VK_FALSE,
         .polygonMode = VK_POLYGON_MODE_FILL,
         .frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE, // forgot what is standard here
-        .depthBiasEnable = VK_FALSE, // don't want this for now
+        .depthBiasEnable = VK_FALSE,                  // don't want this for now
         // other things can go here but I don't care about them right now, except for this linewidth thing
-        .lineWidth = 1.0f
-    };
+        .lineWidth = 1.0f};
 
     VkPipelineMultisampleStateCreateInfo multisample_state_create_info = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
@@ -129,30 +113,24 @@ BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo(GpuContext &g
     };
 
     // ok I am officially too tired for this but it doesn't seem to hard if I don't care about either right now.
-    VkPipelineDepthStencilStateCreateInfo depth_stencil_state_create_info =
-    {
+    VkPipelineDepthStencilStateCreateInfo depth_stencil_state_create_info = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
         .depthTestEnable = VK_TRUE,
         .depthWriteEnable = VK_TRUE,
         .depthCompareOp = VK_COMPARE_OP_GREATER,
-        .stencilTestEnable = VK_FALSE
-    };
+        .stencilTestEnable = VK_FALSE};
 
     // for the only color attachment
-    VkPipelineColorBlendAttachmentState color_blend_attachment_state =
-    {
+    VkPipelineColorBlendAttachmentState color_blend_attachment_state = {
         .blendEnable = VK_FALSE,
-        .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT |
-                          VK_COLOR_COMPONENT_A_BIT
-    };
+        .colorWriteMask =
+            VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT};
 
-    VkPipelineColorBlendStateCreateInfo color_blend_state_create_info =
-    {
+    VkPipelineColorBlendStateCreateInfo color_blend_state_create_info = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
         .logicOpEnable = VK_FALSE,
         .attachmentCount = 1,
-        .pAttachments = &color_blend_attachment_state
-    };
+        .pAttachments = &color_blend_attachment_state};
 
     VkFormat colorAttachmentFormat = offscreen_render_image_info.offscreenImageFormat;
 
@@ -161,9 +139,10 @@ BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo(GpuContext &g
         .viewMask = 0,
         .colorAttachmentCount = 1,
         .pColorAttachmentFormats = &colorAttachmentFormat,
-        .depthAttachmentFormat = VK_FORMAT_D32_SFLOAT,  // lowkey would need to be determined up front and then passed to both image creation and this in an ideal situation rather than hardcoded. also kind of sus if I want to change this.
-        .stencilAttachmentFormat = VK_FORMAT_UNDEFINED
-    };
+        .depthAttachmentFormat = VK_FORMAT_D32_SFLOAT, // lowkey would need to be determined up front and then passed to
+                                                       // both image creation and this in an ideal situation rather than
+                                                       // hardcoded. also kind of sus if I want to change this.
+        .stencilAttachmentFormat = VK_FORMAT_UNDEFINED};
 
     VkGraphicsPipelineCreateInfo createInfo = {
         .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
@@ -192,10 +171,7 @@ BabyFirstGraphicsPipelineInfo CreateBabysFirstGraphicsPipelineInfo(GpuContext &g
     vkDestroyShaderModule(gpuContext.device, vertexShaderModule, nullptr);
     vkDestroyShaderModule(gpuContext.device, fragmentShaderModule, nullptr);
 
-    return {
-        .graphicsPipelineLayout = graphicsPipelineLayout,
-        .graphicsPipeline = babyPipeline
-    };
+    return {.graphicsPipelineLayout = graphicsPipelineLayout, .graphicsPipeline = babyPipeline};
 }
 
 void DestroyBabysFirstGraphicsPipelineInfo(GpuContext &gpuContext, BabyFirstGraphicsPipelineInfo &pipeline_info)

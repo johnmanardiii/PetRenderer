@@ -5,10 +5,10 @@
 #include "GpuContext.h"
 
 #include "SDL3/SDL_vulkan.h"
+#include "SDL3/SDL_log.h"
 #include "ScopedFunctionalQueue.h"
 #include "VulkanDebugUtil.h"
 #include "VulkanInit.h"
-#include "fmt/printf.h"
 #include "volk.h"
 
 static_assert(std::is_move_constructible<GpuContext>());
@@ -20,11 +20,11 @@ std::optional<GpuContext> CreateGpuContext(const Platform &platform, FunctionalQ
     requiredExtensions.push_back(VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME);
     requiredExtensions.push_back(VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME);
 
-    VkInstance instance = CreateInstance({"VK_LAYER_KHRONOS_validation"}, requiredExtensions);
+    VkInstance instance = CreateInstance(true, requiredExtensions);
 
     if (!instance)
     {
-        fmt::printf("Failed to get vulkan instance. exiting");
+        SDL_Log("Failed to get vulkan instance. exiting");
         return std::nullopt;
     }
 
@@ -37,7 +37,7 @@ std::optional<GpuContext> CreateGpuContext(const Platform &platform, FunctionalQ
 
     if (!SDL_Vulkan_CreateSurface(platform.window, instance, nullptr, &surface))
     {
-        fmt::printf("Failed to create vulkan surface\n");
+        SDL_Log("Failed to create vulkan surface\n");
         return std::nullopt;
     }
 
@@ -48,7 +48,7 @@ std::optional<GpuContext> CreateGpuContext(const Platform &platform, FunctionalQ
 
     if (!physDeviceinfo)
     {
-        fmt::printf("Failed to find a valid physical device.\n");
+        SDL_Log("Failed to find a valid physical device.\n");
         return std::nullopt;
     }
 
@@ -57,7 +57,7 @@ std::optional<GpuContext> CreateGpuContext(const Platform &platform, FunctionalQ
         CreateLogicalDevice(physDeviceinfo->physicalDevice, physDeviceinfo->graphicsPresentQueueFamilyIndex);
     if (!device)
     {
-        fmt::printf("Failed to create logical device.\n");
+        SDL_Log("Failed to create logical device.\n");
         return std::nullopt;
     }
 

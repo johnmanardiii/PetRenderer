@@ -166,4 +166,9 @@ inline Matrix4D MakeRevInfiniteProjection(float fovy, float s, float n, float e 
         Matrix4D(g / s, 0.0F, 0.0F, 0.0f, 0.0f, g, 0.0f, 0.0f, 0.0f, 0.0f, e, n * (1.0f - e), 0.0f, 0.0f, 1.0f, 0.0f));
 }
 
+inline Matrix4D Mat4Identity()
+{
+    return {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
+}
+
 #endif // PETRENDERER_MATRIX4D_H

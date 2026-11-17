@@ -15,6 +15,9 @@
  *
  *  Also for this to be 100 percent right, we would need to have the ability to maintain multiple offscreen render targets
  *  on resize since some could be in use on outdated swapchains.
+ *
+ *
+ *  ALSO THE TERM OFFSCREEN RENDER IMAGE is too specific to be building around just treat it like a texture.
  */
 
 // #JOHN - eventually this could be abstracted into whatever image but for now its offscreen image

@@ -14,7 +14,7 @@ FetchContent_MakeAvailable(SDL3)
 FetchContent_Declare(
         fmt
         GIT_REPOSITORY https://github.com/fmtlib/fmt
-        GIT_TAG        e69e5f977d458f2650bb346dadf2ad30c5320281 # 10.2.1
+        GIT_TAG        12.1.0 # compatible with clang 21 for android
         GIT_SHALLOW 1
 )
 FetchContent_MakeAvailable(fmt)
@@ -30,3 +30,8 @@ FetchContent_MakeAvailable(volk)
 include(imgui.cmake)
 include(vma.cmake)
 include(cgltf.cmake)
+
+# silly android ndk... just trying to get this to compile so i copied it over
+if (ANDROID)
+        target_include_directories(PetRenderer PRIVATE vulkan_util)
+endif()

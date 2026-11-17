@@ -33,13 +33,10 @@ target_sources(PetRenderer PRIVATE
         Matrix4D.h
 
         CustomMath.h
-
-        Application.cpp
         Model.cpp
+        Model.h
 )
 
 target_include_directories(PetRenderer PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-
-
 
 target_link_libraries(PetRenderer PRIVATE SDL3::SDL3 fmt::fmt volk::volk vma)

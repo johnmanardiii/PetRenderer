@@ -4,20 +4,20 @@
 
 #include "VulkanInit.h"
 #include "VulkanUtil.h"
-#include "fmt/printf.h"
+#include "SDL3/SDL_log.h"
 
 VKAPI_ATTR VkBool32 VKAPI_CALL DebugCreateInstanceCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
                                                            VkDebugUtilsMessageTypeFlagsEXT messageTypes,
                                                            const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData,
                                                            void *pUserData)
 {
-    fmt::print("DebugCreateInstanceCallback: {}\n", pCallbackData->pMessage);
+    SDL_Log("DebugCreateInstanceCallback: %s\n", pCallbackData->pMessage);
 
     return VK_FALSE;
 }
 
 
-VkInstance CreateInstance(std::vector<std::string> requiredLayers,
+VkInstance CreateInstance(bool bEnableValidation,
                           const std::vector<const char *> &requiredExtensions)
 {
     // ensure that this device supports at least a 1.3 vulkan instance version (hard requirement for now that the
@@ -30,7 +30,7 @@ VkInstance CreateInstance(std::vector<std::string> requiredLayers,
         || VK_API_VERSION_MINOR(instanceApiVersion) < 3)
     {
         // we need instance version at least 1.3 guaranteed
-        fmt::printf("Application requires instance version at least 1.3.\n");
+        SDL_Log("Application requires instance version at least 1.3.\n");
         return VK_NULL_HANDLE;
     }
 
@@ -48,22 +48,22 @@ VkInstance CreateInstance(std::vector<std::string> requiredLayers,
     std::vector<const char *> presentDesiredLayers;
     // this double loop is pissing me off and #JOHN I want it to be "set-like"
     // but I really shouldn't care because it is so small.
-    for (VkLayerProperties &layerInfo : availableLayers)
+    if (bEnableValidation)
     {
-        for (const std::string &layerName : requiredLayers)
+        for (VkLayerProperties &layerInfo : availableLayers)
         {
-            if (layerInfo.layerName == layerName)
+            if (strcmp(layerInfo.layerName, "VK_LAYER_KHRONOS_validation") == 0)
             {
-                presentDesiredLayers.push_back(layerName.c_str());
+                presentDesiredLayers.push_back("VK_LAYER_KHRONOS_validation");
             }
         }
-    }
 
-    if (presentDesiredLayers.size() != requiredLayers.size())
-    {
-        fmt::printf("Failed to retrieve present desired layers.\n");
-        return VK_NULL_HANDLE;
+        if (presentDesiredLayers.empty())
+        {
+            SDL_Log("Validation Requested but validation layer not found.\n");
+        }
     }
+    
 
     // #JOHN figure out extensions that we want
     uint32_t instanceExtensionCount = 0;
@@ -85,11 +85,6 @@ VkInstance CreateInstance(std::vector<std::string> requiredLayers,
         availableExtensions.insert(availableExtensions.end(), layerExtensions.begin(), layerExtensions.end());
     }
 
-    // de-duplicate required extensions
-    std::sort(requiredLayers.begin(), requiredLayers.end());
-    auto ret = std::ranges::unique(requiredLayers);
-    requiredLayers.erase(ret.begin(), ret.end());
-
     // return early if not all extensions in the required extensions are present
     for (const auto &extensionName : requiredExtensions)
     {
@@ -106,7 +101,7 @@ VkInstance CreateInstance(std::vector<std::string> requiredLayers,
         if (!bFound)
         {
             // dependent on the above break but it should be chill
-            fmt::printf("Failed to retrieve debug extension names.\n");
+            SDL_Log("Failed to retrieve debug extension names.\n");
             return VK_NULL_HANDLE;
         }
     }
@@ -179,9 +174,14 @@ static bool HasSwapChainExtension(VkPhysicalDevice device)
     std::vector<VkExtensionProperties> extensions(extensionCount);
     vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, extensions.data());
 
-    return std::ranges::find_if(extensions, [](const VkExtensionProperties &extension) {
-        return strcmp(extension.extensionName, "VK_KHR_swapchain") == 0;
-    }) != extensions.end();
+    for (VkExtensionProperties& extensionProperties : extensions)
+    {
+        if (strcmp(extensionProperties.extensionName, "VK_KHR_swapchain") == 0)
+        {
+            return true;
+        }
+    }
+    return false;
 }
 
 std::optional<PhysicalDeviceInfo> selectPhysicalDevice(VkInstance instance, VkSurfaceKHR surface)
@@ -249,7 +249,7 @@ std::optional<PhysicalDeviceInfo> selectPhysicalDevice(VkInstance instance, VkSu
                 if (queueFamilyProperties[queueFamilyIndex].queueFamilyProperties.queueFlags & VK_QUEUE_GRAPHICS_BIT)
                 {
                     // this device is good enough for me:
-                    fmt::printf("Found device %s with a queue that supports graphics and presentation, good enough"
+                    SDL_Log("Found device %s with a queue that supports graphics and presentation, good enough"
                                 " for me.\n",
                                 physicalDeviceProperties.properties.deviceName);
                     info = {.physicalDevice = device, .graphicsPresentQueueFamilyIndex = queueFamilyIndex};
@@ -341,8 +341,7 @@ VkDevice CreateLogicalDevice(VkPhysicalDevice physDevice, uint32_t queueFamilyIn
     VkPhysicalDeviceVulkan12Features vk12features = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
         .pNext = &vk13Features,
-        .timelineSemaphore = VK_TRUE,
-        .bufferDeviceAddress = VK_TRUE
+        .timelineSemaphore = VK_TRUE
     };
 
     VkPhysicalDeviceVulkan11Features vk_physical_device11_features = {

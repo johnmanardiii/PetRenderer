@@ -17,8 +17,8 @@
 // maybe needs a more specific name yolo
 // maybe in the future we would want some shared definition between shaders and cpp
 // #JOHN - come back to this after profiling & shadows
-// https://learn.arm.com/learning-paths/mobile-graphics-and-gaming/optimizing-vertex-efficiency/vme-learning-path/ Real-Time Rendering, 4th ed., §16.4.5, “Vertex and Index Buffers/Arrays 
-//https://github.com/zeux/meshoptimizer vertex fetch mechanics
+// https://learn.arm.com/learning-paths/mobile-graphics-and-gaming/optimizing-vertex-efficiency/vme-learning-path/ real time rendering 16.4.5
+// https://github.com/zeux/meshoptimizer vertex fetch mechanics
 struct Vertex
 {
     Vector3D pos;
@@ -32,7 +32,6 @@ struct Vertex
 // with the delete funciton currently located in the pipeline file.
 struct GPUMesh
 {
-    VkDeviceAddress vertexBufferAddress;
     VkBuffer vertexBuffer;
     VmaAllocation vertexBufferAlloc;
 

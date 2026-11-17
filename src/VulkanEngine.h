@@ -7,7 +7,6 @@
 
 #define GLFW_INCLUDE_VULKAN
 
-#include "Application.h"
 #include "BabysFirstGraphicsPipeline.h"
 #include "CreatePipeline.h"
 #include "DescriptorAllocator.h"
@@ -68,20 +67,19 @@ private:
     AttachmentImageInfo offscreenRenderImageInfo;
 
     // random rendering stuff for the compute shader
-    DescriptorInformation descriptorInfo;
+    AttachmentImageDescriptorInformation attachmentImageDescriptorInfo;   // #JOHN - this name is pretty terrible since it is managing exactly 1 descriptor set for the background image
     PipelineObjects pipelineObjects;
 
     BabyFirstGraphicsPipelineInfo babysFirstGraphicsPipelineInfo;
 
     // #JOHN - this doesn't belong here but need to track it for now
+    BigMeshBufferDescriptorInformation mesh_buffer_descriptor_information;
     GPUMesh exampleMesh;
 
     ScopedFunctionalQueue deletionQueue;
 
     uint32_t currentFrame = 0; // always incrementing, doesn't loop around w/ modulo
     float elapsedTime = 0.0f;
-
-    Application app;
 };
 
 #endif // VULKAN_ENGINE_H
