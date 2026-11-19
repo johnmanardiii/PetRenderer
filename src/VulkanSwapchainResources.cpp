@@ -196,6 +196,13 @@ namespace VulkanCreateSwapchain {
             return std::nullopt;
         }
 
+        // #JOHN - if we end up doing a rotate pass at the very end instead of "rendeering rotated"
+        // then it should be UNROTATED in the render texture, and then rotated in the swapchian image I think I have that ordering right but will have to see when we cross that bridge.
+        if ((surfaceTransform & VK_SURFACE_TRANSFORM_ROTATE_90_BIT_KHR) ||
+                (surfaceTransform & VK_SURFACE_TRANSFORM_ROTATE_270_BIT_KHR))
+        {
+            std::swap(swapChainExtent.width, swapChainExtent.height);
+        }
 
         // #JOHN i get the feeling that it would be extremely painful to handle resizing at this stage of the project
         // so we will save that for a later date.

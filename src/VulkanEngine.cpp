@@ -285,7 +285,13 @@ void VulkanEngine::RenderToOffscreenImage(VkCommandBuffer commandBuffer)
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
     // draw here
-    float aspectRatio = offscreenRenderImageInfo.extent.width / offscreenRenderImageInfo.extent.height;
+    float aspectRatio = static_cast<float>(offscreenRenderImageInfo.extent.width) / offscreenRenderImageInfo.extent.height;
+    // #JOHN - this should really be encapsulated better it shouldn't have to know about this and I should just do a final rotation transfer
+    if ((swapchainResources.GetCurrentTransform() & VK_SURFACE_TRANSFORM_ROTATE_90_BIT_KHR) ||
+            (swapchainResources.GetCurrentTransform() & VK_SURFACE_TRANSFORM_ROTATE_270_BIT_KHR))
+    {
+        aspectRatio = 1.0f / aspectRatio;
+    }
     Matrix4D matrixToUpload = MakeRevInfiniteProjection(deg2rad(60.0f), aspectRatio, .1f) *
                               Matrix4D::Translate({0, 0, 6}) * Matrix4D::MakeRotationY(elapsedTime);
     matrixToUpload = swapchainResources.GetRequiredTransformMatrix() * matrixToUpload;

@@ -76,6 +76,17 @@ public:
 
     [[nodiscard]] Matrix4D GetRequiredTransformMatrix() const;
 
+    [[nodiscard]] VkSurfaceTransformFlagBitsKHR GetCurrentTransform() const
+    {
+        // really don't like this optional right here omg #JOHN makes no sense this shouldn't be invalid
+        // or maybe just a swapchaininfo get that everything else accesses as optional at the very least.
+        if (!swapchainInfo)
+        {
+            return VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
+        }
+        return swapchainInfo->currentTransform;
+    }
+
 private:
 
     bool Recreate();
