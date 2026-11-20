@@ -13,6 +13,19 @@ Ensure that the Vulkan SDK is installed on your computer: https://vulkan.lunarg.
 steps to add the needed things to your env on linux, I had to manually add the env
 var to the cmake config since clion wasn't picking up on it.)
 
+## 11/18/2026
+* showed off the handheld version and someone pointed out that the grid in the background was stretched out, so I took a capture in renderdoc to see if that could show it. It was actually easy to install and take a capture, but unfortunatly the capture looked normal and I knew it was an issue with the swapchain transform because everything was looking normal on linux / windows. 
+
+![alt text](progress_footage/readme_files/renderDocNov182026.png)
+
+So I found this article again (https://developer.android.com/games/optimize/vulkan-prerotation) which was great and saw that they were swapping the width height when in a 90 / 270 rotation. And my image seemed very stretched out so I tried swapping it the same as they did and that fixed the issue. My best understanding of what was happening was that when I said .preTransform = surfaceTransform, where the surfaceTransform was the one that the capabilities reported as the current transform, while also providing a swapped width and height, it went "ok, time to take the horizontal axis (say 1920) and map it to 1080 (giving you a very dense grid pattern along the horizontal axis of the "final" base swapchain orientation), and then take the vertical axis (say 1080) and then map that to 1920 (giving you the stretched out grid pattern). 
+
+Issue pictured (device oriented along its identity swapchain transform which is somewhat unexpected that this thing is a vertical phone in a horizontal handheld body):
+
+![alt text](progress_footage/readme_files/stretchedGridIssue11_18_2026.png)
+
+All of this was a bit confusing because the grid didn't have any rotation applied to it (compute shader), but the model did because I WAS applying the 90 / 270 rotation after the perspective matrix. All in all this is to say I hope it is a while before I have to deal with swapchain rotation again and if I do I should really read this article closer before implementing it.
+
 
 ## 11/17/2026 - 12:10 AM 
 * Woooooo! got it finally working. I had written some asserts myself for handling the pretransform but managed to get that part working pretty quickly. Very exciting to see it on the android. here is a quick little gif:
