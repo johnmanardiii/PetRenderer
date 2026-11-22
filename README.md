@@ -13,6 +13,13 @@ Ensure that the Vulkan SDK is installed on your computer: https://vulkan.lunarg.
 steps to add the needed things to your env on linux, I had to manually add the env
 var to the cmake config since clion wasn't picking up on it.)
 
+## 11/21/2026
+
+* Made a really simple fly camera. Not super happy with how directly it is tied to the joysticks right now, but I think building out the input system would be a distraction at this point.
+* also loaded in the uvs and packed that into the vertex data
+
+![alt text](progress_footage/readme_files/20261122_1526131.gif)
+
 ## 11/18/2026
 * showed off the handheld version and someone pointed out that the grid in the background was stretched out, so I took a capture in renderdoc to see if that could show it. It was actually easy to install and take a capture, but unfortunatly the capture looked normal and I knew it was an issue with the swapchain transform because everything was looking normal on linux / windows. 
 
