@@ -70,14 +70,14 @@ struct Matrix4D
         n[3][3] = 1.0;
     }
 
-    float &operator()(int i, int j)
+    float &operator()(int row, int col)
     {
-        return n[j][i];
+        return n[col][row];
     }
 
-    const float &operator()(int i, int j) const
+    const float &operator()(int row, int col) const
     {
-        return n[j][i];
+        return n[col][row];
     }
 
     static Matrix4D MakeRotationX(float rad)
@@ -130,6 +130,14 @@ struct Matrix4D
     const Vector4D& operator[](int col) const
     {
         return *reinterpret_cast<const Vector4D *>(n[col]);
+    }
+
+    Matrix4D Transpose() const
+    {
+        return Matrix4D(n[0][0], n[0][1], n[0][2], n[0][3],
+                        n[1][0], n[1][1], n[1][2], n[1][3],
+                        n[2][0], n[2][1], n[2][2], n[2][3],
+                        n[3][0], n[3][1], n[3][2], n[3][3]);
     }
 };
 

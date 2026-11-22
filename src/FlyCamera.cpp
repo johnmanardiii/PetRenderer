@@ -34,28 +34,34 @@ void FlyCamera::HandleJoystickEvent(SDL_Event *event) {
     }
 }
 
+Matrix4D FlyCamera::GetOrientation() const {
+    return Matrix4D::MakeRotationY(yawRads) * Matrix4D::MakeRotationX(pitchRads);
+}
+
 void FlyCamera::ProcessQueuedInput(float delta) {
     Vector3D offset{lastReportedSideInput, 0.0f, -lastReportedForwardInput};
     if (MagSqrd(offset) > 0.0f) {
-        offset = Normalize(offset); // #JOHN - this should probably be a function but I'm lazy
+        if (Magnitude(offset) > 1.0f)
+        {
+            offset = Normalize(offset);
+        }
+
         offset *= delta * movementSpeed;
-        Matrix4D coordinateFrame = Matrix4D::MakeRotationX(pitchRads) * Matrix4D::MakeRotationY(yawRads);
+        Matrix4D coordinateFrame = GetOrientation();
         position += (offset.x * coordinateFrame[0]) + (offset.z * coordinateFrame[2]);
     }
 
     // cap the pitch to always be abs value less than 90 to prevent funny business
     Vector3D rotationAmount = {lastReportedPitchInput, lastReportedYawInput, 0.0f};
-    // #JOHN - actually not sure if normalizing makes sense but it kinda makes sense to me for some reason
     if (MagSqrd(rotationAmount) > 0.0f)
     {
-        rotationAmount = Normalize(rotationAmount);
         rotationAmount *= delta * rotationSpeed;
         pitchRads -= rotationAmount.x;
         yawRads += rotationAmount.y;
 
-        // limit yaw
-        float littleUnderPiHalf = std::nextafter((pi / 2.0f), 0.0f);
-        pitchRads = Clamp(yawRads, -littleUnderPiHalf, littleUnderPiHalf);
+        // limit pitch to avoid gimbal lock n flipping upside down and stuff
+        float maxPitchAbsValue = deg2rad(89);
+        pitchRads = Clamp(pitchRads, -maxPitchAbsValue, maxPitchAbsValue);
     }
 }
 
@@ -67,5 +73,5 @@ Matrix4D FlyCamera::GetViewMatrix() const {
     // #JOHN - could make this more optimized by calculating it all out but don't really care for now, pretty cheap in the scheme of htings
     Matrix4D inversePitch = Matrix4D::MakeRotationX(-pitchRads);
     Matrix4D inverseYaw = Matrix4D::MakeRotationY(-yawRads);
-    return inversePitch * inverseYaw * Matrix4D::Translate(-position);
+    return GetOrientation().Transpose() * Matrix4D::Translate(-position);
 }

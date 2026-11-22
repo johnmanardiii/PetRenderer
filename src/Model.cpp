@@ -12,6 +12,7 @@
 #include <SDL3/SDL_iostream.h>
 #include <fmt/format.h>
 #include <fmt/printf.h>
+#include "Vector2D.h"
 
 /*
  * #JOHN - the point of this for now is to abstract out the main loop from "scene specific things" so that I can
@@ -23,6 +24,7 @@ struct LoadedMeshData
     std::string name;
     std::vector<Vector3D> positions;
     std::vector<Vector3D> normals;
+    std::vector<Vector2D> uvs;
     std::vector<uint32_t> indices;
 };
 
@@ -58,6 +60,7 @@ LoadedMeshData ParseCpuMeshData(const cgltf_data *data)
     // position loading
     cgltf_attribute *positionAttribute = nullptr;
     cgltf_attribute *normalAttribute = nullptr;
+    cgltf_attribute *uvAttribute = nullptr;
     cgltf_size attributeCount = primitiveToLoad->attributes_count;
     for (int i = 0; i < attributeCount; i++)
     {
@@ -69,7 +72,12 @@ LoadedMeshData ParseCpuMeshData(const cgltf_data *data)
         {
             normalAttribute = &primitiveToLoad->attributes[i];
         }
+        else if (primitiveToLoad->attributes[i].type == cgltf_attribute_type_texcoord)
+        {
+            uvAttribute = &primitiveToLoad->attributes[i];
+        }
     }
+
     assert(positionAttribute != nullptr);
 
     cgltf_accessor *posAccessor = positionAttribute->data;
@@ -106,6 +114,26 @@ LoadedMeshData ParseCpuMeshData(const cgltf_data *data)
         // initialize the normals to 0
         Vector3D zero{0.0f, 0.0f, 0.0f};
         std::fill(loadedModel.normals.begin(), loadedModel.normals.end(), zero);
+    }
+
+    // load uvs
+    loadedModel.uvs.resize(posAccessor->count);
+    if (uvAttribute != nullptr)
+    {
+        cgltf_accessor *uvAccessor = uvAttribute->data;
+        assert(uvAccessor->type == cgltf_type_vec2);
+        assert(uvAccessor->offset == 0);
+        assert(uvAccessor->stride == sizeof(Vector2D));
+
+        cgltf_size numUvFloats = cgltf_accessor_unpack_floats(uvAccessor, nullptr, 0);
+        assert((numUvFloats / 2) == (numPosFloats / 3));
+
+        cgltf_accessor_unpack_floats(uvAccessor, reinterpret_cast<float *>(loadedModel.uvs.data()), numUvFloats);
+    }
+    else
+    {
+        Vector2D zero{0.0f, 0.0f};
+        std::fill(loadedModel.uvs.begin(), loadedModel.uvs.end(), zero);
     }
 
     return loadedModel;
@@ -166,7 +194,8 @@ std::vector<Vertex> CreateInterleavedVertexList(const LoadedMeshData& loadedMesh
     result.resize(loadedMeshData.positions.size());
     for (size_t i = 0; i < loadedMeshData.positions.size(); i++)
     {
-        result[i] = {loadedMeshData.positions[i], 0.0f, loadedMeshData.normals[i], 0.0f};
+        result[i] = {loadedMeshData.positions[i], loadedMeshData.uvs[i].x, loadedMeshData.normals[i],
+                     loadedMeshData.uvs[i].y};
     }
 
     return result;

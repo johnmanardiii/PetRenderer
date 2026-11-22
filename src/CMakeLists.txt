@@ -28,6 +28,7 @@ target_sources(PetRenderer PRIVATE
         BabysFirstGraphicsPipeline.cpp
         BabysFirstGraphicsPipeline.h
 
+        Vector2D.h      # starting to think this should be a template...
         Vector3D.h
         Vector4D.h
         Matrix3D.h

@@ -37,7 +37,7 @@ VSOutput vertexMain(uint instanceID : SV_VertexID)
     VSOutput output;
     Vertex v = vertexBuffer.vertices[instanceID];
     output.Pos = mul(matAndVertexBuff.MVP, float4(v.pos, 1.0f));
-    output.color = v.norm;
+    output.color = float3(v.u, v.v, 0.0f);
     return output;
 }
 

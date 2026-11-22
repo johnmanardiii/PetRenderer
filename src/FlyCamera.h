@@ -19,7 +19,7 @@ public:
     Matrix4D GetViewMatrix() const;
 private:
     void ProcessQueuedInput(float delta);
-
+    Matrix4D GetOrientation() const;
     Vector3D position {0.0f};
 
     float pitchRads = 0.0f;
