@@ -9,6 +9,7 @@
 // 16 byte aligned...
 // column-major just like Matrix3D
 #include "Matrix3D.h" // not sure if including this is a good idea but yolo
+#include "Vector4D.h"
 
 struct Matrix4D
 {
@@ -79,6 +80,18 @@ struct Matrix4D
         return n[j][i];
     }
 
+    static Matrix4D MakeRotationX(float rad)
+    {
+        float c = cos(rad);
+        float s = sin(rad);
+
+        return Matrix4D(1, 0, 0, 0,
+                        0, c, -s, 0,
+                        0, s, c, 0,
+                        0, 0, 0, 1);
+
+    }
+
     static Matrix4D MakeRotationY(float rad)
     {
         float c = cos(rad);
@@ -107,6 +120,16 @@ struct Matrix4D
     static Matrix4D Scale(float s)
     {
         return Matrix4D(s, 0, 0, 0, 0, s, 0, 0, 0, 0, s, 0, 0, 0, 0, 1);
+    }
+
+    Vector4D& operator[](int col)
+    {
+        return *reinterpret_cast<Vector4D *>(n[col]);
+    }
+
+    const Vector4D& operator[](int col) const
+    {
+        return *reinterpret_cast<const Vector4D *>(n[col]);
     }
 };
 

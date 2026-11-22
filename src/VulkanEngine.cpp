@@ -131,10 +131,7 @@ bool VulkanEngine::init()
 
     // #JOHN - this management and "post upload" work should really be moved out of this "engine" thing
     // honestly move this into the allocate please it is very ugly and you are already assuming it happens once #JOHN
-    VkDescriptorBufferInfo buffer_info = {
-        .buffer = exampleMesh.vertexBuffer,
-        .range = VK_WHOLE_SIZE
-    };
+    VkDescriptorBufferInfo buffer_info = {.buffer = exampleMesh.vertexBuffer, .range = VK_WHOLE_SIZE};
     VkWriteDescriptorSet writeVertexBufferToDescriptorSet{.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
                                                           .dstSet = mesh_buffer_descriptor_information.descriptorSet,
                                                           .dstBinding = 0,
@@ -154,12 +151,17 @@ bool VulkanEngine::init()
 
 void VulkanEngine::Iterate()
 {
+    // update random stuff that isn't quite rendering
+    camera.Update(deltaTime);
+
     // render image and present to swapchain
     RenderAndPresentToSwapchain();
 
     // update what frame we are on for the frames in flight structures
     currentFrame++;
+    float prevTime = elapsedTime;
     elapsedTime = SDL_GetTicksNS() / 1000000000.0;
+    deltaTime = elapsedTime - prevTime;
 }
 
 void VulkanEngine::OnWindowSizeChanged()
@@ -185,6 +187,13 @@ void VulkanEngine::WaitForDeviceIdle() const
     {
         vkDeviceWaitIdle(gpuContext.device);
     }
+}
+
+void VulkanEngine::HandleJoyStickEvent(SDL_Event *event)
+{
+    // #JOHN - want to eventually have a more robust input system that doesn't live in this already bloated file
+    // for now, just forward the event to the camera
+    camera.HandleJoystickEvent(event);
 }
 
 void VulkanEngine::RenderToOffscreenImage(VkCommandBuffer commandBuffer)
@@ -285,14 +294,16 @@ void VulkanEngine::RenderToOffscreenImage(VkCommandBuffer commandBuffer)
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
     // draw here
-    float aspectRatio = static_cast<float>(offscreenRenderImageInfo.extent.width) / offscreenRenderImageInfo.extent.height;
-    // #JOHN - this should really be encapsulated better it shouldn't have to know about this and I should just do a final rotation transfer
+    float aspectRatio =
+        static_cast<float>(offscreenRenderImageInfo.extent.width) / offscreenRenderImageInfo.extent.height;
+    // #JOHN - this should really be encapsulated better it shouldn't have to know about this and I should just do a
+    // final rotation transfer
     if ((swapchainResources.GetCurrentTransform() & VK_SURFACE_TRANSFORM_ROTATE_90_BIT_KHR) ||
-            (swapchainResources.GetCurrentTransform() & VK_SURFACE_TRANSFORM_ROTATE_270_BIT_KHR))
+        (swapchainResources.GetCurrentTransform() & VK_SURFACE_TRANSFORM_ROTATE_270_BIT_KHR))
     {
         aspectRatio = 1.0f / aspectRatio;
     }
-    Matrix4D matrixToUpload = MakeRevInfiniteProjection(deg2rad(60.0f), aspectRatio, .1f) *
+    Matrix4D matrixToUpload = MakeRevInfiniteProjection(deg2rad(60.0f), aspectRatio, .1f) * camera.GetViewMatrix() *
                               Matrix4D::Translate({0, 0, 6}) * Matrix4D::MakeRotationY(elapsedTime);
     matrixToUpload = swapchainResources.GetRequiredTransformMatrix() * matrixToUpload;
     GPUPushConstants push_constants{matrixToUpload};

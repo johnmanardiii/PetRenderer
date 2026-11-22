@@ -11,7 +11,7 @@ static_assert(std::is_move_constructible<Platform>());
 // #JOHN - should probably make this a 2d type.
 std::optional<Platform> CreatePlatform(int width, int height, FunctionalQueue& deletionQueue)
 {
-    if (!SDL_Init(SDL_INIT_VIDEO))
+    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK))
     {
         SDL_Log("Failed to initialize GLFW\n");
         return std::nullopt;

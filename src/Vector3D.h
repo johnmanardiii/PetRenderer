@@ -14,6 +14,8 @@ struct Vector3D
 
     }
 
+    Vector3D(float x) : x(x), y(x), z(x) {};
+
     float& operator[](int i)
     {
         return ((&x)[i]);
@@ -97,6 +99,11 @@ inline Vector3D operator-(const Vector3D &rhs, const Vector3D &lhs)
 inline float Magnitude(const Vector3D& v)
 {
     return (sqrt(v.x * v.x + v.y * v.y + v.z * v.z));
+}
+
+inline float MagSqrd(const Vector3D& v)
+{
+    return (v.x * v.x + v.y * v.y + v.z * v.z);
 }
 
 inline Vector3D Normalize(const Vector3D& v)

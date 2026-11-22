@@ -29,12 +29,16 @@ target_sources(PetRenderer PRIVATE
         BabysFirstGraphicsPipeline.h
 
         Vector3D.h
+        Vector4D.h
         Matrix3D.h
         Matrix4D.h
 
         CustomMath.h
         Model.cpp
         Model.h
+
+        FlyCamera.h
+        FlyCamera.cpp
 )
 
 target_include_directories(PetRenderer PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})

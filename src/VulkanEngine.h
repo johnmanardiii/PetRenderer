@@ -10,6 +10,7 @@
 #include "BabysFirstGraphicsPipeline.h"
 #include "CreatePipeline.h"
 #include "DescriptorAllocator.h"
+#include "FlyCamera.h"
 #include "FrameInFlightStructures.h"
 #include "GpuContext.h"
 #include "Model.h"
@@ -18,6 +19,7 @@
 
 #include "VulkanSwapchainResources.h"
 #include "vk_mem_alloc.h"
+#include "SDL3/SDL_events.h"    // #JOHN - not sure how I feel about handling this here.
 
 class VulkanEngine
 {
@@ -36,6 +38,8 @@ public:
     void Iterate();
     void OnWindowSizeChanged();
     void WaitForDeviceIdle() const;
+
+    void HandleJoyStickEvent(SDL_Event* event);
 
 private:
     VulkanEngine(Platform platform, GpuContext gpuContext, VmaAllocator vmaAllocator,
@@ -78,8 +82,11 @@ private:
 
     ScopedFunctionalQueue deletionQueue;
 
+    FlyCamera camera;
+
     uint32_t currentFrame = 0; // always incrementing, doesn't loop around w/ modulo
     float elapsedTime = 0.0f;
+    float deltaTime = 0.0f;
 };
 
 #endif // VULKAN_ENGINE_H
