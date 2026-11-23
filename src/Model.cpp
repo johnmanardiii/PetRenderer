@@ -28,6 +28,16 @@ struct LoadedMeshData
     std::vector<uint32_t> indices;
 };
 
+void LoadTextureData(const cgltf_data* data, LoadedMeshData& meshData)
+{
+    int i = 0;
+    for (int i = 0; i < data->textures_count; i++)
+    {
+        cgltf_texture texture = data->textures[i];
+
+    }
+}
+
 LoadedMeshData ParseCpuMeshData(const cgltf_data *data)
 {
     // #JOHN - for now, this isn't generalizable... but that's ok
@@ -135,6 +145,8 @@ LoadedMeshData ParseCpuMeshData(const cgltf_data *data)
         Vector2D zero{0.0f, 0.0f};
         std::fill(loadedModel.uvs.begin(), loadedModel.uvs.end(), zero);
     }
+
+    LoadTextureData(data, loadedModel);
 
     return loadedModel;
 }

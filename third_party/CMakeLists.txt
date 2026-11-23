@@ -30,6 +30,7 @@ FetchContent_MakeAvailable(volk)
 include(imgui.cmake)
 include(vma.cmake)
 include(cgltf.cmake)
+include(stb.cmake)
 
 # silly android ndk... just trying to get this to compile so i copied it over
 if (ANDROID)
