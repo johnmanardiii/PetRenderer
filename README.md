@@ -13,6 +13,9 @@ Ensure that the Vulkan SDK is installed on your computer: https://vulkan.lunarg.
 steps to add the needed things to your env on linux, I had to manually add the env
 var to the cmake config since clion wasn't picking up on it.)
 
+## 11/23/2026
+* Started trying to load textures from the cgltf library and realized I should probably have a better system for staging things into GPU local memory before I attempt this and get it working at least with a few procedural textures like a checkerboard and stuff.
+
 ## 11/21/2026
 
 * Made a really simple fly camera. Not super happy with how directly it is tied to the joysticks right now, but I think building out the input system would be a distraction at this point.

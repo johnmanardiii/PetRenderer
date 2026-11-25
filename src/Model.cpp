@@ -19,6 +19,12 @@
  * better read vulkan engine because I can't imagine doing model loading alongside everything else right now
  *
  */
+
+struct Material
+{
+
+};
+
 struct LoadedMeshData
 {
     std::string name;
@@ -31,9 +37,14 @@ struct LoadedMeshData
 void LoadTextureData(const cgltf_data* data, LoadedMeshData& meshData)
 {
     int i = 0;
-    for (int i = 0; i < data->textures_count; i++)
+    for (int i = 0; i < data->materials_count; i++)
     {
-        cgltf_texture texture = data->textures[i];
+        cgltf_material mat = data->materials[i];
+        // For now, assert that it has pbr metallic roughness and handle the case where it isn't the case later
+        // when you want to load a model w/out textures or something like that #JOHN
+        assert(mat.has_pbr_metallic_roughness);
+        // not going to really check the rest of the other possible things for now, but know there is specular glossiness and clearcoat and transmission...
+
 
     }
 }
@@ -213,6 +224,42 @@ std::vector<Vertex> CreateInterleavedVertexList(const LoadedMeshData& loadedMesh
     return result;
 }
 
+// staging buffer stuff
+
+// #JOHN - ideally this is like a big queue of work that wouldn't be too hard to break up if it gets too big...
+// and maybe since it is a vector we could be like... "yo if adding this one to your plate would make you too full"
+// like > 256 MB or whatever the limit is, then we can flush you and keep going. Not sure how to query that limit tho.
+// but maybe we'll crash into that bridge when we crash into it.
+
+// #JOHN - you need to make this more generic before you go onto textures but yolo... I think maybe
+// somehow this needs to be a more central "request system" passed in... where you are like "yo can I get a staging block"
+// and then it handles the flushing. Also if you go that route you really need to query something from the device
+// on the staging memory. "DeviceLocalUploader..." name pending on that one.
+
+// Sheesh the fact it needs the queue index is telling me it needs to be a central system.
+// take in the device, queue index, and the also have it query it, and then pass it in.... should be shared by anything
+// that needs to go CPU visible to gpu local like this... and it should just say "yep go off king" and then
+// there will be a final flush and then these objects (like gpu mesh) will hold onto only the things they care about.
+// https://vkguide.dev/docs/new_chapter_2/vulkan_imgui_setup/
+// https://docs.vulkan.org/tutorial/latest/04_Vertex_buffers/02_Staging_buffer.html
+// maybe a lambda passed? https://github.com/KhronosGroup/Vulkan-Docs/wiki/Synchronization-Examples#transfer-dependencies:~:text=()%3B%0A...%0AvkCmdEndRenderPass()%3B-,Transfer%20Dependencies,-Upload%20data%20from
+// make the object hold onto the fence and command buffer and pool
+// maybe also make it image vs buffer different
+//https://github.com/zeux/niagara/blob/567ebe331247e122425eaf1a6319d8c64daf816d/src/resources.cpp#L152
+//https://github.com/zeux/niagara/blob/567ebe331247e122425eaf1a6319d8c64daf816d/src/textures.cpp#L159
+void CopyStagingBuffersToDestinationBuffers(VkDevice device, const std::vector<CPUVisibleStagingBuffer>& stagingBuffers)
+{
+    // create the command pool to use for the work
+    VkCommandPoolCreateInfo cmdPoolCreateInfo =
+        {
+        .sType =  = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+        .flags =
+    };
+    vkchk(vkCreateCommandPool(device, ));
+}
+
+// end of staging buffer stuff
+
 GPUMesh LoadGPUMeshFromPath(VmaAllocator vmaAllocator, VkDevice device, const char *filePath)
 {
     LoadedMeshData cpuData = LoadCPUMeshDataFromPath(filePath);
@@ -238,11 +285,11 @@ GPUMesh LoadGPUMeshFromPath(VmaAllocator vmaAllocator, VkDevice device, const ch
 
     // #JOHN - this should probably be all constructed at once and failure should be handled better but yolo for now
     GPUMesh gpuMesh;
-
+    VmaAllocationInfo vertexAllocInfo;
     vkchk(vmaCreateBuffer(vmaAllocator, &vertex_buffer_create_info, &vertexAllocCreateInfo, &gpuMesh.vertexBuffer,
-                          &gpuMesh.vertexBufferAlloc, &gpuMesh.vertexBufferAllocInfo));
+                          &gpuMesh.vertexBufferAlloc, &vertexAllocInfo));
 
-    memcpy(gpuMesh.vertexBufferAllocInfo.pMappedData, interleavedVertexData.data(), positionDataSize);
+    memcpy(vertexAllocInfo.pMappedData, interleavedVertexData.data(), positionDataSize);
 
     VmaAllocationCreateInfo indexAllocCreateInfo = {
         .flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
@@ -259,20 +306,27 @@ GPUMesh LoadGPUMeshFromPath(VmaAllocator vmaAllocator, VkDevice device, const ch
         .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
     };
 
+    VmaAllocationInfo indexBufferAllocInfo;
     vkchk(vmaCreateBuffer(vmaAllocator, &index_buffer_create_info, &indexAllocCreateInfo, &gpuMesh.indexBuffer,
-                          &gpuMesh.indexBufferAlloc, &gpuMesh.indexBufferAllocInfo));
+                          &gpuMesh.indexBufferAlloc, &indexBufferAllocInfo));
 
-    memcpy(gpuMesh.indexBufferAllocInfo.pMappedData, cpuData.indices.data(), indexDataSize);
+    memcpy(indexBufferAllocInfo.pMappedData, cpuData.indices.data(), indexDataSize);
 
     gpuMesh.indexCount = cpuData.indices.size();
 
 
-    std::string indexBufferName = fmt::sprintf("Index Buffer for %s", filePath);
+    std::string indexBufferName = fmt::sprintf("Staging Index Buffer for %s", filePath);
     DebugSetName(device, VK_OBJECT_TYPE_BUFFER, gpuMesh.indexBuffer, indexBufferName.c_str());
 
-    std::string vertexBufferName = fmt::sprintf("Vertex Buffer for %s", filePath);
+    std::string vertexBufferName = fmt::sprintf("Staging Vertex Buffer for %s", filePath);
     DebugSetName(device, VK_OBJECT_TYPE_BUFFER, gpuMesh.vertexBuffer, vertexBufferName.c_str());
 
+    // #JOHN - ideally this would be general enough to be usable with textures
+    // #JOHN do full GPU to GPU copy here and wait
+
+    // destroy staging buffers
+
+    // gpu mesh should be valid here
     return gpuMesh;
 }
 

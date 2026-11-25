@@ -27,6 +27,16 @@ struct Vertex
     float v;    // and why not this while I'm here.
 };
 
+// #JOHN - maybe I want to share this with textures when I get there? not sure yet.
+struct CPUVisibleStagingBuffer
+{
+    VkDeviceSize dataSize;
+    VkBuffer stagingBuffer; // deleted once copied!
+    VmaAllocation stagingBufferAllocation;
+    VkBuffer dstBuffer;     // already created and destination to copy to
+    VmaAllocation dstBufferAllocation;  // actually take this out it doesn't own it
+};
+
 // need to move mesh loading into a simple "hey just give path and I'll give you some gpu blocks to use"
 // and then eventually have a retirement queue for this that appropriately waits for the gpu to be done before deleting
 // with the delete funciton currently located in the pipeline file.
@@ -35,13 +45,8 @@ struct GPUMesh
     VkBuffer vertexBuffer;
     VmaAllocation vertexBufferAlloc;
 
-    // #JOHN - do I need the alloc info?
-    VmaAllocationInfo vertexBufferAllocInfo;
-
     VkBuffer indexBuffer;
     VmaAllocation indexBufferAlloc;
-    // #JOHN - do I need the alloc info?
-    VmaAllocationInfo indexBufferAllocInfo;
 
     uint32_t indexCount;
 };
