@@ -8,14 +8,14 @@
 #include <volk.h>
 #include "vk_mem_alloc.h"
 
-struct GpuContext;
-class ScopedFunctionalQueue;
+struct ImmediateSubmitInfo;
 
 struct CopyQueueBufferInput
 {
     const void *data;
     size_t bufferSizeInBytes;
     VkBufferUsageFlags dstBufferUsage;
+    const char *pDebugName;
 };
 
 struct DeviceLocalResult
@@ -24,20 +24,7 @@ struct DeviceLocalResult
     VmaAllocation deviceLocalBufferAlloc;
 };
 
-struct CopyQueue
-{
-    VmaAllocator allocator;
-    VkDevice device;
-    VkQueue graphicsQueue;
-
-    // command pool / command buffer stuff
-    VkCommandPool transferCommandPool;
-    VkCommandBuffer transferCmdBuffer;
-    VkFence transferFence;
-};
-
-CopyQueue CreateCopyQueue(VmaAllocator allocator, const GpuContext &gpuContext, ScopedFunctionalQueue &deletionQueue);
-
-DeviceLocalResult CopyDataToDeviceLocal(const CopyQueue &copyQueue, const CopyQueueBufferInput &input);
+DeviceLocalResult CopyDataToDeviceLocal(VmaAllocator allocator, const ImmediateSubmitInfo &immediateSubmit,
+                                        const CopyQueueBufferInput &input);
 
 #endif //COPYQUEUE_H

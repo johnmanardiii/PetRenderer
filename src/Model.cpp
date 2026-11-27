@@ -13,6 +13,7 @@
 #include <fmt/format.h>
 #include <fmt/printf.h>
 #include "Vector2D.h"
+#include "ImmediateSubmit.h"
 #include "CopyQueue.h"
 
 /*
@@ -225,7 +226,7 @@ std::vector<Vertex> CreateInterleavedVertexList(const LoadedMeshData& loadedMesh
     return result;
 }
 
-GPUMesh LoadGPUMeshFromPath(CopyQueue &copyQueue, VkDevice device, const char *filePath)
+GPUMesh LoadGPUMeshFromPath(ImmediateSubmitInfo &immediateSubmitInfo, VmaAllocator allocator, const char *filePath)
 {
     LoadedMeshData cpuData = LoadCPUMeshDataFromPath(filePath);
 
@@ -233,17 +234,17 @@ GPUMesh LoadGPUMeshFromPath(CopyQueue &copyQueue, VkDevice device, const char *f
     std::vector<Vertex> interleavedVertexData = CreateInterleavedVertexList(cpuData);
 
     size_t positionDataSize = sizeof(Vertex) * interleavedVertexData.size();
-    DeviceLocalResult vertexBuffer = CopyDataToDeviceLocal(copyQueue,
-        {interleavedVertexData.data(), positionDataSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT});
+    
+    std::string vertexBufferName = fmt::sprintf("Staging Vertex Buffer for %s", filePath);
+    DeviceLocalResult vertexBuffer = CopyDataToDeviceLocal(allocator,
+        immediateSubmitInfo, {interleavedVertexData.data(), positionDataSize,
+                                                    VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, vertexBufferName.c_str()});
 
     size_t indexDataSize = sizeof(uint32_t) * cpuData.indices.size();
-    DeviceLocalResult indexBuffer = CopyDataToDeviceLocal(copyQueue, {cpuData.indices.data(), indexDataSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT});
-
     std::string indexBufferName = fmt::sprintf("Staging Index Buffer for %s", filePath);
-    DebugSetName(device, VK_OBJECT_TYPE_BUFFER, indexBuffer.deviceLocalBuffer, indexBufferName.c_str());
-
-    std::string vertexBufferName = fmt::sprintf("Staging Vertex Buffer for %s", filePath);
-    DebugSetName(device, VK_OBJECT_TYPE_BUFFER, vertexBuffer.deviceLocalBuffer, vertexBufferName.c_str());
+    DeviceLocalResult indexBuffer = CopyDataToDeviceLocal(
+        allocator, immediateSubmitInfo,
+        {cpuData.indices.data(), indexDataSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, indexBufferName.c_str()});
 
     // gpu mesh should be valid here
     return
