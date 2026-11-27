@@ -40,6 +40,9 @@ target_sources(PetRenderer PRIVATE
 
         FlyCamera.h
         FlyCamera.cpp
+
+        CopyQueue.h
+        CopyQueue.cpp
 )
 
 target_include_directories(PetRenderer PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})

@@ -54,14 +54,17 @@ VulkanEngine *VulkanEngine::Create()
 
     deletionQueue.Register([vmaAllocator] { vmaDestroyAllocator(vmaAllocator); });
 
-    return new VulkanEngine(*platform, *gpuContext, vmaAllocator,
+    CopyQueue copyQueue = CreateCopyQueue(vmaAllocator, *gpuContext, deletionQueue);
+
+    return new VulkanEngine(*platform, *gpuContext, vmaAllocator, copyQueue,
                             VkExtent2D{.width = static_cast<uint32_t>(width), .height = static_cast<uint32_t>(height)},
                             std::move(deletionQueue));
 }
 
-VulkanEngine::VulkanEngine(Platform inPlatform, GpuContext inGpuContext, VmaAllocator inVmaAllocator,
+VulkanEngine::VulkanEngine(Platform inPlatform, GpuContext inGpuContext, VmaAllocator inVmaAllocator, CopyQueue copyQueue,
                            VkExtent2D inInitialExtent, ScopedFunctionalQueue &&inDeletionQueue)
-    : platform(inPlatform), gpuContext(inGpuContext), vmaAllocator(inVmaAllocator),
+    : platform(inPlatform), gpuContext(inGpuContext), vmaAllocator(inVmaAllocator), 
+    copyQueue(copyQueue),
       // #JOHN - this "gpu context ref" is super duper dangerous seeming and a bad pattern...
       // should read modern C++ design...
       swapchainResources(gpuContext, inInitialExtent), deletionQueue(std::move(inDeletionQueue))
@@ -99,7 +102,7 @@ bool VulkanEngine::init()
     deletionQueue.Register(
         [this] { AttachmentImageDestroyDescriptorInformation(gpuContext.device, attachmentImageDescriptorInfo); });
 
-    exampleMesh = LoadGPUMeshFromPath(vmaAllocator, gpuContext.device, "models/DamagedHelmet.glb");
+    exampleMesh = LoadGPUMeshFromPath(copyQueue, gpuContext.device, "models/DamagedHelmet.glb");
 
     BigMeshBufferAllocateDescriptorInfo(gpuContext.device, mesh_buffer_descriptor_information);
 

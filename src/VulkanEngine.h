@@ -16,7 +16,7 @@
 #include "Model.h"
 #include "OffscreenRenderImage.h"
 #include "Platform.h"
-
+#include "CopyQueue.h"
 #include "VulkanSwapchainResources.h"
 #include "vk_mem_alloc.h"
 #include "SDL3/SDL_events.h"    // #JOHN - not sure how I feel about handling this here.
@@ -42,7 +42,7 @@ public:
     void HandleJoyStickEvent(SDL_Event* event);
 
 private:
-    VulkanEngine(Platform platform, GpuContext gpuContext, VmaAllocator vmaAllocator,
+    VulkanEngine(Platform platform, GpuContext gpuContext, VmaAllocator vmaAllocator, CopyQueue copyQueue,
                  VkExtent2D initialExtent,
                  ScopedFunctionalQueue &&deletionQueue);
 
@@ -56,6 +56,8 @@ private:
     Platform platform;
 
     GpuContext gpuContext;
+
+    CopyQueue copyQueue;
 
     VmaAllocator vmaAllocator;
 

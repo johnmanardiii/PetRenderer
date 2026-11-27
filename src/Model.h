@@ -12,7 +12,7 @@
 #include <string>
 #include <vector>
 
-
+class CopyQueue;
 
 // maybe needs a more specific name yolo
 // maybe in the future we would want some shared definition between shaders and cpp
@@ -51,7 +51,7 @@ struct GPUMesh
     uint32_t indexCount;
 };
 
-GPUMesh LoadGPUMeshFromPath(VmaAllocator vmaAllocator, VkDevice device, const char *filePath);
+GPUMesh LoadGPUMeshFromPath(CopyQueue& copyQueue, VkDevice device, const char *filePath);
 
 // #JOHN - ideally this would be tied to the object and deferred deleted
 void DestroyGpuMesh(VmaAllocator vmaAllocator, GPUMesh& mesh);
