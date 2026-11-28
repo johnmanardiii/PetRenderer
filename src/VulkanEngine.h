@@ -21,6 +21,9 @@
 #include "vk_mem_alloc.h"
 #include "SDL3/SDL_events.h"    // #JOHN - not sure how I feel about handling this here.
 
+// #JOHN - this is for the texture type and that is wrong.
+#include "CopyQueue.h"
+
 class VulkanEngine
 {
 public:
@@ -52,6 +55,9 @@ private:
     void RenderAndPresentToSwapchain();
     void ResizeOffscreenRenderTarget();
 
+    // #JOHN temp function for testing
+    DeviceLocalImageResult CreateMissingTextureExample();
+
     // This should be destructed last because it kinda owns vulkan. should have more guarantees on that #JOHN
     Platform platform;
 
@@ -81,6 +87,8 @@ private:
     // #JOHN - this doesn't belong here but need to track it for now
     BigMeshBufferDescriptorInformation mesh_buffer_descriptor_information;
     GPUMesh exampleMesh;
+    // #JOHN - this is just to prove to myself I can get an image onto the GPU... temp and should be moved
+    DeviceLocalImageResult missingTextureExample;
 
     ScopedFunctionalQueue deletionQueue;
 

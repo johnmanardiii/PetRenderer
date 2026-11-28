@@ -105,6 +105,8 @@ bool VulkanEngine::init()
 
     exampleMesh = LoadGPUMeshFromPath(immediateSubmit, vmaAllocator, "models/DamagedHelmet.glb");
 
+    missingTextureExample = CreateMissingTextureExample();
+
     BigMeshBufferAllocateDescriptorInfo(gpuContext.device, mesh_buffer_descriptor_information);
 
     babysFirstGraphicsPipelineInfo =
@@ -531,4 +533,54 @@ void VulkanEngine::ResizeOffscreenRenderTarget()
                                                          vmaAllocator, VK_FORMAT_R16G16B16A16_SFLOAT);
     UpdateAttachmentImageDescriptorSet(gpuContext.device, offscreenRenderImageInfo,
                                        attachmentImageDescriptorInfo.descriptorSet);
+}
+
+
+// this should not exist but don't want to think about the iteration of each byte
+struct byteRGBAPixel
+{
+    unsigned char r = 0;
+    unsigned char g = 0;
+    unsigned char b = 0;
+    unsigned char a = 0;
+};
+
+DeviceLocalImageResult VulkanEngine::CreateMissingTextureExample()
+{
+    // create a buffer for a magenta and black garry's mod like texture
+    // 16x16 x 4 bytes
+    std::vector<byteRGBAPixel> data(16 * 16);
+
+    // 2x2 checkerboard pattern
+    for (int row = 0; row < 4; row++)
+    {
+        int colInit = (row % 2 == 0) ? 0 : 1;
+        for (; colInit < 4; colInit++)
+        {
+            // set the 2x2 at this point to be magenta (255, 0, 255, 255) since rgba
+            // this isn't right but will be fun to see in a capture...
+            int startFillRow = row * 2;
+            int startFillCol = colInit * 2;
+            for (int i = startFillRow; i < startFillRow + 2; i++)
+            {
+                for (int j = startFillCol; j < startFillCol + 2; j++)
+                {
+                    data[16 * i + j] = {255, 0, 255, 255};
+                }
+            }
+        }
+    }
+
+    int i = 0;
+
+    // #JOHN - todo before merging - no mip levels! seems like a problem...
+    const char *debugName = "Default Missing Texture";
+    // #JOHN - should really learn about spans w/ buffer type to see if it fixes this whole "get byte size and implicitly cast to void" thing...
+    CopyQueueImageInput createImageInfo = {.data = data.data(), .bufferSizeInBytes = data.size() * sizeof(byteRGBAPixel),
+                                           .pDebugName = debugName,
+                                           .imageType = VK_IMAGE_TYPE_2D,
+.extent = 16 * 16, .mipLevels = 1, 
+    };
+
+    return {};
 }

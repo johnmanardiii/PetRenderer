@@ -89,3 +89,11 @@ DeviceLocalResult CopyDataToDeviceLocal(VmaAllocator allocator, const ImmediateS
         dstBuffer, dstBufferAllocation
     };
 }
+
+DeviceLocalImageResult CopyImageToDeviceLocal(VmaAllocator allocator, const ImmediateSubmitInfo &immediateSubmit,
+                                              const CopyQueueImageInput &input)
+{
+    DeviceLocalImageResult result;
+
+    return result;
+}
